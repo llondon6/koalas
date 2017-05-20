@@ -3,18 +3,20 @@ from positive import *
 
 # Class for basic print manipulation
 class print_format:
-   magenta = '\033[95m'
-   cyan = '\033[96m'
-   darkcyan = '\033[36m'
-   blue = '\033[94m'
+   magenta = '\033[1;35m'
+   cyan = '\033[0;36m'
+   darkcyan = '\033[0;36m'
+   blue = '\033[0;34m'
    green = '\033[92m'
-   yellow = '\033[93m'
-   red = '\033[91m'
+   yellow = '\033[0;33m'
+   red = '\033[31m'
    bold = '\033[1m'
    grey = gray = '\033[1;30m'
    ul = '\033[4m'
-   end = '\033[0m'
+   end = '\x1b[0m'
+   hlb = '\033[5;30;42m'
    underline = '\033[4m'
+
 
 # Function that uses the print_format class to make tag text for bold printing
 def bold(string):

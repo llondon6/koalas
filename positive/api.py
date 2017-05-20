@@ -1,5 +1,6 @@
 #
 from positive import *
+from strings import *
 
 #
 def parsin( keys, dict, default=False, verbose=False, fname='*', **kwarg ):

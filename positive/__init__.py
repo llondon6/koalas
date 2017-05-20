@@ -1,3 +1,4 @@
+
 # -------------------------------------------------------- #
 ''' Import High Level Libs '''
 # -------------------------------------------------------- #
@@ -17,10 +18,17 @@ import h5py
 import copy
 # -------------------------------------------------------- #
 
+# -------------------------------------------------------- #
+''' Import Low Level Libs '''
+# -------------------------------------------------------- #
+
 # list all py files within this directory
+from os.path import dirname, basename, isdir, realpath
 modules = [ basename(f)[:-3] for f in glob.glob(dirname(__file__)+"/*.py") if not ('__init__.py' in f) ]
 
 # Dynamically import all modules within this folder (namespace preserving)
 for module in modules:
-    if verbose: print '      .%s' % module
-    exec 'import %s' % module
+    exec 'from %s import *' % module
+
+# Cleanup
+del modules, module, f
