@@ -41,6 +41,8 @@ def textul(string):
     return print_format.underline + string + print_format.end
 def underline(string):
     return print_format.underline + string + print_format.end
+def hlblack(string):
+    return print_format.hlb + string + print_format.end
 
 # Convert complex number to string in exponential form
 def complex2str( x, precision=None, latex=False ):

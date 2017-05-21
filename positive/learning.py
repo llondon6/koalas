@@ -203,68 +203,82 @@ def positive_romspline(   domain,           # Domain of Map
     min_space = list(space)
     e = []
 
-    #
-    foo = pgreedy()
-
-    while not done:
-        #
-        min_sigma = inf
-        for k in [ a for a in domain_space if not (a in space) ]:
-            # Add a trial point
-            trial_space = list(space)
-            trial_space.append(k)
-            # trial_space.sort()
-            # Apply linear interpolation ON the new domain TO the original domain
-            trial_domain = d[ sorted(trial_space) ]
-            trial_range = r[ sorted(trial_space) ]
-            #
-            sigma = err( weights * (spline( trial_domain, trial_range )( d ) - r) ) / ( err(r) if err(r)!=0 else 1e-8  )
-            # print spline( trial_domain, trial_range, k=3 )( d )
-            # print interp1d( trial_domain, trial_range, kind='cubic' )( d )
-            # raise
-            #
-            if sigma < min_sigma:
-                min_k = k
-                min_sigma = sigma
-                min_space = array( trial_space )
-
-        #
-        e.append(min_sigma)
-
-        #
-        space = list(min_space)
-        #
-        low_enough_error = min_sigma<tol
-        enough_points = len(space) == N
-        done = low_enough_error or enough_points
+    # Define an action for each greedy step
+    def action(trial_space):
+        # Apply interpolation ON the new domain TO the original domain
+        print trial_space
+        trial_domain = d[ sorted(trial_space) ]
+        trial_range = r[ sorted(trial_space) ]
+        # Compute error estimate
+        trial_rom = spline( trial_domain, trial_range )
+        estimator = err( weights * (trial_rom( d ) - r) ) / ( err(r) if err(r)!=0 else 1e-8  )
+        # Trial rom
+        return estimator,trial_rom
+    # Set fixed initial boundary for greedy learning
+    initial_boundary,_ = romline( domain,range_,N=3 )
+    foo = pgreedy(domain_space,action,initial_boundary=initial_boundary,fitatol=tol)
 
     #
-    rom = spline( d[sorted(min_space)], R[sorted(min_space)] )
-    knots = min_space
+    return foo
 
+    # while not done:
+    #     #
+    #     min_sigma = inf
+    #     for k in [ a for a in domain_space if not (a in space) ]:
+    #         # Add a trial point
+    #         trial_space = list(space)
+    #         trial_space.append(k)
+    #         # trial_space.sort()
+    #         # Apply linear interpolation ON the new domain TO the original domain
+    #         trial_domain = d[ sorted(trial_space) ]
+    #         trial_range = r[ sorted(trial_space) ]
+    #         #
+    #         sigma = err( weights * (spline( trial_domain, trial_range )( d ) - r) ) / ( err(r) if err(r)!=0 else 1e-8  )
+    #         # print spline( trial_domain, trial_range, k=3 )( d )
+    #         # print interp1d( trial_domain, trial_range, kind='cubic' )( d )
+    #         # raise
+    #         #
+    #         if sigma < min_sigma:
+    #             min_k = k
+    #             min_sigma = sigma
+    #             min_space = array( trial_space )
     #
-    figure()
-    plot( e )
-    from numpy import arange,log,amax,diff,argmax
-    lknots,lrom = romline( arange(len(e)), log(e), 9 )
-    dlknots = abs(diff(lrom(lknots))/diff(lknots))
-    dlknots /= amax(dlknots)
-    print find(dlknots>0.1)[-1] + 1
-    lknots = lknots[ find(dlknots>0.1)[-1] + 1 ]
-    plot( lknots, e[lknots], 'or', mfc='r', mec='r', alpha=0.8 )
-    yscale('log')
-    show()
+    #     #
+    #     e.append(min_sigma)
+    #
+    #     #
+    #     space = list(min_space)
+    #     #
+    #     low_enough_error = min_sigma<tol
+    #     enough_points = len(space) == N
+    #     done = low_enough_error or enough_points
+    #
+    # #
+    # rom = spline( d[sorted(min_space)], R[sorted(min_space)] )
+    # knots = min_space
+    #
+    # #
+    # figure()
+    # plot( e )
+    # from numpy import arange,log,amax,diff,argmax
+    # lknots,lrom = romline( arange(len(e)), log(e), 9 )
+    # dlknots = abs(diff(lrom(lknots))/diff(lknots))
+    # dlknots /= amax(dlknots)
+    # print find(dlknots>0.1)[-1] + 1
+    # lknots = lknots[ find(dlknots>0.1)[-1] + 1 ]
+    # plot( lknots, e[lknots], 'or', mfc='r', mec='r', alpha=0.8 )
+    # yscale('log')
+    # show()
+    #
+    # knots = knots[:(lknots+1)]
+    # rom = spline( d[sorted(knots)], R[sorted(knots)] )
 
-    knots = knots[:(lknots+1)]
-    rom = spline( d[sorted(knots)], R[sorted(knots)] )
-    # min_sigma = err( weights * (rom( d ) - R) ) / ( err(R) if err(R)!=0 else 1e-8  )
-
-    return knots,rom,min_sigma
+    # return knots,rom,min_sigma
 
 
 
 # Hey, here's a function related to romspline
-def positive_romspline(   domain,           # Domain of Map
+def positive_romspline_old(   domain,           # Domain of Map
                           range_,           # Range of Map
                           tol=1e-2,         # Tolerance of normalized data
                           N = None,         # Optional number of points
@@ -361,6 +375,9 @@ def positive_romspline(   domain,           # Domain of Map
 def apolyfit(x,y,order=None,tol=1e-3):
     #
     from numpy import polyfit,poly1d,std,inf
+
+    #
+    error('Use gmvpfit instead :-) ')
 
     #
     givenorder = False if order is None else True
@@ -514,6 +531,7 @@ def ndflatten( domain_list,      # List of meshgrid arrays
         return flat_domain,flat_range
     else:
         return flat_domain
+
 
 # Multivariate polynomial fitting algorithm
 class mvpolyfit:
@@ -1251,6 +1269,7 @@ class mvpolyfit:
         #
         this.data_label = None
 
+
 # High level Positive greedy algorithm ("Positive" becuase points are added greedily)
 # NOTE that this function answers: Which model basis elements need to be added in order to optimize efffectualness?
 class pgreedy:
@@ -1349,6 +1368,7 @@ class pgreedy:
         if show:
             from matplotlib.pyplot import show
             show()
+
 
 # High level Negative greedy algorithm ("Negative" becuase points are removed greedily)
 # NOTE that this function answers: Which model basis elements can be removed without significantly impacting effectualness?
@@ -1472,6 +1492,7 @@ class ngreedy:
         if show:
             from matplotlib.pyplot import show
             show()
+
 
 
 # Adaptive (Greedy) Multivariate polynomial fitting
