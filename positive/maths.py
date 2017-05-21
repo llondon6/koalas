@@ -1,6 +1,142 @@
 #
 from positive import *
 
+# Smooth 1D data
+# based on https://stackoverflow.com/questions/20618804/how-to-smooth-a-curve-in-the-right-way
+class smooth:
+    '''
+    Smooth 1D data. Initially based on https://stackoverflow.com/questions/20618804/how-to-smooth-a-curve-in-the-right-way
+    '''
+
+    # Class constructor
+    def __init__(this,y,width=None,method=None):
+        # Import useful things
+        from numpy import ones,convolve,mod,hstack,arange,cumsum,mod,array
+        # Handle method input; set default
+        method = 'average' if method is None else method.lower()
+        # Handle n input; default is None which causes method to be auto
+        method = 'auto' if width is None else method
+        # Store relevant inputs to this object
+        this.scalar_range = array(y)
+        this.width = width
+        this.method = method
+        # Handle different methods
+        if method in ('average'):
+            # Use Rolling Average (non convulative)
+            y_smooth = this.__rolling_average__(width)
+        elif method in ('auto','optimal'):
+            # Automatically determine best smoothing length to use with average
+            y_smooth = this.__auto_smooth__()
+        else:
+            error('unknown smoothing method requested: %s'%red(method))
+        #
+        this.answer = y_smooth
+
+    # Smooth using moving average of available pionts
+    def __rolling_average__(this,width):
+        # Import useful things
+        from numpy import ones,mod,array
+        ''' Use a rolling average '''
+        # NOTE: I tried using convolution, but it didnt handle general boundary conditions well; so I wrote my own algo
+        if width > 0:
+            width = int(width+mod(width,2))/2
+            z = array(this.scalar_range)
+            for k in range(len(z)):
+                #
+                a = max(0,k-width)
+                b = min(len(this.scalar_range),k+width)
+                s = min( k-a, b-k )
+                a,b = k-s,k+s
+                z[k] = sum( this.scalar_range[a:b] ) / (b-a) if b>a else this.scalar_range[k]
+        else:
+            z = this.scalar_range
+        #
+        ans = z
+        return ans
+
+    # Automatically determine best smoothing length to use with average
+    def __auto_smooth__(this):
+        '''Automatically determine best smoothing length to use with average'''
+        # Import useful things
+        from numpy import ones,convolve,mod,hstack,arange,cumsum,mod,array
+        from numpy import poly1d,polyfit,std,argmin
+
+        #
+        err,smo = [],[]
+        width_range = range(3,min(100,int(len(this.scalar_range)/2)))
+        #
+        for j,k in enumerate(width_range):
+            smo.append( smooth(this.scalar_range,k,method='average').answer )
+            err.append( (std( this.scalar_range - smo[-1] )/std(this.scalar_range))**2 )
+        #
+        modeled_err = poly1d( polyfit(width_range,err,2) )(width_range)
+        k = argmin( modeled_err )
+        best_width = width_range[k] if k>0 else 3
+        #
+        y_smooth = smooth(this.scalar_range,best_width,method='average').answer
+        #
+        this.raw_error = err
+        this.modeled_error = modeled_err
+        this.trial_answers = smo
+        this.width_range = width_range
+        this.width = best_width
+        #
+        ans = y_smooth
+        return ans
+
+    # Plotting function
+    def plot(this):
+        # Import useful things
+        import matplotlib as mpl
+        mpl.rcParams['lines.linewidth'] = 0.8
+        mpl.rcParams['font.family'] = 'serif'
+        mpl.rcParams['font.size'] = 12
+        mpl.rcParams['axes.labelsize'] = 16
+        mpl.rcParams['axes.titlesize'] = 16
+        from matplotlib.pyplot import plot,figure,title,xlabel,ylabel,legend,subplots,gca,sca,xlim,title,subplot
+        from numpy import array,arange,argmin
+        #
+        if this.method in ('auto'):
+            #
+            fsz = 1.2*array([12,4])
+            fig1 = figure( figsize=fsz )
+            subplot(1,2,1)
+            plot( this.scalar_range,'ok',alpha=0.5)
+            xlim( lim(arange(len(this.scalar_range))) )
+            clr = rgb( len(this.width_range), jet=True, reverse=True )
+            for j,k in enumerate(this.width_range):
+                plot( this.trial_answers[j], color = clr[j], alpha=0.2 )
+            #
+            plot( this.answer, '-k' )
+            xlabel('$x$')
+            ylabel('$y(x)$')
+            title('Method = "%s"'%this.method)
+            #
+            subplot(1,2,2)
+            plot( this.width_range, this.raw_error, 'k', alpha=0.5 )
+            plot( this.width_range, this.modeled_error, 'g' )
+            k = argmin( this.modeled_error )
+            best_n = this.width_range[k] if k>0 else 0
+            plot( this.width_range[k], this.modeled_error[k], 'og', mec='none' )
+            xlim( lim(this.width_range) )
+            xlabel('$x$')
+            ylabel('error for $y(x)$')
+            title('Smoothed with $width = %d$'%this.width)
+        else:
+            fsz = 1.2*array([6,4])
+            fig = figure( figsize=fsz )
+            #
+            x = arange(len(this.scalar_range))
+            y = this.scalar_range
+            plot(x, y,'ok',alpha=0.3,label='Input Data')
+            plot(x, this.answer, 'r', label='Smoothed Data' )
+            xlim( lim(x) )
+            xlabel('$x$')
+            ylabel('$y(x)$')
+            legend(frameon=False)
+            title('Smoothed with $width = %d$'%this.width)
+
+
 # custome function for setting desirable ylimits
 def pylim( x, y, axis='both', domain=None, symmetric=False, pad_y=0.1 ):
     '''Try to automatically determine nice xlim and ylim settings for the current axis'''
@@ -193,7 +329,10 @@ def single_outsider( A ):
 def lim(x):
 
     # Import useful bit
-    from numpy import array,amin,amax
+    from numpy import array,amin,amax,ndarray
+
+    # ensure is array
+    if not isinstance(x,ndarray): x = array(x)
 
     # Columate input.
     z = x.reshape((x.size,))

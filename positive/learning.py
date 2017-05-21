@@ -155,21 +155,14 @@ def positive_romline(   domain,           # Domain of Map
     return knots,rom,min_sigma
 
 
-
-#
-def romspline( domain, range_,tol=1e-2,N=None,verbose=False ):
-    #
-    knots,rom,min_sigma = positive_romspline( domain, range_,tol=1e-2,N=None,verbose=False )
-    return None
-
-
-
 # Hey, here's a function related to romspline
-def positive_romspline(   domain,           # Domain of Map
-                          range_,           # Range of Map
-                          tol=1e-2,         # Tolerance of normalized data
-                          N = None,         # Optional number of points
-                          verbose = False ):
+def romspline(   domain,           # Domain of Map
+                 range_,           # Range of Map
+                 tol=1e-4,         # HALTING tolerance of normalized data
+                 N = None,         # Optional number of points
+                 weights=None,     # Optional weights for error estimation
+                 use_smoothing = False, # Optional toggle to spline auto smoothed data
+                 verbose = False ):
 
     # Use an interpolator, and a reverse greedy process
     from numpy import interp, linspace, array, inf, arange, mean, zeros, std, argmax, argmin, amin, amax, ones
@@ -180,7 +173,7 @@ def positive_romspline(   domain,           # Domain of Map
 
     # Domain and range shorthand
     d = domain
-    R = range_
+    R = range_ if not use_smoothing else smooth(range_).answer
 
     # Some basic validation
     if len(d) != len(R):
@@ -191,220 +184,38 @@ def positive_romspline(   domain,           # Domain of Map
     # Normalize Data
     R0,R1 = mean(R), std(R)
     r = (R-R0)/R1
-    #
-    # weights = (r-amin(r)) / amax( r-amin(r) )
-    weights = ones( d.size )
+    # Handle weights input
+    weights = ones( d.size ) if weights is None else weights
+    if weights.shape != range_.shape:
+        error('weights and range should one-to-one in reference --> they should at have the same shape')
 
     #
-    done = False
-    space,_ = romline( domain,range_,N=3 )
     domain_space = range(len(d))
-    err = lambda x: std(x) # mean( abs(x) ) # std(x) #
-    min_space = list(space)
-    e = []
+    err = lambda x: std(x)**2
 
     # Define an action for each greedy step
     def action(trial_space):
         # Apply interpolation ON the new domain TO the original domain
-        print trial_space
         trial_domain = d[ sorted(trial_space) ]
         trial_range = r[ sorted(trial_space) ]
         # Compute error estimate
         trial_rom = spline( trial_domain, trial_range )
         estimator = err( weights * (trial_rom( d ) - r) ) / ( err(r) if err(r)!=0 else 1e-8  )
         # Trial rom
-        return estimator,trial_rom
+        answer = ( trial_space, spline( trial_domain, R[ sorted(trial_space) ] ) )
+        return estimator,answer
+
     # Set fixed initial boundary for greedy learning
     initial_boundary,_ = romline( domain,range_,N=3 )
-    foo = pgreedy(domain_space,action,initial_boundary=initial_boundary,fitatol=tol)
+    A = pgreedy(domain_space,action,initial_boundary=initial_boundary,fitatol=tol,verbose=verbose)
 
-    #
-    return foo
+    # Apply a negative greedy process to futher refine the symbol content
+    boundary = A.boundary
+    est_list = A.estimator_list
+    B = ngreedy( boundary, action, verbose = verbose, ref_est_list = est_list )
 
-    # while not done:
-    #     #
-    #     min_sigma = inf
-    #     for k in [ a for a in domain_space if not (a in space) ]:
-    #         # Add a trial point
-    #         trial_space = list(space)
-    #         trial_space.append(k)
-    #         # trial_space.sort()
-    #         # Apply linear interpolation ON the new domain TO the original domain
-    #         trial_domain = d[ sorted(trial_space) ]
-    #         trial_range = r[ sorted(trial_space) ]
-    #         #
-    #         sigma = err( weights * (spline( trial_domain, trial_range )( d ) - r) ) / ( err(r) if err(r)!=0 else 1e-8  )
-    #         # print spline( trial_domain, trial_range, k=3 )( d )
-    #         # print interp1d( trial_domain, trial_range, kind='cubic' )( d )
-    #         # raise
-    #         #
-    #         if sigma < min_sigma:
-    #             min_k = k
-    #             min_sigma = sigma
-    #             min_space = array( trial_space )
-    #
-    #     #
-    #     e.append(min_sigma)
-    #
-    #     #
-    #     space = list(min_space)
-    #     #
-    #     low_enough_error = min_sigma<tol
-    #     enough_points = len(space) == N
-    #     done = low_enough_error or enough_points
-    #
-    # #
-    # rom = spline( d[sorted(min_space)], R[sorted(min_space)] )
-    # knots = min_space
-    #
-    # #
-    # figure()
-    # plot( e )
-    # from numpy import arange,log,amax,diff,argmax
-    # lknots,lrom = romline( arange(len(e)), log(e), 9 )
-    # dlknots = abs(diff(lrom(lknots))/diff(lknots))
-    # dlknots /= amax(dlknots)
-    # print find(dlknots>0.1)[-1] + 1
-    # lknots = lknots[ find(dlknots>0.1)[-1] + 1 ]
-    # plot( lknots, e[lknots], 'or', mfc='r', mec='r', alpha=0.8 )
-    # yscale('log')
-    # show()
-    #
-    # knots = knots[:(lknots+1)]
-    # rom = spline( d[sorted(knots)], R[sorted(knots)] )
-
-    # return knots,rom,min_sigma
-
-
-
-# Hey, here's a function related to romspline
-def positive_romspline_old(   domain,           # Domain of Map
-                          range_,           # Range of Map
-                          tol=1e-2,         # Tolerance of normalized data
-                          N = None,         # Optional number of points
-                          verbose = False ):
-
-    # Use an interpolator, and a reverse greedy process
-    from numpy import interp, linspace, array, inf, arange, mean, zeros, std, argmax, argmin, amin, amax, ones
-    from scipy.interpolate import InterpolatedUnivariateSpline as spline
-    from scipy.interpolate import interp1d
-    from matplotlib.pyplot import plot,show,figure,xlabel,ylabel,legend,yscale
-
-    # Domain and range shorthand
-    d = domain
-    R = range_
-
-    # Some basic validation
-    if len(d) != len(R):
-        raise(ValueError,'length of domain (of len %i) and range (of len %i) mus be equal'%(len(d),len(R)))
-    if len(d)<3:
-        raise(ValueError,'domain length is less than 3. it must be longer for a romline porcess to apply. domain is %s'%domain)
-
-    # Normalize Data
-    R0,R1 = mean(R), std(R)
-    r = (R-R0)/R1
-    #
-    # weights = (r-amin(r)) / amax( r-amin(r) )
-    weights = ones( d.size )
-
-    #
-    done = False
-    space,_ = romline( domain,range_,N=3 )
-    domain_space = range(len(d))
-    err = lambda x: std(x) # mean( abs(x) ) # std(x) #
-    min_space = list(space)
-    e = []
-    while not done:
-        #
-        min_sigma = inf
-        for k in [ a for a in domain_space if not (a in space) ]:
-            # Add a trial point
-            trial_space = list(space)
-            trial_space.append(k)
-            # trial_space.sort()
-            # Apply linear interpolation ON the new domain TO the original domain
-            trial_domain = d[ sorted(trial_space) ]
-            trial_range = r[ sorted(trial_space) ]
-            #
-            sigma = err( weights * (spline( trial_domain, trial_range )( d ) - r) ) / ( err(r) if err(r)!=0 else 1e-8  )
-            # print spline( trial_domain, trial_range, k=3 )( d )
-            # print interp1d( trial_domain, trial_range, kind='cubic' )( d )
-            # raise
-            #
-            if sigma < min_sigma:
-                min_k = k
-                min_sigma = sigma
-                min_space = array( trial_space )
-
-        #
-        e.append(min_sigma)
-
-        #
-        space = list(min_space)
-        #
-        low_enough_error = min_sigma<tol
-        enough_points = len(space) == N
-        done = low_enough_error or enough_points
-
-    #
-    rom = spline( d[sorted(min_space)], R[sorted(min_space)] )
-    knots = min_space
-
-    #
-    figure()
-    plot( e )
-    from numpy import arange,log,amax,diff,argmax
-    lknots,lrom = romline( arange(len(e)), log(e), 9 )
-    dlknots = abs(diff(lrom(lknots))/diff(lknots))
-    dlknots /= amax(dlknots)
-    print find(dlknots>0.1)[-1] + 1
-    lknots = lknots[ find(dlknots>0.1)[-1] + 1 ]
-    plot( lknots, e[lknots], 'or', mfc='r', mec='r', alpha=0.8 )
-    yscale('log')
-    show()
-
-    knots = knots[:(lknots+1)]
-    rom = spline( d[sorted(knots)], R[sorted(knots)] )
-    # min_sigma = err( weights * (rom( d ) - R) ) / ( err(R) if err(R)!=0 else 1e-8  )
-
-    return knots,rom,min_sigma
-
-
-
-#
-def apolyfit(x,y,order=None,tol=1e-3):
-    #
-    from numpy import polyfit,poly1d,std,inf
-
-    #
-    error('Use gmvpfit instead :-) ')
-
-    #
-    givenorder = False if order is None else True
-
-    #
-    done = False; k = 0; ordermax = len(x)-1; oldr = inf
-    while not done:
-
-        order = k if givenorder is False else order
-        fit = poly1d(polyfit(x,y,order))
-        r = std( fit(x)-y ) / ( std(y) if std(y)>1e-15 else 1.0 )
-        k += 1
-
-        dr = oldr-r # ideally dr > 0
-
-        if order==ordermax:
-            done = True
-        if dr <= tol:
-            done = True
-        if dr < 0:
-            done = True
-
-        if givenorder:
-            done = True
-
-    #
-    return fit
+    # Return an answer
+    return B # knots,rom,min_sigma
 
 
 # Simple combinatoric function -- number of ways to select k of n when order doesnt matter
@@ -1292,7 +1103,7 @@ class pgreedy:
         if verbose: print '\n############################################\n# Applying a Positive Greedy Algorithm\n############################################\n'
 
         # The positive greedy process will move information from the bulk to the boundary based upon interactions with the input data
-        boundary= [] if initial_boundary is None else initial_boundary
+        boundary= [] if initial_boundary is None else list(initial_boundary)
         # Ensure that starting bulk and boundary are disjoint
         bulk = list( set(bulk).difference(set(initial_boundary)) ) if not ( initial_boundary is None ) else bulk
 
@@ -1343,7 +1154,7 @@ class pgreedy:
                 itercount += 1
                 print '\n%sIteration #%i (Positive Greedy)\n%s' % ( 'Final ' if done else '', itercount, 12*'---' )
                 print '>> The current estimator value is %1.4e' % min_est
-                print '>> %s was added to the boundary' % ( min_term if isinstance(min_term,(list,str,ndarray)) else (list(min_term) if not (min_term is None) else 'Nothing' ) )
+                print '>> %s was added to the boundary' % ( min_term if isinstance(min_term,(list,str,ndarray)) else (str(min_term) if not (min_term is None) else 'Nothing' ) )
                 print '>> This caused the estimator value to change by %f' % d_est
                 print '>> The current boundary is %s' % boundary
                 if done: print state_msg
@@ -1460,7 +1271,7 @@ class ngreedy:
             if verbose:
                 print '>> min_estimator = %1.4e' % min_est
                 if not done:
-                    print '>> "%s" was removed from the boundary.' % ( min_term if isinstance(min_term,(list,str,ndarray)) else list(min_term) )
+                    print '>> "%s" was removed from the boundary.' % ( min_term if isinstance(min_term,(list,str,ndarray)) else str(min_term) )
                     print '>> As a result, the estimator value changed by %f. The tolerance for this change is %f' % (d_est,fitatol)
                 print '>> The current boundary = %s' % boundary
                 if done: print state_msg
