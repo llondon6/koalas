@@ -443,7 +443,7 @@ class mvpolyfit:
     def __fit__(this):
 
         # Import usefuls
-        from numpy import array,dot
+        from numpy import array,dot,mean,std
         from numpy.linalg import pinv,lstsq
 
         #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
@@ -458,12 +458,25 @@ class mvpolyfit:
         # Extract the forward domain map to apply before least-squares
         U = this.range_map['forward']
 
+        # Center and adjust range
+        mapped_range = U(this.domain,this.range)
+        u = mean( mapped_range )
+        v =  std( mapped_range )
+        centered_adjusted_range = ( mapped_range - u ) / v
+
         # Estimate the coefficients of the basis symbols
-        a = dot( Q, U(this.domain,this.range) )
+        a = dot( Q, centered_adjusted_range )
+        # a = dot( Q, U(this.domain,this.range) )
 
         # # Largely the same as above, but in certain circumstances, a more complicated approach is taken -- line kept for future consideration
         # a = lstsq( P,U(this.domain,this.range) )[0]
         # print a
+
+        # NOTE that a[0] corresponds to a constant term; see this.__validate_inputs__ for handling of 'K' in this.basis_symbols
+
+        # Un-center and un-scale
+        a *= v
+        a[0] += u
 
         # Store the fit coefficients
         this.coeffs = a
@@ -986,7 +999,7 @@ class mvpolyfit:
     def __validate_inputs__(this,domain,scalar_range,basis_symbols,labels,range_map,data_label):
 
         # Import usefuls
-        from numpy import ndarray,isfinite,complex256,float128,double
+        from numpy import ndarray,isfinite,complex256,float128,double,mean,std
 
         #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
         ''' Validate the domain: '''
@@ -1067,12 +1080,17 @@ class mvpolyfit:
         # Get unique values
         basis_symbols = list( set(basis_symbols) )
         basis_symbols = sorted( basis_symbols, key=lambda k: len(k) )
-        if 'K' in basis_symbols:
-            basis_symbols = ['K'] + [ s for s in basis_symbols if s!='K' ]
+        # Ensure that the first entry is the constant term. This is important for centering.
+        basis_symbols = ['K'] + [ s for s in basis_symbols if s!='K' ]
 
         # Store low level inputs (More items are stored later)
-        this.domain = domain
+        # this.__raw_range__ = scalar_range
+        # this.range_mean = mean(this.__raw_range__)
+        # this.range_std = std(this.__raw_range__)
+        # this.range = (this.__raw_range__ - this.range_mean) / this.range_std
         this.range = scalar_range
+        #
+        this.domain = domain
         this.basis_symbols = basis_symbols
         this.labels = {} if labels is None else labels
         this.range_map = range_map
@@ -1150,8 +1168,8 @@ class pgreedy:
             if plotfun and plot: plotfun(ans)
 
             #
+            itercount += 1
             if verbose:
-                itercount += 1
                 print '\n%sIteration #%i (Positive Greedy)\n%s' % ( 'Final ' if done else '', itercount, 12*'---' )
                 print '>> The current estimator value is %1.4e' % min_est
                 print '>> %s was added to the boundary' % ( min_term if isinstance(min_term,(list,str,ndarray)) else (str(min_term) if not (min_term is None) else 'Nothing' ) )
@@ -1314,7 +1332,7 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
              mindeg = 1,          # minimum degree to consider for tempering
              plot = False,        # Toggle plotting
              show = False,        # Toggle for showing plots as they are created
-             fitatol  = 1e-3,     # Tolerance in fractional chance in estimator
+             fitatol  = 1e-2,     # Tolerance in fractional chance in estimator
              permanent_symbols = None,  # If given, these symbols (compatible with mvpfit) will always be used in the final fit
              initial_boundary = None,   # Seed boundary for positive greedy process
              apply_negative = True,     # Toggle for the application of a negtative greedy algorithm following the positive one. This is set true by default to handle overmodelling.
@@ -1336,7 +1354,7 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
 
     # Let the people know about the apply_negative input
     if verbose and (not apply_negative):
-        msg = 'Found %s. The negative greedy step will not be applied. Please consider turing the option on (its true by default) to investigate whether the result of the positive greedy algorithm is over-modeled.' % cyan("apply_negative = True")
+        msg = 'Found %s. The negative greedy step will not be applied. Please consider turning the option on (its true by default) to investigate whether the result of the positive greedy algorithm is over-modeled.' % cyan("apply_negative = True")
         alert(msg)
 
     # Validate the range map; set to identitiy op if none given
@@ -1386,6 +1404,7 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
             alert(msg)
 
         # Apply a positive greedy process to estimate the optimal model's symbol content (i.e. "boundary", the greedy process moves symbols from the bulk to the boundary)
+        # A_ = pgreedy( bulk, action, fitatol=fitatol, initial_boundary=initial_boundary, verbose = True  )
         A_ = pgreedy( bulk, action, fitatol=fitatol, initial_boundary=initial_boundary, verbose = verbose if (not temper) else False  )
 
         # Meter the stopping condition

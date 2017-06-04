@@ -2,7 +2,6 @@
 from positive import *
 
 # Smooth 1D data
-# based on https://stackoverflow.com/questions/20618804/how-to-smooth-a-curve-in-the-right-way
 class smooth:
     '''
     Smooth 1D data. Initially based on https://stackoverflow.com/questions/20618804/how-to-smooth-a-curve-in-the-right-way
@@ -63,11 +62,11 @@ class smooth:
 
         #
         err,smo = [],[]
-        width_range = range(3,min(100,int(len(this.scalar_range)/2)))
+        width_range = range(3,min(50,int(len(this.scalar_range)/2)))
         #
         for j,k in enumerate(width_range):
             smo.append( smooth(this.scalar_range,k,method='average').answer )
-            err.append( (std( this.scalar_range - smo[-1] )/std(this.scalar_range))**2 )
+            err.append( std( this.scalar_range - smo[-1] )/std(this.scalar_range) )
         #
         modeled_err = poly1d( polyfit(width_range,err,2) )(width_range)
         k = argmin( modeled_err )
