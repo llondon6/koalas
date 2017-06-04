@@ -458,7 +458,7 @@ class mvpolyfit:
         # Extract the forward domain map to apply before least-squares
         U = this.range_map['forward']
 
-        # Center and adjust range
+        # Center and adjust range values
         mapped_range = U(this.domain,this.range)
         u = mean( mapped_range )
         v =  std( mapped_range )
@@ -466,17 +466,12 @@ class mvpolyfit:
 
         # Estimate the coefficients of the basis symbols
         a = dot( Q, centered_adjusted_range )
-        # a = dot( Q, U(this.domain,this.range) )
 
-        # # Largely the same as above, but in certain circumstances, a more complicated approach is taken -- line kept for future consideration
-        # a = lstsq( P,U(this.domain,this.range) )[0]
-        # print a
-
-        # NOTE that a[0] corresponds to a constant term; see this.__validate_inputs__ for handling of 'K' in this.basis_symbols
-
-        # Un-center and un-scale
+        # Un-center and un-scale, thus return to original (mapped by U) feature space
         a *= v
         a[0] += u
+
+        # NOTE that a[0] corresponds to a constant term; see this.__validate_inputs__ for handling of 'K' in this.basis_symbols
 
         # Store the fit coefficients
         this.coeffs = a
