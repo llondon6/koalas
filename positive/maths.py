@@ -826,7 +826,103 @@ def ishift( h, di ):
     return ans
 
 
+#
+def intrp_max_dev( y, domain=None, verbose=False, return_argmax=False ):
+
+    #
+    from scipy.interpolate import InterpolatedUnivariateSpline as spline
+    from scipy.optimize import minimize
+    from numpy import linspace,argmax,arange,hstack,diff
+
+    #
+    x = range(len(y)) if domain is None else domain
+
+    # Get location of max
+    maxdex = argmax(y)
+    NumMax = y[maxdex]
+
+    # Define number of points left and right of max to use for interpolation
+    pad = 3
+
+    # Define the index domain to be used for intrpolation.
+    # NOTE that circular boundar considitons are assumed for the input data.
+    leftdex = maxdex-pad
+    rightdex = maxdex+pad
+    RawIntrpDomain = arange(leftdex,rightdex)
+    CenterValidDomain = RawIntrpDomain[ (RawIntrpDomain>=0) & (RawIntrpDomain<len(y)) ]
+    LeftValidDomain = RawIntrpDomain[ RawIntrpDomain<0 ] + len(y)-1
+    RightValidDomain = RawIntrpDomain[ RawIntrpDomain>(len(y)-1) ] - (len(y)-1)
+    IntrpDomain =hstack( [LeftValidDomain ,CenterValidDomain ,RightValidDomain] )
+
+    # Check for and Impose Symmetry of Interpolating region on Range
+    IntrpRange = y[IntrpDomain]
+    dy = diff(IntrpRange)
+    dyref = 0.8*min( [ dy[0], -dy[-1] ] )
+    LeftA,RightA = IntrpRange[0], IntrpRange[-1]
+    TakeSpan = range(0,len(IntrpRange)) # Default value. See usage below.
+    if abs(LeftA-RightA)>dyref: # If the range is asymmetric
+    	# Something is going to be removed for the sake of symmetry.
+    	if LeftA<RightA :
+    		# Alert["--> Removing the Left point."]
+    		TakeSpan = range(1,len(IntrpRange))
+        elif LeftA>RightA:
+    		# Alert[" ... Removing the Right point."]
+			TakeSpan = range(0,len(IntrpRange)-1)
+
+        IntrpRange  = IntrpRange[TakeSpan]
+        IntrpDomain = IntrpDomain[TakeSpan]
+        RawIntrpDomain = RawIntrpDomain[TakeSpan]
+		# Else, check for double-max asymmetry
+    elif min(abs(dy))<0.1*dyref:
+        # Alert["Something is going to be removed for the sake of symmetry. This is a symmetric numerical max case."]
+        if abs( y[maxdex]-y[ mod(maxdex+1,len(y)) ] ) == min(abs(dy)) :
+        	# Alert["--> Removing the Left point."]
+        	TakeSpan = range(1,len(IntrpRange))
+        elif abs( y[maxdex]-y[ mod(maxdex-1,len(y)) ] ) == min(abs(dy)) :
+        	# Alert[" ... Removing the Right point."]
+        	TakeSpan = range(0,len(IntrpRange)-1)
+        #
+        IntrpRange  = IntrpRange[TakeSpan]
+        IntrpDomain = IntrpDomain[TakeSpan]
+        RawIntrpDomain = RawIntrpDomain[TakeSpan]
+
+    # Perform the Interpolation
+    IntrpAfun = spline( range(len(IntrpRange)), IntrpRange, k=4 )
+    FineDomain = linspace( 0, len(IntrpDomain)-1, 2e2 ) # Table[k,{k,1,Length@IntrpDomain,0.01}]
+    IntrpA = IntrpAfun( FineDomain ) # Table[{k,IntrpAfun[k]},{k,FineDomain}]
+
+    # Determine the interpolated max, and the related ArgMax
+    IntrpMaxDex = argmax(IntrpA) # Ordering[IntrpA[[,2]],-1][[1]]
+    AMax = IntrpA[IntrpMaxDex] # IntrpA[[IntrpMaxDex,2]]
+    print IntrpA[IntrpMaxDex]
+    print AMax
+    MaxDex = spline( range(len(IntrpRange)), range(len(IntrpRange)) )(IntrpMaxDex) # IntrpA[IntrpMaxDex,1]
+	# This line is a little tricky: the interpolated argmax  lives in the index domain of the RawIntrpDomain. RawIntrpDomain shares an index domain with IntrpDomain which is used to define FineDomain, of which MaxDex is a member.
+    IntrpArgMax = spline(range(len(RawIntrpDomain)),RawIntrpDomain)(MaxDex)
+
+    #
+    if return_argmax:
+        ans = (AMax,IntrpArgMax)
+    else:
+        ans = maxval
+
+    #
+    from matplotlib.pyplot import plot,xlim,ylim,title,show,gca
+    plot(y,'bo',mfc='none')
+    plot(IntrpDomain,y[IntrpDomain],'vk')
+    plot( MaxDex,AMax, 'sk' )
+    plot( IntrpA )
+    # plot( FineDomain, IntrpAfun(FineDomain),'k',alpha=0.5 )
+    # plot( xmax, yspline(xmax), 'or', mfc='none' )
+    show()
+
+    #
+    return ans
+
+
+
 # Find the interpolated global max location of a data series
+# NOTE that this version does not localize around numerical max of input; this is a bad thing
 def intrp_argmax( y,
                   domain=None,
                   verbose=False ):
@@ -840,6 +936,7 @@ def intrp_argmax( y,
 
 
 # Find the interpolated global max location of a data series
+# NOTE that this version does not localize around numerical max of input; this is a bad thing
 def intrp_max( y,
                domain=None,
                verbose=False, return_argmax=False ):
@@ -861,14 +958,30 @@ def intrp_max( y,
     # NOTE that we use minimize with bounds as it was found to have better behavior than fmin with no bounding
     x0 = x[k]
     f = lambda X: -yspline(X)
-    q = minimize(f,x0,bounds=[(x0-10,x0+10)])
+    dx = 0.1*x0
+    q = minimize(f,x0,bounds=[(max(x0-dx,min(x)),min(x0+dx,max(x)))])
     xmax = q.x[0]
 
     #
-    if return_argmax:
-        ans = (yspline(xmax),xmax)
+    if yspline(xmax)<max(y):
+        # warning('yspline(xmax)<max(y): spline optimization failed; now taking numerical max of input series')
+        maxval = max(y)
     else:
-        ans = yspline(xmax)
+        maxval = yspline(xmax)
+
+    #
+    if return_argmax:
+        ans = (maxval,xmax)
+    else:
+        ans = maxval
+
+    # #
+    # from matplotlib.pyplot import plot,xlim,ylim,title,show,gca
+    # plot(x,y,'bo',mfc='none')
+    # x_ = linspace(min(x),max(x),2e2)
+    # plot( x_,yspline(x_),'k',alpha=0.5 )
+    # plot( xmax, yspline(xmax), 'or', mfc='none' )
+    # show()
 
     #
     return ans

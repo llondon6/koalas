@@ -350,7 +350,7 @@ class mvpolyfit:
     # Low Level Multivariate Polynomial Fitting
     ---
 
-    fit_object = mvpolyfilt( ... )
+    fit_object = mvpolyfit( ... )
 
     ## Inputs
 
@@ -720,7 +720,7 @@ class mvpolyfit:
         # ax.plot_trisurf(domain[:,0], domain[:,1], _map(this.eval( domain )), triangles=tri.simplices, color='none', edgecolor='k' )
 
         # Setup grid points for model
-        padf = 0.05
+        padf = 0.1
         dx = ( max(this.domain[:,0])-min(this.domain[:,0]) ) * padf
         dy = ( max(this.domain[:,1])-min(this.domain[:,1]) ) * padf
         fitx = linspace( min(this.domain[:,0])-dx, max(this.domain[:,0])+dx, 20 )
@@ -1092,6 +1092,14 @@ class mvpolyfit:
 
         #
         this.data_label = None
+
+
+#
+class mvratifit(mvpolyfit):
+
+    #
+    def __init__(this):
+        return None
 
 
 # High level Positive greedy algorithm ("Positive" becuase points are added greedily)

@@ -22,7 +22,12 @@ def rgb( N,                     #
          jet        = False,    #
          reverse    = False,    #
          weights    = None,     #
+         grayscale  = None,     #
          verbose    = None ):   #
+
+    '''
+    Function to produce array of color vectors.
+    '''
 
     #
     from numpy import array,pi,sin,arange,linspace,amax
@@ -78,10 +83,14 @@ def rgb( N,                     #
     for t in t_range:
 
         #
-        R = r*sin( w*t                + shift )
-        G = g*sin( w*t*speed + offset + shift )
-        B = b*sin( w*t + pi/2         + shift )
-
+        if not grayscale:
+            R = r*sin( w*t                + shift )
+            G = g*sin( w*t*speed + offset + shift )
+            B = b*sin( w*t + pi/2         + shift )
+        else:
+            R = r*t
+            G = g*t
+            B = b*t
         #
         clr.append( abs(R+G+B) )
 
