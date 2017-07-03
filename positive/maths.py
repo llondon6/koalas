@@ -960,7 +960,7 @@ def intrp_max( y, domain=None, verbose=False, return_argmax=False, plot = False,
 
     #
     if return_argmax:
-        ans = (max_val,arg_max)
+        ans = (max_val,float(arg_max))
     else:
         ans = max_val
 
