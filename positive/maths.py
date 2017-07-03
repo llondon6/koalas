@@ -826,95 +826,143 @@ def ishift( h, di ):
     return ans
 
 
-#
-def intrp_max_dev( y, domain=None, verbose=False, return_argmax=False ):
+# Find the interpolated global max location of a data series
+def intrp_max( y, domain=None, verbose=False, return_argmax=False, plot = False, pad = 3 ):
 
     #
-    from scipy.interpolate import InterpolatedUnivariateSpline as spline
+    from scipy.interpolate import UnivariateSpline as spline
     from scipy.optimize import minimize
-    from numpy import linspace,argmax,arange,hstack,diff
+    from numpy import linspace,argmax,arange,hstack,diff,argmax,argmin,mod,array
+    #
+    PLOT = plot
+    if PLOT: from matplotlib.pyplot import plot,show,xlim,ylim,xlabel,ylabel,title,figure
+
 
     #
-    x = range(len(y)) if domain is None else domain
+    t = range(len(y)) if domain is None else domain
 
-    # Get location of max
-    maxdex = argmax(y)
-    NumMax = y[maxdex]
-
-    # Define number of points left and right of max to use for interpolation
-    pad = 3
-
-    # Define the index domain to be used for intrpolation.
-    # NOTE that circular boundar considitons are assumed for the input data.
-    leftdex = maxdex-pad
-    rightdex = maxdex+pad
-    RawIntrpDomain = arange(leftdex,rightdex)
-    CenterValidDomain = RawIntrpDomain[ (RawIntrpDomain>=0) & (RawIntrpDomain<len(y)) ]
-    LeftValidDomain = RawIntrpDomain[ RawIntrpDomain<0 ] + len(y)-1
-    RightValidDomain = RawIntrpDomain[ RawIntrpDomain>(len(y)-1) ] - (len(y)-1)
-    IntrpDomain =hstack( [LeftValidDomain ,CenterValidDomain ,RightValidDomain] )
-
-    # Check for and Impose Symmetry of Interpolating region on Range
-    IntrpRange = y[IntrpDomain]
-    dy = diff(IntrpRange)
-    dyref = 0.8*min( [ dy[0], -dy[-1] ] )
-    LeftA,RightA = IntrpRange[0], IntrpRange[-1]
-    TakeSpan = range(0,len(IntrpRange)) # Default value. See usage below.
-    if abs(LeftA-RightA)>dyref: # If the range is asymmetric
-    	# Something is going to be removed for the sake of symmetry.
-    	if LeftA<RightA :
-    		# Alert["--> Removing the Left point."]
-    		TakeSpan = range(1,len(IntrpRange))
-        elif LeftA>RightA:
-    		# Alert[" ... Removing the Right point."]
-			TakeSpan = range(0,len(IntrpRange)-1)
-
-        IntrpRange  = IntrpRange[TakeSpan]
-        IntrpDomain = IntrpDomain[TakeSpan]
-        RawIntrpDomain = RawIntrpDomain[TakeSpan]
-		# Else, check for double-max asymmetry
-    elif min(abs(dy))<0.1*dyref:
-        # Alert["Something is going to be removed for the sake of symmetry. This is a symmetric numerical max case."]
-        if abs( y[maxdex]-y[ mod(maxdex+1,len(y)) ] ) == min(abs(dy)) :
-        	# Alert["--> Removing the Left point."]
-        	TakeSpan = range(1,len(IntrpRange))
-        elif abs( y[maxdex]-y[ mod(maxdex-1,len(y)) ] ) == min(abs(dy)) :
-        	# Alert[" ... Removing the Right point."]
-        	TakeSpan = range(0,len(IntrpRange)-1)
+    #
+    if PLOT:
         #
-        IntrpRange  = IntrpRange[TakeSpan]
-        IntrpDomain = IntrpDomain[TakeSpan]
-        RawIntrpDomain = RawIntrpDomain[TakeSpan]
+        ts = linspace( min(t), max(t), 2e2 )
+        ys = spline(t,y,s=0,k=4)(ts)
+        #
+        clr= rgb(3)
+        #
+        fig1 = figure()
+        plot( t,y, 'ok' )
+        plot( ts,ys, color=clr[0], linestyle='--' )
+        #
+        dy = diff( lim(y) )*0.1
+        ylim( array([-1,1])*dy + lim(y) )
+        xlim( lim(t) )
+        #
+        xlabel('domain')
+        ylabel('range')
 
-    # Perform the Interpolation
-    IntrpAfun = spline( range(len(IntrpRange)), IntrpRange, k=4 )
-    FineDomain = linspace( 0, len(IntrpDomain)-1, 2e2 ) # Table[k,{k,1,Length@IntrpDomain,0.01}]
-    IntrpA = IntrpAfun( FineDomain ) # Table[{k,IntrpAfun[k]},{k,FineDomain}]
+    #
+    k_max = argmax( y )
+    t_max = t[k_max]
+    y_max = y[k_max]
 
-    # Determine the interpolated max, and the related ArgMax
-    IntrpMaxDex = argmax(IntrpA) # Ordering[IntrpA[[,2]],-1][[1]]
-    AMax = IntrpA[IntrpMaxDex] # IntrpA[[IntrpMaxDex,2]]
-    print IntrpA[IntrpMaxDex]
-    print AMax
-    MaxDex = spline( range(len(IntrpRange)), range(len(IntrpRange)) )(IntrpMaxDex) # IntrpA[IntrpMaxDex,1]
-	# This line is a little tricky: the interpolated argmax  lives in the index domain of the RawIntrpDomain. RawIntrpDomain shares an index domain with IntrpDomain which is used to define FineDomain, of which MaxDex is a member.
-    IntrpArgMax = spline(range(len(RawIntrpDomain)),RawIntrpDomain)(MaxDex)
+    #
+    if PLOT:
+        plot( t_max, y_max, 'o', mfc='none', mec='k', ms=16 )
+
+    # Determine points to right and left of numerical max
+
+    # This many points to right and left of numerical max will be taken
+    pad = pad
+
+    #
+    a = k_max - pad
+    b = k_max + pad
+
+    #
+    left = arange( a, k_max )
+    right = arange( k_max, b+1 )
+    #
+    raw_space = hstack( [left,right] )
+    #
+    space = mod( raw_space, len(y)-1 )
+    #
+    raw_kspace = range( len(space) )
+
+    #
+    if PLOT:
+        plot( t[ space[0] ], y[ space[0] ], '>', mfc='none', mec='g', ms = 19 )
+        plot( t[ space[-1] ], y[ space[-1] ], '<', mfc='none', mec='g', ms = 19 )
+
+    #
+    raw_suby = y[space]
+
+    # -------------------------------------------- #
+    # Enforce adjacent symmetry about numerical max
+    # -------------------------------------------- #
+    left_k  =  1 + argmin( abs(raw_suby[0] - raw_suby[1:]) )
+    right_k =  argmin( abs(raw_suby[-1] - raw_suby[:-1]) )
+    center_k = argmax(raw_suby)
+    # print left_k, right_k, center_k
+
+    #
+    if PLOT:
+        fig2 = figure()
+        plot( raw_kspace, raw_suby, 'ok' )
+
+    # IF the clostest point is on the other side of the peak AND there is an assymetry detected
+    # THEN make more symmetric by removing points from left or right
+    mask = range( len(raw_suby) )
+    if (right_k < center_k): # and (left_k != len(raw_suby)-1) :
+        mask = range( right_k, len(raw_suby) )
+    elif (left_k > center_k): # and (right_k != 0) :
+        mask = range( 0, left_k+1 )
+
+    # Apply the mask
+    kspace = array([ raw_kspace[v] for v in mask ])
+    suby = array([ raw_suby[v] for v in mask ])
+
+    # -------------------------------------------- #
+    # Interpolate local space to estimate max
+    # -------------------------------------------- #
+    intrp_suby = spline( kspace, suby, k=4, s=0 )
+    # Location of the max is determined analytically, given the local spline model
+    kspace_maxes = intrp_suby.derivative().roots()
+    kspace_max = kspace_maxes[ argmax( intrp_suby(kspace_maxes) ) ]
+
+    #
+    if PLOT:
+        #
+        plot( kspace_max, intrp_suby(kspace_max), '*', ms=20, mec=clr[-1], mfc=clr[-1] )
+        kspace_sm = linspace(min(kspace),max(kspace))
+        plot( kspace_sm, intrp_suby(kspace_sm), color=clr[0], linestyle='--' )
+        plot( kspace, suby, 'ow', ms=4 )
+        #
+        dy = diff( lim(suby) )*0.2
+        ylim( array([-1,1])*dy + lim(raw_suby) )
+        xlim( lim(raw_kspace) )
+        xlabel('mapped index domain')
+        ylabel('wrapped range')
+
+    max_val = intrp_suby(kspace_max)
+    index_arg_max = spline( raw_kspace, raw_space, k=1, s=0 )(kspace_max)
+    arg_max = spline( range(len(t)), t )( index_arg_max )
+
+    #
+    if verbose:
+        print '\n>> Results of intrp_max:\n%s' % ( '--'*20 )
+        print '    intrp_max \t = \t %f' % max_val
+        print 'intrp_arg_max \t = \t %f\n' % arg_max
+
+    #
+    if PLOT:
+        figure( fig1.number )
+        plot( arg_max, max_val, '*', ms=20, mec=clr[-1], mfc=clr[-1]  )
 
     #
     if return_argmax:
-        ans = (AMax,IntrpArgMax)
+        ans = (max_val,arg_max)
     else:
-        ans = maxval
-
-    #
-    from matplotlib.pyplot import plot,xlim,ylim,title,show,gca
-    plot(y,'bo',mfc='none')
-    plot(IntrpDomain,y[IntrpDomain],'vk')
-    plot( MaxDex,AMax, 'sk' )
-    plot( IntrpA )
-    # plot( FineDomain, IntrpAfun(FineDomain),'k',alpha=0.5 )
-    # plot( xmax, yspline(xmax), 'or', mfc='none' )
-    show()
+        ans = max_val
 
     #
     return ans
@@ -928,16 +976,16 @@ def intrp_argmax( y,
                   verbose=False ):
 
     #
-    max_val,argmax = intrp_max( y,domain=domain,verbose=verbose,return_argmax=True )
+    max_val,arg_max = intrp_max( y,domain=domain,verbose=verbose,return_argmax=True )
 
     #
-    ans = argmax
+    ans = arg_max
     return ans
 
 
 # Find the interpolated global max location of a data series
 # NOTE that this version does not localize around numerical max of input; this is a bad thing
-def intrp_max( y,
+def intrp_max_depreciated( y,
                domain=None,
                verbose=False, return_argmax=False ):
 
