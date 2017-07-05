@@ -839,7 +839,7 @@ def intrp_max( y, domain=None, verbose=False, return_argmax=False, plot = False,
 
 
     #
-    t = range(len(y)) if domain is None else domain
+    t = arange(len(y)) if domain is None else domain
 
     #
     if PLOT:
@@ -894,7 +894,7 @@ def intrp_max( y, domain=None, verbose=False, return_argmax=False, plot = False,
         plot( t[ space[-1] ], y[ space[-1] ], '<', mfc='none', mec='g', ms = 19 )
 
     #
-    raw_suby = y[space]
+    raw_suby = array( [ y[k] for k in space ] ) # y[space]
 
     # -------------------------------------------- #
     # Enforce adjacent symmetry about numerical max
