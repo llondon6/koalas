@@ -832,131 +832,160 @@ def intrp_max( y, domain=None, verbose=False, return_argmax=False, plot = False,
     #
     from scipy.interpolate import UnivariateSpline as spline
     from scipy.optimize import minimize
-    from numpy import linspace,argmax,arange,hstack,diff,argmax,argmin,mod,array
+    from numpy import allclose,linspace,argmax,arange,hstack,diff,argmax,argmin,mod,array,mean,std
     #
     PLOT = plot
     if PLOT: from matplotlib.pyplot import plot,show,xlim,ylim,xlabel,ylabel,title,figure
 
-
     #
     t = arange(len(y)) if domain is None else domain
 
-    #
-    if PLOT:
+    # Determine if y is flat
+    c = (y - mean(y))/std(y)
+    # the centered version of y, c, is determined to be flat if the largest difference is small
+    y_is_flat = allclose( y, y[::-1], rtol=1e-3 )
+
+    '''
+    If the input vector is flat, simply take its numerical max.
+    Otherwise, use the intrp_max algorithm.
+    '''
+
+    # IF THE INPUT IS NOT FLAT
+    if not y_is_flat:
+
         #
-        ts = linspace( min(t), max(t), 2e2 )
-        ys = spline(t,y,s=0,k=4)(ts)
+        if PLOT:
+            #
+            from positive import rgb
+            ts = linspace( min(t), max(t), 2e2 )
+            ys = spline(t,y,s=0,k=4)(ts)
+            #
+            clr= rgb(3)
+            #
+            fig1 = figure()
+            plot( t,y, 'ok' )
+            plot( ts,ys, color=clr[0], linestyle='--' )
+            #
+            dy = diff( lim(y) )*0.1
+            ylim( array([-1,1])*dy + lim(y) )
+            xlim( lim(t) )
+            #
+            xlabel('domain')
+            ylabel('range')
+
         #
-        clr= rgb(3)
+        k_max = argmax( y )
+        t_max = t[k_max]
+        y_max = y[k_max]
+
         #
-        fig1 = figure()
-        plot( t,y, 'ok' )
-        plot( ts,ys, color=clr[0], linestyle='--' )
+        if PLOT:
+            plot( t_max, y_max, 'o', mfc='none', mec='k', ms=16 )
+
+        # Determine points to right and left of numerical max
+
+        # This many points to right and left of numerical max will be taken
+        pad = pad
+
         #
-        dy = diff( lim(y) )*0.1
-        ylim( array([-1,1])*dy + lim(y) )
-        xlim( lim(t) )
+        a = k_max - pad
+        b = k_max + pad
+
         #
-        xlabel('domain')
-        ylabel('range')
-
-    #
-    k_max = argmax( y )
-    t_max = t[k_max]
-    y_max = y[k_max]
-
-    #
-    if PLOT:
-        plot( t_max, y_max, 'o', mfc='none', mec='k', ms=16 )
-
-    # Determine points to right and left of numerical max
-
-    # This many points to right and left of numerical max will be taken
-    pad = pad
-
-    #
-    a = k_max - pad
-    b = k_max + pad
-
-    #
-    left = arange( a, k_max )
-    right = arange( k_max, b+1 )
-    #
-    raw_space = hstack( [left,right] )
-    #
-    space = mod( raw_space, len(y)-1 )
-    #
-    raw_kspace = range( len(space) )
-
-    #
-    if PLOT:
-        plot( t[ space[0] ], y[ space[0] ], '>', mfc='none', mec='g', ms = 19 )
-        plot( t[ space[-1] ], y[ space[-1] ], '<', mfc='none', mec='g', ms = 19 )
-
-    #
-    raw_suby = array( [ y[k] for k in space ] ) # y[space]
-
-    # -------------------------------------------- #
-    # Enforce adjacent symmetry about numerical max
-    # -------------------------------------------- #
-    left_k  =  1 + argmin( abs(raw_suby[0] - raw_suby[1:]) )
-    right_k =  argmin( abs(raw_suby[-1] - raw_suby[:-1]) )
-    center_k = argmax(raw_suby)
-    # print left_k, right_k, center_k
-
-    #
-    if PLOT:
-        fig2 = figure()
-        plot( raw_kspace, raw_suby, 'ok' )
-
-    # IF the clostest point is on the other side of the peak AND there is an assymetry detected
-    # THEN make more symmetric by removing points from left or right
-    mask = range( len(raw_suby) )
-    if (right_k < center_k): # and (left_k != len(raw_suby)-1) :
-        mask = range( right_k, len(raw_suby) )
-    elif (left_k > center_k): # and (right_k != 0) :
-        mask = range( 0, left_k+1 )
-
-    # Apply the mask
-    kspace = array([ raw_kspace[v] for v in mask ])
-    suby = array([ raw_suby[v] for v in mask ])
-
-    # -------------------------------------------- #
-    # Interpolate local space to estimate max
-    # -------------------------------------------- #
-    intrp_suby = spline( kspace, suby, k=4, s=0 )
-    # Location of the max is determined analytically, given the local spline model
-    kspace_maxes = intrp_suby.derivative().roots()
-    kspace_max = kspace_maxes[ argmax( intrp_suby(kspace_maxes) ) ]
-
-    #
-    if PLOT:
+        left = arange( a, k_max )
+        right = arange( k_max, b+1 )
         #
-        plot( kspace_max, intrp_suby(kspace_max), '*', ms=20, mec=clr[-1], mfc=clr[-1] )
-        kspace_sm = linspace(min(kspace),max(kspace))
-        plot( kspace_sm, intrp_suby(kspace_sm), color=clr[0], linestyle='--' )
-        plot( kspace, suby, 'ow', ms=4 )
+        raw_space = hstack( [left,right] )
         #
-        dy = diff( lim(suby) )*0.2
-        ylim( array([-1,1])*dy + lim(raw_suby) )
-        xlim( lim(raw_kspace) )
-        xlabel('mapped index domain')
-        ylabel('wrapped range')
+        space = mod( raw_space, len(y)-1 )
+        #
+        raw_kspace = range( len(space) )
 
-    max_val = intrp_suby(kspace_max)
-    index_arg_max = spline( raw_kspace, raw_space, k=1, s=0 )(kspace_max)
-    arg_max = spline( range(len(t)), t )( index_arg_max )
+        #
+        if PLOT:
+            plot( t[ space[0] ], y[ space[0] ], '>', mfc='none', mec='g', ms = 19 )
+            plot( t[ space[-1] ], y[ space[-1] ], '<', mfc='none', mec='g', ms = 19 )
 
-    #
-    if verbose:
-        print '\n>> Results of intrp_max:\n%s' % ( '--'*20 )
-        print '    intrp_max \t = \t %f' % max_val
-        print 'intrp_arg_max \t = \t %f\n' % arg_max
+        #
+        raw_suby = array( [ y[k] for k in space ] ) # y[space]
 
-    #
-    if PLOT:
-        figure( fig1.number )
-        plot( arg_max, max_val, '*', ms=20, mec=clr[-1], mfc=clr[-1]  )
+        # -------------------------------------------- #
+        # Enforce adjacent symmetry about numerical max
+        # -------------------------------------------- #
+        left_k  =  1 + argmin( abs(raw_suby[0] - raw_suby[1:]) )
+        right_k =  argmin( abs(raw_suby[-1] - raw_suby[:-1]) )
+        center_k = argmax(raw_suby)
+        # print left_k, right_k, center_k
+
+        #
+        if PLOT:
+            fig2 = figure()
+            plot( raw_kspace, raw_suby, 'ok' )
+
+        # IF the clostest point is on the other side of the peak AND there is an assymetry detected
+        # THEN make more symmetric by removing points from left or right
+        mask = range( len(raw_suby) )
+        if (right_k < center_k): # and (left_k != len(raw_suby)-1) :
+            mask = range( right_k, len(raw_suby) )
+        elif (left_k > center_k): # and (right_k != 0) :
+            mask = range( 0, left_k+1 )
+
+        # Apply the mask
+        kspace = array([ raw_kspace[v] for v in mask ])
+        suby = array([ raw_suby[v] for v in mask ])
+
+        # -------------------------------------------- #
+        # Interpolate local space to estimate max
+        # -------------------------------------------- #
+        try:
+            intrp_suby = spline( kspace, suby, k=4, s=0 )
+        except:
+            from matplotlib import pyplot as pp
+            pp.figure()
+            pp.plot( kspace, suby, '-o' )
+            pp.title( diff(lim(c)) )
+            pp.show()
+            raise
+        # Location of the max is determined analytically, given the local spline model
+        kspace_maxes = intrp_suby.derivative().roots()
+        kspace_max = kspace_maxes[ argmax( intrp_suby(kspace_maxes) ) ]
+
+        #
+        if PLOT:
+            #
+            plot( kspace_max, intrp_suby(kspace_max), '*', ms=20, mec=clr[-1], mfc=clr[-1] )
+            kspace_sm = linspace(min(kspace),max(kspace))
+            plot( kspace_sm, intrp_suby(kspace_sm), color=clr[0], linestyle='--' )
+            plot( kspace, suby, 'ow', ms=4 )
+            #
+            dy = diff( lim(suby) )*0.2
+            ylim( array([-1,1])*dy + lim(raw_suby) )
+            xlim( lim(raw_kspace) )
+            xlabel('mapped index domain')
+            ylabel('wrapped range')
+
+        max_val = intrp_suby(kspace_max)
+        index_arg_max = spline( raw_kspace, raw_space, k=1, s=0 )(kspace_max)
+        arg_max = spline( range(len(t)), t )( index_arg_max )
+
+        #
+        if verbose:
+            print '\n>> Results of intrp_max:\n%s' % ( '--'*20 )
+            print '    intrp_max \t = \t %f' % max_val
+            print 'intrp_arg_max \t = \t %f\n' % arg_max
+
+        #
+        if PLOT:
+            figure( fig1.number )
+            plot( arg_max, max_val, '*', ms=20, mec=clr[-1], mfc=clr[-1]  )
+
+    else: # IF THE INPUT IS FLAT
+
+        #
+        if verbose: warning('Input is determined to be flat. A simple numerical mex will be used.')
+        arg_max_dex = argmax( y )
+        arg_max = t[ arg_max_dex ]
+        max_val = y[ arg_max_dex ]
 
     #
     if return_argmax:
@@ -973,10 +1002,11 @@ def intrp_max( y, domain=None, verbose=False, return_argmax=False, plot = False,
 # NOTE that this version does not localize around numerical max of input; this is a bad thing
 def intrp_argmax( y,
                   domain=None,
+                  plot=False,
                   verbose=False ):
 
     #
-    max_val,arg_max = intrp_max( y,domain=domain,verbose=verbose,return_argmax=True )
+    max_val,arg_max = intrp_max( y,domain=domain,verbose=verbose,return_argmax=True,plot=plot )
 
     #
     ans = arg_max
