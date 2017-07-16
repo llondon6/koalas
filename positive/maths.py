@@ -948,7 +948,19 @@ def intrp_max( y, domain=None, verbose=False, return_argmax=False, plot = False,
             raise
         # Location of the max is determined analytically, given the local spline model
         kspace_maxes = intrp_suby.derivative().roots()
-        kspace_max = kspace_maxes[ argmax( intrp_suby(kspace_maxes) ) ]
+        try:
+            kspace_max = kspace_maxes[ argmax( intrp_suby(kspace_maxes) ) ]
+        except:
+            warning('somthing\'s wrong folks ....')
+            print kspace_maxes
+            from matplotlib import pyplot as pp
+            pp.figure()
+            from numpy import isnan
+            print sum(isnan(y))
+            pp.plot( kspace, suby, '-o' )
+            pp.title( diff(lim(c)) )
+            pp.show()
+            raise
 
         #
         if PLOT:

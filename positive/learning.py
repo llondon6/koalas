@@ -258,7 +258,7 @@ def rnsum(order,degree,lst=None):
         while proceed:
             B = []
             for a in A:
-                # Generate sumlists, again from teh twosum perspective
+                # Generate sumlists, again from the twosum perspective
                 U = twosum( a[-1] )
                 # Now create 3 element list whose sum is n
                 V = []
@@ -342,6 +342,58 @@ def ndflatten( domain_list,      # List of meshgrid arrays
         return flat_domain,flat_range
     else:
         return flat_domain
+
+
+
+# Create a functional representation of a polynomial symbols consistent with symeval
+def sym_poly_eval( symbols, coeffs, domain, range_map=None ):
+    '''A functional representation of the fit'''
+    #
+    ans_ = 0
+    for k,b in enumerate(coeffs):
+        ans_ += b*symeval( symbols[k], domain )
+    #
+    if range_map is not None:
+        V = range_map['backward']
+        ans = V(domain,ans_)
+    else:
+        ans = ans_
+    #
+    return ans
+
+# SYMEVAL -- Helper function for polynomial fitting
+# Each symbol encodes a simple multinomial function of the basis vectors.
+# Example: sym = "001111" encodes x^2 * y^4
+def symeval( sym, domain, verbose=False ):
+    '''
+    SYMEVAL -- Helper function for polynomial fitting
+    Each symbol encodes a simple multinomial function of the basis vectors.
+    Example: sym = "001111" encodes x^2 * y^4
+    '''
+
+    if verbose: alert('sym = "%s"'%sym)
+    if sym.upper() == 'K':
+        # Handle symbolic representation of constant term
+        from numpy import ones
+        ans = ones( domain[:,0].shape, dtype=domain.dtype ) if len(domain.shape)>1 else ones( domain.shape, dtype=domain.dtype )
+    elif sym.isdigit():
+        # Handle non-constant symbols
+        map_ = [ int(k) for k in sym ]
+        ans = 1.0 # NOTE that the final answer will be of the shape of the domain vectors
+        for k in map_:
+            # IF the domain has dimension greater than 1
+            if len(domain.shape)>1:
+                # Allow referencing of each dimnesion
+                ans *= domain[:,k]
+            else:
+                # ELSE, simply use the domain
+                ans *= domain
+                # NOTE that this IF-ELSE structure results from 1D domains not being able to be refernced in a matrix like manner
+    else:
+        raise TypeError('"%s" is an invalid symbol. Multivariate symbols must be "K" for constant term, or string of integers corresponding to domain dimensions, such as "0001" which, if the domain is [x,y,...], corresponds to x*x*x*y.'%sym)
+
+    #
+    return ans
 
 
 # Multivariate polynomial fitting algorithm
@@ -497,28 +549,31 @@ class mvpolyfit:
         if dom is None:
             dom = this.domain
 
-        if sym.upper() == 'K':
-            # Handle symbolic representation of constant term
-            from numpy import ones
-            ans = ones( dom[:,0].shape, dtype=dom.dtype ) if len(dom.shape)>1 else ones( dom.shape, dtype=dom.dtype )
-        elif sym.isdigit():
-            # Handle non-constant symbols
-            map_ = [ int(k) for k in sym ]
-            ans = 1.0 # NOTE that the final answer will be of the shape of the domain vectors
-            for k in map_:
-                # IF the domain has dimension greater than 1
-                if len(dom.shape)>1:
-                    # Allow referencing of each dimnesion
-                    ans *= dom[:,k]
-                else:
-                    # ELSE, simply use teh domain
-                    ans *= dom
-                    # NOTE that this IF-ELSE structure results from 1D domains not being able to be refernced in a matrix like manner
-        else:
-            raise TypeError('"%s" is an invalid symbol. Multivariate symbols must be "K" for constant term, or string of integers corresponding to domain dimensions, such as "0001" which, if the domain is [x,y,...], corresponds to x*x*x*y.'%sym)
-
+        # if sym.upper() == 'K':
+        #     # Handle symbolic representation of constant term
+        #     from numpy import ones
+        #     ans = ones( dom[:,0].shape, dtype=dom.dtype ) if len(dom.shape)>1 else ones( dom.shape, dtype=dom.dtype )
+        # elif sym.isdigit():
+        #     # Handle non-constant symbols
+        #     map_ = [ int(k) for k in sym ]
+        #     ans = 1.0 # NOTE that the final answer will be of the shape of the domain vectors
+        #     for k in map_:
+        #         # IF the domain has dimension greater than 1
+        #         if len(dom.shape)>1:
+        #             # Allow referencing of each dimnesion
+        #             ans *= dom[:,k]
+        #         else:
+        #             # ELSE, simply use the domain
+        #             ans *= dom
+        #             # NOTE that this IF-ELSE structure results from 1D domains not being able to be refernced in a matrix like manner
+        # else:
+        #     raise TypeError('"%s" is an invalid symbol. Multivariate symbols must be "K" for constant term, or string of integers corresponding to domain dimensions, such as "0001" which, if the domain is [x,y,...], corresponds to x*x*x*y.'%sym)
         #
-        return ans
+        # #
+        # return ans
+
+        # Use the class external function
+        return symeval( sym, dom )
 
     # Create model string for prompt printing
     def __str__(this,labels=None):
