@@ -128,12 +128,15 @@ def thisfun():
     return inspect.stack()[2][3]
 
 # Alert wrapper
-def alert(msg,fname=None,say=False,output_string=False):
+def alert(msg,fname=None,say=False,output_string=False,heading=None):
     import os
     if fname is None:
         fname = thisfun()
     if say: os.system( 'say "%s"' % msg )
     _msg = '('+cyan(fname)+')>> '+msg
+    if heading:
+        hl = '-~' * int( len(_msg.replace('033','') )/2 )
+        _msg = '\n# %s #\n%s\n# %s #\n'%(hl,_msg,hl)
     if not output_string:
         print _msg
     else:
@@ -151,7 +154,7 @@ def say(msg,fname=None):
 def warning(msg,fname=None,output_string=False):
     if fname is None:
         fname = thisfun()
-    _msg = '('+yellow(fname)+')>> '+msg
+    _msg = bold('('+yellow(fname+'!')+')>> ')+msg
     if not output_string:
         print _msg
     else:
@@ -161,4 +164,4 @@ def warning(msg,fname=None,output_string=False):
 def error(msg,fname=None):
     if fname is None:
         fname = thisfun()
-    raise ValueError( '('+red(fname)+')!! '+msg )
+    raise ValueError( bold('('+red(fname+'!!')+') ')+msg )

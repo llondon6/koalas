@@ -1,9 +1,14 @@
 #
 from positive import *
 
+# safely join directory strings
+def osjoin(a,b):
+    import os
+    return str( os.path.join( a, b ) )
+
 # Class for basic print manipulation
 class print_format:
-   magenta = '\033[1;35m'
+   magenta = '\033[0;35m'
    cyan = '\033[0;36m'
    darkcyan = '\033[0;36m'
    blue = '\033[0;34m'

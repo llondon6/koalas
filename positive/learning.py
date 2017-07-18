@@ -2,6 +2,66 @@
 from maths import *
 from positive import *
 
+#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+# Low level methods for ration function modeling                                    #
+#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+
+# Invert Psi = A - Psi*B, for Psi = A/(1+B)
+def mvrslv0( domain, centered_scalar_range, numerator_symbols, denominator_symbols, mu=0, sigma=1.0 ):
+    ''' Invert Psi = A - Psi*B, for Psi = A/(1+B) '''
+    #
+    from numpy import mean,std,array
+    from numpy.linalg import pinv,lstsq
+    #
+    if 'K' in denominator_symbols: error('denominator_symbols cannot have symbol for constant term "K"')
+    #
+    M = len( numerator_symbols )
+    alpha = array( [ symeval(sym,domain)*( 1 if k < M else -centered_scalar_range) for k,sym in enumerate( numerator_symbols+denominator_symbols ) ] ).T
+    #
+    coeffs = lstsq( alpha, centered_scalar_range )[0]
+    #
+    numerator_coeffs = coeffs[:M]
+    denominator_coeffs = coeffs[M:]
+    #
+    def fitfun( DOMAIN ):
+        # Evaluate the model
+        A = sym_poly_eval( numerator_symbols,   numerator_coeffs,   DOMAIN )
+        B = sym_poly_eval( denominator_symbols, denominator_coeffs, DOMAIN )
+        # Shift and scale to preserve mean and sigma of input scalar_range
+        ans = mu + sigma*A/(1+B)
+        return ans
+    #
+    return numerator_coeffs, denominator_coeffs, fitfun
+
+
+# Invert: Psi-1 = A - Psi*B, for Psi = (1+A)/(1+B)
+def mvrslv1( domain, centered_scalar_range, numerator_symbols, denominator_symbols, mu=0, sigma=1.0 ):
+    ''' Invert Psi-1 = A - Psi*B, for Psi = (1+A)/(1+B) '''
+    #
+    from numpy import mean,std,ones_like,array,dot
+    from numpy.linalg import pinv,lstsq
+    #
+    if 'K' in numerator_symbols: error('numerator_symbols cannot have symbol for constant term "K"')
+    if 'K' in denominator_symbols: error('denominator_symbols cannot have symbol for constant term "K"')
+    #
+    M = len( numerator_symbols )
+    alpha = array( [ symeval(sym,domain)*( 1 if k < M else -centered_scalar_range) for k,sym in enumerate( numerator_symbols+denominator_symbols ) ] ).T
+    #
+    coeffs = lstsq( alpha, centered_scalar_range-1 )[0]
+    #
+    numerator_coeffs = coeffs[:M]
+    denominator_coeffs = coeffs[M:]
+    #
+    def fitfun( DOMAIN ):
+        # Evaluate the model
+        A = sym_poly_eval( numerator_symbols,   numerator_coeffs,   DOMAIN )
+        B = sym_poly_eval( denominator_symbols, denominator_coeffs, DOMAIN )
+        # Shift and scale to preserve mean and sigma of input scalar_range
+        ans = mu + sigma * (1+A)/(1+B)
+        return ans
+    #
+    return numerator_coeffs, denominator_coeffs, fitfun
+
 
 #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
 # Given a 1D array, determine the set of N lines that are optimally representative  #
@@ -370,12 +430,17 @@ def symeval( sym, domain, verbose=False ):
     Each symbol encodes a simple multinomial function of the basis vectors.
     Example: sym = "001111" encodes x^2 * y^4
     '''
-
+    #
+    from numpy import ones_like,ones
+    #
     if verbose: alert('sym = "%s"'%sym)
+    #
     if sym.upper() == 'K':
         # Handle symbolic representation of constant term
-        from numpy import ones
-        ans = ones( domain[:,0].shape, dtype=domain.dtype ) if len(domain.shape)>1 else ones( domain.shape, dtype=domain.dtype )
+        #--
+        # from numpy import ones_like
+        # ans = ones( domain[:,0].shape, dtype=domain.dtype ) if len(domain.shape)>1 else ones( domain.shape, dtype=domain.dtype )
+        ans = ones_like( domain[:,0] ) if len(domain.shape)>1 else ones_like( domain )
     elif sym.isdigit():
         # Handle non-constant symbols
         map_ = [ int(k) for k in sym ]

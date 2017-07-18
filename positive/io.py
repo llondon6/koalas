@@ -89,7 +89,7 @@ class smart_object:
     ~ll2'14
     '''
 
-    def __init__(this,attrfile=None,id=None,overwrite=False,**kwargs):
+    def __init__(this,attrfile=None,id=None,overwrite=False,cleanup=False,defaults=None,**kwargs):
         #
         this.valid = False
         this.source_file_path = []
@@ -111,8 +111,24 @@ class smart_object:
                 this.learn_file( attrfile, **kwargs )
             else:
 
-                msg = 'first input (attrfile key) must of list containing strings, or single string of file location'
+                msg = 'first input (attrfile key) must of list containing strings, or single string of file location, instead it is %s'%yellow(str(attrfile.__class__.__name__))
                 raise ValueError(msg)
+
+        # Apply defaults
+        if isinstance(defaults,dict):
+            for attr in defaults:
+                if isinstance(attr,str):
+                    if attr not in this.__dict__:
+                        warning('Attribute %s not found; therefore, the defualt value will be used.'%yellow(attr),this.__class__.__name__)
+                        setattr(  this, attr, defaults[attr]  )
+
+
+        # Only keep attributes found in file
+        if cleanup:
+            delattr(this,'valid')
+            delattr(this,'overwrite')
+            delattr(this,'source_dir')
+            delattr(this,'source_file_path')
 
     #
     def show( this ):
@@ -123,7 +139,7 @@ class smart_object:
         #
         for attr in this.__dict__.keys():
             value = this.__dict__[attr]
-            print( '[%s]>> %s = %s' % (thisfun,attr,str(value)) )
+            alert( '%s = %s ' % (yellow(attr),green(str(value))) )
 
     # Function for parsing entire files into class attributes and values
     def learn_file( this, file_location, eqls="=", **kwargs ):
@@ -283,6 +299,8 @@ def mkdir(dir_,rm=False,verbose=False):
         if verbose:
             alert('Directory at "%s" already exists %s.'%(magenta(dir_),red('and will be removed')),'mkdir')
         shutil.rmtree(dir_,ignore_errors=True)
+    elif os.path.exists(dir_):
+        if verbose: alert('Directory at "%s" already exists %s.'%(green(dir_),yellow('and will be not be altered or created.')),'mkdir')
     # Check for directory existence; make if needed.
     if not os.path.exists(dir_):
         os.makedirs(dir_)
