@@ -136,7 +136,7 @@ def alert(msg,fname=None,say=False,output_string=False,heading=None):
     _msg = '('+cyan(fname)+')>> '+msg
     if heading:
         hl = '-~' * int( len(_msg.replace('033','') )/2 )
-        _msg = '\n# %s #\n%s\n# %s #\n'%(hl,_msg,hl)
+        _msg = '\n# %s #\n%s\n# %s #\n'%(hl,bold(_msg),hl)
     if not output_string:
         print _msg
     else:

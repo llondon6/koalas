@@ -6,62 +6,97 @@ from positive import *
 # Low level methods for ration function modeling                                    #
 #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
 
-# Invert Psi = A - Psi*B, for Psi = A/(1+B)
-def mvrslv0( domain, centered_scalar_range, numerator_symbols, denominator_symbols, mu=0, sigma=1.0 ):
-    ''' Invert Psi = A - Psi*B, for Psi = A/(1+B) '''
+# Invert Psi = A + Psi*B, for Psi = A/(1-B)
+def mvrslv0( domain, centered_scalar_range, numerator_symbols, denominator_symbols, mu=0, sigma=1.0, right_centered_scalar_range=None ):
+    '''
+
+    Lionel London 2017 lionel.london@ligo.org
+
+    Invert Psi = A + Psi*B, for Psi = A/(1-B)
+
+    Y = A / ( 1 - B )
+    Y - YB = A
+    Y = A + YB
+    Y = A + B ( A + YB )
+      = A + BA + Y B^2
+      = A + AB + (A+YB) B^2
+      = A + AB + A B^2 + Y B^3
+      = A ( 1 + B + B^2 + B^3 + B^4 + ... + B^n ) + Y B^(n+1)
+
+    Let R(n) = Y B^(n+1)
+    Let H(n) = Y - Y B^(n+1)
+    Let H = lim (n-->Inf) H(n) {Assumed to converge!}
+
+    Consider H = V * c, where V is H's associated vandermonde matix and c is the related
+    vector of coefficients.
+
+    Y = AH c
+    c = (AH)^{-1} Y
+
+    This WOULD BE NICE; however, V is generally a very large matrix whose columns span
+    nonlinear combinations of B's feature coefficients. This is a problem for building a
+    fast and practical algoithm.
+
+    But the idea of using recurssive inversion is a nice one. Let's hold on to it.
+
+    Let us consider the following formulation of the above problem.
+
+    Consider not
+
+    Y = A + YB
+
+    but
+
+    Y(0) = A + Y(n)B
+         = V(n)*x(n+1)  -->  x(n+1) = V(n)^-1 * Y(0) = a(n+1) U b(n+1)  -->  Y(n+1) = A(n+1) / ( 1 - B(n+1) )
+
+    This, in principle, allows recurssive inversion with small matricies. Alternative formulations are possible:
+
+    Y(0) = A + 0.5*(Y(n)+Y(n-1)) B
+
+    But we don't do that here.
+
+    '''
     #
-    from numpy import mean,std,array
+    from numpy import mean,std,array,dot,mod
     from numpy.linalg import pinv,lstsq
+    #
+    if right_centered_scalar_range is None: right_centered_scalar_range = centered_scalar_range
     #
     if 'K' in denominator_symbols: error('denominator_symbols cannot have symbol for constant term "K"')
     #
     M = len( numerator_symbols )
-    alpha = array( [ symeval(sym,domain)*( 1 if k < M else -centered_scalar_range) for k,sym in enumerate( numerator_symbols+denominator_symbols ) ] ).T
+    alpha = array( [ symeval(sym,domain)*( 1 if k < M else right_centered_scalar_range) for k,sym in enumerate( numerator_symbols+denominator_symbols ) ] ).T
     #
     coeffs = lstsq( alpha, centered_scalar_range )[0]
+
+    def action(coeffs):
+        #
+        numerator_coeffs = coeffs[:M]
+        denominator_coeffs = coeffs[M:]
+        #
+        def fitfun( DOMAIN, mu=mu, sigma=sigma, __centered__=False ):
+            # Evaluate the model
+            A = sym_poly_eval( numerator_symbols,   numerator_coeffs,   DOMAIN )
+            B = sym_poly_eval( denominator_symbols, denominator_coeffs, DOMAIN )
+            # Shift and scale to preserve mean and sigma of input scalar_range
+            ans = A/(1.0-B) if __centered__ else mu + sigma*A/(1.0-B)
+            return ans
+
+        #
+        real_residuals = fitfun(domain,0,1)-centered_scalar_range
+        ols_residuals = dot(alpha,coeffs)-centered_scalar_range
+        #
+        return real_residuals,ols_residuals,fitfun
+
+    real_residuals,ols_residuals,fitfun = action(coeffs)
+
     #
     numerator_coeffs = coeffs[:M]
     denominator_coeffs = coeffs[M:]
-    #
-    def fitfun( DOMAIN ):
-        # Evaluate the model
-        A = sym_poly_eval( numerator_symbols,   numerator_coeffs,   DOMAIN )
-        B = sym_poly_eval( denominator_symbols, denominator_coeffs, DOMAIN )
-        # Shift and scale to preserve mean and sigma of input scalar_range
-        ans = mu + sigma*A/(1+B)
-        return ans
+
     #
     return numerator_coeffs, denominator_coeffs, fitfun
-
-
-# Invert: Psi-1 = A - Psi*B, for Psi = (1+A)/(1+B)
-def mvrslv1( domain, centered_scalar_range, numerator_symbols, denominator_symbols, mu=0, sigma=1.0 ):
-    ''' Invert Psi-1 = A - Psi*B, for Psi = (1+A)/(1+B) '''
-    #
-    from numpy import mean,std,ones_like,array,dot
-    from numpy.linalg import pinv,lstsq
-    #
-    if 'K' in numerator_symbols: error('numerator_symbols cannot have symbol for constant term "K"')
-    if 'K' in denominator_symbols: error('denominator_symbols cannot have symbol for constant term "K"')
-    #
-    M = len( numerator_symbols )
-    alpha = array( [ symeval(sym,domain)*( 1 if k < M else -centered_scalar_range) for k,sym in enumerate( numerator_symbols+denominator_symbols ) ] ).T
-    #
-    coeffs = lstsq( alpha, centered_scalar_range-1 )[0]
-    #
-    numerator_coeffs = coeffs[:M]
-    denominator_coeffs = coeffs[M:]
-    #
-    def fitfun( DOMAIN ):
-        # Evaluate the model
-        A = sym_poly_eval( numerator_symbols,   numerator_coeffs,   DOMAIN )
-        B = sym_poly_eval( denominator_symbols, denominator_coeffs, DOMAIN )
-        # Shift and scale to preserve mean and sigma of input scalar_range
-        ans = mu + sigma * (1+A)/(1+B)
-        return ans
-    #
-    return numerator_coeffs, denominator_coeffs, fitfun
-
 
 #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
 # Given a 1D array, determine the set of N lines that are optimally representative  #
@@ -531,6 +566,7 @@ class mvpolyfit:
         residuals = fit_range - this.range
         fractional_residuals = (fit_range - this.range)/this.range
         frmse = abs( std(U(fit_range)-U(this.range)) / std(U(this.range)) )
+        maxres = abs( U(fit_range)-U(this.range) ).max()
 
         # Model the residuals as normally distributed random points
         ampres = ( abs(fit_range)-abs(this.range) ) / abs(this.range)
@@ -543,6 +579,7 @@ class mvpolyfit:
         # Store bulk information about fit
         this.residual = residuals
         this.frmse = frmse
+        this.maxres = maxres
         this.prompt_string = str(this)
         this.python_string = this.__str_python__()
         this.latex_string = this.__str_latex__()
@@ -999,10 +1036,10 @@ class mvpolyfit:
         ax.set_ylim( array([amin(_map(this.range)),amax(_map(this.range))]) + dy*array([-1,1]) )
 
 
-        for k in index:
-            j = k-1
-            text( k, _map(this.range[j]), str(j), ha='center', va='center', size=12, alpha=0.6 )
-            if this.data_label is not None: print '[%i]>> %s' % (j,this.data_label[j])
+        # for k in index:
+        #     j = k-1
+        #     text( k, _map(this.range[j]), str(j), ha='center', va='center', size=12, alpha=0.6 )
+        #     if this.data_label is not None: print '[%i]>> %s' % (j,this.data_label[j])
 
         #
         xlabel('Domain Index')
@@ -1451,7 +1488,7 @@ class ngreedy:
 # NOTE that this version optimizes over degree
 def gmvpfit( domain,              # The N-D domain over which a scalar will be modeled: list of vector coordinates
              scalar_range,        # The scalar range to model on the domain: 1d iterable of range values corresponding to domain entries
-             maxdeg = 8,          # polynomial degrees of at most this order in domain variables will be considered: e.g. x*y and y*y are both degree 2. NOTE that the effective degree will be optimized over: increased incrementally until the model becomes less optimal.
+             maxdeg = 16,          # polynomial degrees of at most this order in domain variables will be considered: e.g. x*y and y*y are both degree 2. NOTE that the effective degree will be optimized over: increased incrementally until the model becomes less optimal.
              mindeg = 1,          # minimum degree to consider for tempering
              plot = False,        # Toggle plotting
              show = False,        # Toggle for showing plots as they are created
@@ -1462,6 +1499,7 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
              temper = True,         # Toggle for applying degree tempering, where the positive greedy process is forward optimized over max polynomial degree
              range_map = None,      # Operation to apply to range before fitting, and inverse. EXAMPLE: range_map = { 'forward': lambda x: external_variable*x, 'backward': lambda y: y/external_variable }
              verbose = False,       # Let the people know
+             maxres_estimator = False, # Toggle for using abs of max residual as estimator rather then frmse
              **kwargs ):
     '''Adaptive (Greedy) Multivariate polynomial fitting: general domain dimension, but range must be 1D (possibly complex).'''
     # Import stuff
@@ -1500,9 +1538,11 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
         warning(msg,'gmvpfit')
 
     # Prepare inputs for generalized positive greedy algorithm
+    if maxres_estimator: alert('Using maxres as an estimator for the fit.')
     def action( trial_boundary ):
         foo = mvpolyfit(domain,scalar_range,trial_boundary,range_map=range_map,**kwargs)
-        estimator = foo.frmse
+        # estimator = foo.frmse
+        estimator = foo.maxres if maxres_estimator else foo.frmse
         return estimator,foo
     def mvplotfun( foo ): foo.plot(show=show)
 
