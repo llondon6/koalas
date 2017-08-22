@@ -90,9 +90,9 @@ def poly2pystr(basis_symbols,coeffs,labels=None,precision=8):
     funlabel = funlabel.replace('-','M')
 
     # Create a simple string representation of the fit
-    model_str = '%s = lambda %s:%s%s*(x%s)' % ( funlabel, ','.join(varlabels), (' %s('%prefix) if prefix else ' '  , complex2str(coeffs[0],precision=precision) if isinstance(coeffs[0],complex) else '%1.4e'%coeffs[0], '*x'.join( list(basis_symbols[0]) ) )
+    model_str = '%s = lambda %s:%s%s*(x%s)' % ( funlabel, ','.join(varlabels), (' %s('%prefix) if prefix else ' '  , complex2str(coeffs[0],precision=precision) if isinstance(coeffs[0],complex) else ('%%1.%ie'%precision)%coeffs[0], '*x'.join( list(basis_symbols[0]) ) )
     for k,b in enumerate(coeffs[1:]):
-        model_str += ' + %s*(x%s)' % ( complex2str(b,precision=precision) if isinstance(b,complex) else '%1.4e'%b , '*x'.join( list(basis_symbols[k+1]) ) )
+        model_str += ' + %s*(x%s)' % ( complex2str(b,precision=precision) if isinstance(b,complex) else ('%%1.%ie'%precision)%b , '*x'.join( list(basis_symbols[k+1]) ) )
 
     # Correct for a lingering multiply sign
     model_str = model_str.replace('(*','(')

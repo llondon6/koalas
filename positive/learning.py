@@ -1322,12 +1322,12 @@ class mvrfit:
         numerator_str   = poly2pystr( this.numerator_symbols, this.numerator_coeffs, labels=python_labels, precision=precision ).split(':')[-1]
         # Create polynomial string for denominator
         denominator_str = poly2pystr( this.denominator_symbols, -this.denominator_coeffs, labels=python_labels, precision=precision ).split(':')[-1]
-        # Create lambda sytax and full model string
+        # Create lambda sytax
         funlabel = 'f' if python_labels is None else python_labels[0]
         varlabels = [ 'x%i'%k for k in range(domain_dimension) ] if python_labels is None else python_labels[1]
         lambda_syntax = '%s = lambda %s: ' % ( funlabel, ','.join(varlabels) )
-        #
-        model_str = lambda_syntax + '( %s ) / ( 1.0 + %s )' % ( numerator_str, denominator_str )
+        # Construct the output string
+        model_str = lambda_syntax + '%s  +  %s * ( %s ) / ( 1.0 + %s )' % ( ('%%1.%ie'%precision)%this.__mu__, ('%%1.%ie'%precision)%this.__sigma__, numerator_str, denominator_str )
         #
         return model_str
 
