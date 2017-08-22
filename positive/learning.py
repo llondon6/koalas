@@ -14,48 +14,6 @@ def mvrslv0( domain, centered_scalar_range, numerator_symbols, denominator_symbo
 
     Invert Psi = A + Psi*B, for Psi = A/(1-B)
 
-    Y = A / ( 1 - B )
-    Y - YB = A
-    Y = A + YB
-    Y = A + B ( A + YB )
-      = A + BA + Y B^2
-      = A + AB + (A+YB) B^2
-      = A + AB + A B^2 + Y B^3
-      = A ( 1 + B + B^2 + B^3 + B^4 + ... + B^n ) + Y B^(n+1)
-
-    Let R(n) = Y B^(n+1)
-    Let H(n) = Y - Y B^(n+1)
-    Let H = lim (n-->Inf) H(n) {Assumed to converge!}
-
-    Consider H = V * c, where V is H's associated vandermonde matix and c is the related
-    vector of coefficients.
-
-    Y = AH c
-    c = (AH)^{-1} Y
-
-    This WOULD BE NICE; however, V is generally a very large matrix whose columns span
-    nonlinear combinations of B's feature coefficients. This is a problem for building a
-    fast and practical algoithm.
-
-    But the idea of using recurssive inversion is a nice one. Let's hold on to it.
-
-    Let us consider the following formulation of the above problem.
-
-    Consider not
-
-    Y = A + YB
-
-    but
-
-    Y(0) = A + Y(n)B
-         = V(n)*x(n+1)  -->  x(n+1) = V(n)^-1 * Y(0) = a(n+1) U b(n+1)  -->  Y(n+1) = A(n+1) / ( 1 - B(n+1) )
-
-    This, in principle, allows recurssive inversion with small matricies. Alternative formulations are possible:
-
-    Y(0) = A + 0.5*(Y(n)+Y(n-1)) B
-
-    But we don't do that here.
-
     '''
     #
     from numpy import mean,std,array,dot,mod
