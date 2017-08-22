@@ -72,7 +72,7 @@ def poly2pystr(basis_symbols,coeffs,labels=None,precision=8):
     from positive.api import error
 
     # Count the number of unique domain variables
-    domain_dimension = len( set(''.join(basis_symbols)) )
+    domain_dimension = len( set(''.join(basis_symbols).replace('K','')) )
 
     # Extract desired labels and handle defaults
     funlabel = 'f' if labels is None else labels[0]

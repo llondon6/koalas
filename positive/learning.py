@@ -1315,7 +1315,7 @@ class mvrfit:
             * EXAMPLE: labels = [ 'temperature', ['day','longitude','latitude','aliens_influence_measure'], '' ]
         '''
         # Count the number of unique domain variables
-        domain_dimension = len( set(''.join(this.denominator_symbols+this.numerator_symbols)) )
+        domain_dimension = len( set(''.join(this.denominator_symbols+this.numerator_symbols).replace('K','')) )
         # Extract python labels
         python_labels = ( this.labels['python'] if 'python' in this.labels else None ) if python_labels is None else python_labels
         # Create polynomial string for numerator
