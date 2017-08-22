@@ -49,6 +49,70 @@ def underline(string):
 def hlblack(string):
     return print_format.hlb + string + print_format.end
 
+
+# Convert poylnomial (basis symbols and coefficients) to python string
+def poly2pystr(basis_symbols,coeffs,labels=None,precision=8):
+
+    '''
+    It's useful to know:
+
+    * That "labels" is of the following form
+        * labels = [range_label,domain_labels,python_prefix]
+        * EXAMPLE: labels = [ 'temperature', ['day','longitude','latitude','aliens_influence_measure'], '' ]
+
+    * The length of basis_symbols and coeffs must match.
+
+    * basis_symbols must be consistent with positive.learning.symeval
+        * EXAMPLE: basis_symbols = ['K','0','1','00']
+        * this corresponds to a c0 + c1*x + c2*y + c3*x^2, and coeffs = [c0,c1,c2,c3]
+
+    '''
+
+    # Import usefuls
+    from positive.api import error
+
+    # Count the number of unique domain variables
+    domain_dimension = len( set(''.join(basis_symbols)) )
+
+    # Extract desired labels and handle defaults
+    funlabel = 'f' if labels is None else labels[0]
+    varlabels = None if labels is None else labels[1]
+
+    prefix = '' if labels is None else labels[2]
+    postfix = '' if labels is None else ( labels[3] if len(labels)==4 else '' )
+
+    if varlabels is None:
+        varlabels = [ 'x%s'%str(k) for k in range(domain_dimension) ]
+    elif len(varlabels) != domain_dimension:
+        error( 'Number of variable labels, %i, is not equal to the number of domain dimensions found, %i. One posiility is that youre fitting with a 1D domain, and have attempted to use a domain label that is a tuple containing a single string which python may interpret as a string -- try defining the label as a list by using square brackets.'%( len(varlabels), domain_dimension ) , 'mvpolyfit' )
+
+    # Replace minus signs in function name with M
+    funlabel = funlabel.replace('-','M')
+
+    # Create a simple string representation of the fit
+    model_str = '%s = lambda %s:%s%s*(x%s)' % ( funlabel, ','.join(varlabels), (' %s('%prefix) if prefix else ' '  , complex2str(coeffs[0],precision=precision) if isinstance(coeffs[0],complex) else '%1.4e'%coeffs[0], '*x'.join( list(basis_symbols[0]) ) )
+    for k,b in enumerate(coeffs[1:]):
+        model_str += ' + %s*(x%s)' % ( complex2str(b,precision=precision) if isinstance(b,complex) else '%1.4e'%b , '*x'.join( list(basis_symbols[k+1]) ) )
+
+    # Correct for a lingering multiply sign
+    model_str = model_str.replace('(*','(')
+
+    # Correct for the constant term not being an explicit function of a domain variable
+    model_str = model_str.replace('*(xK)','')
+
+    # if there is a prefix, then close the automatic ()
+    model_str += ' )' if prefix else ''
+
+    #
+    model_str += postfix
+
+    # Replace variable labels with input
+    if not ( varlabels is None ):
+        for k in range(domain_dimension):
+            model_str = model_str.replace( 'x%i'%k, varlabels[k] )
+
+    return model_str
+
 # Convert complex number to string in exponential form
 def complex2str( x, precision=None, latex=False ):
     '''Convert complex number to string in exponential form '''
@@ -95,6 +159,7 @@ def complex2str( x, precision=None, latex=False ):
     # Return the answer
     return ans
 
+
 # Rudimentary function for printing text in the center of the terminal window
 def center_space(str):
     x = os.popen('stty size', 'r').read()
@@ -107,6 +172,7 @@ def center_space(str):
 def center_print(str):
     pad = center_space(str)
     print pad + str
+
 
 # Print a short about statement to the prompt
 def print_hl(symbol="<>"):

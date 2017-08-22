@@ -12,7 +12,7 @@ def mvrslv0( domain, centered_scalar_range, numerator_symbols, denominator_symbo
 
     Lionel London 2017 lionel.london@ligo.org
 
-    Invert Psi = A + Psi*B, for Psi = A/(1-B)
+    SINGLE INVERSION OF Psi = A + Psi*B, for Psi = A/(1-B)
 
     '''
     #
@@ -502,7 +502,7 @@ class mvpolyfit:
 
 
         # Import useful things
-        from kerr import alert,error,warning
+        from positive import alert,error,warning
         from numpy import array,mean,unwrap,angle,std,isfinite
         from scipy.stats import norm
 
@@ -746,6 +746,7 @@ class mvpolyfit:
                         verbose=False):
         ''' Given an optional write directory, save the fit formula as a python module.'''
         # Open file for writing
+        error('This method needs to be written ... if it will ever be')
         return None
 
     # Plot 1D domain, 1D range
@@ -1210,11 +1211,301 @@ class mvpolyfit:
 
 
 #
-class mvratifit(mvpolyfit):
+class mvrfit:
+    '''
+    '''
+    #
+    def __init__( this,                 # The current object
+                  domain,               # The N-D domain over which a scalar will be modeled: list of vector coordinates
+                  scalar_range,         # The scalar range to model on the domain: 1d iterable of range values corresponding to domain entries
+                  numerator_symbols,    # These symbols encode which combinations of dimensions will be used for the numerator's vandermonde matrix
+                  denominator_symbols,  # These symbols encode which combinations of dimensions will be used for the denominators's vandermonde matrix
+                  labels = None,        # Domain and range labels for string creation
+                  plot = False,         # Toggle for plotting
+                  verbose = False ):    # Toggle for letting the people know.
+
+        #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+        ''' Validate Inputs '''
+        #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+        this.__validate_inputs__(domain,scalar_range,numerator_symbols,denominator_symbols,labels,verbose)
+
+        #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+        ''' Perform the fit '''
+        #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+        this.__fit__()
+
+        #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+        ''' Envoke optional plotting '''
+        #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+        if plot:
+            this.plot()
+
+    # Perform the fit
+    def __fit__(this):
+
+        # Import usefuls
+        from numpy import array,dot,mean,std,var
+
+        # Unpack useful information
+        domain = this.domain
+        scalar_range = this.scalar_range
+        centered_scalar_range = this.centered_scalar_range
+        numerator_symbols = this.numerator_symbols
+        denominator_symbols = this.denominator_symbols
+        mu, sigma = this.__mu__, this.__sigma__
+
+        #
+        numerator_coeffs, denominator_coeffs, fitfun = mvrslv0( domain, centered_scalar_range, numerator_symbols, denominator_symbols, mu=mu, sigma=sigma )
+        residuals = scalar_range - fitfun( domain )
+
+        #
+        done = False; tol = 1e-5
+        k = 0; kmax = 100; last_est = 1.0
+        est_list = []
+        while not done:
+            # Redefine the range values to be used on the right-hand-side
+            right_centered_scalar_range = fitfun( domain, __centered__ = True )
+            # Invert the linear form using these new values
+            numerator_coeffs, denominator_coeffs, fitfun = mvrslv0( domain, centered_scalar_range, numerator_symbols, denominator_symbols, mu=mu, sigma=sigma, right_centered_scalar_range=right_centered_scalar_range )
+            # Calculate estimators
+            residuals = scalar_range - fitfun( domain )
+            # est = max(abs(residuals))/max(abs(scalar_range)) # max(abs(residuals))
+            est = abs(var(residuals)/var(scalar_range)) # max(abs(residuals))
+            est_list.append(est)
+            # Determine whether the process has converged
+            # NOTE that there is a smarter stopping condition based on the expectation of exponential convergence
+            z = abs(last_est-est) / (est_list[0] if k>0 else 1.0)
+            #
+            k_is_large = k>kmax
+            if k_is_large and this.verbose: alert('Exiting because k is large')
+            z_is_small = z<tol
+            if z_is_small and this.verbose: alert('Exiting because z is small')
+            #est_grew = est > last_est
+            #if est_grew: alert('exiting becuase the estimator grew')
+            done = k_is_large or z_is_small # or est_grew
+            #
+            last_est = est
+            k += 1
+
+        #
+        this.estimator_series = est_list
+        this.numerator_coeffs = numerator_coeffs
+        this.denominator_coeffs = denominator_coeffs
+        this.residuals = residuals
+        this.__fitfun__ = fitfun
+
+    # Create a functional representation of the fit
+    def eval(this,vec):
+        '''A functional representation of the fit'''
+        ans = this.__fitfun__(vec)
+        return ans
 
     #
-    def __init__(this):
+    def __str__(this,python_labels=None):
+        # Handle the labels input
+        return this.__str_python__(labels=labels)
+
+    #
+    def __str_python__(this,python_labels=None,precision=8):
+        '''
+        It's useful to know:
+
+        * That "labels" is of the following form
+            * labels = [range_label,domain_labels,python_prefix]
+            * EXAMPLE: labels = [ 'temperature', ['day','longitude','latitude','aliens_influence_measure'], '' ]
+        '''
+        # Count the number of unique domain variables
+        domain_dimension = len( set(''.join(this.denominator_symbols+this.numerator_symbols)) )
+        # Extract python labels
+        python_labels = ( this.labels['python'] if 'python' in this.labels else None ) if python_labels is None else python_labels
+        # Create polynomial string for numerator
+        numerator_str   = poly2pystr( this.numerator_symbols, this.numerator_coeffs, labels=python_labels, precision=precision ).split(':')[-1]
+        # Create polynomial string for denominator
+        denominator_str = poly2pystr( this.denominator_symbols, -this.denominator_coeffs, labels=python_labels, precision=precision ).split(':')[-1]
+        # Create lambda sytax and full model string
+        funlabel = 'f' if python_labels is None else python_labels[0]
+        varlabels = [ 'x%i'%k for k in range(domain_dimension) ] if python_labels is None else python_labels[1]
+        lambda_syntax = '%s = lambda %s: ' % ( funlabel, ','.join(varlabels) )
+        #
+        model_str = lambda_syntax + '( %s ) / ( 1.0 + %s )' % ( numerator_str, denominator_str )
+        #
+        return model_str
+
+    #
+    def __str_latex__(this,labels=None,precision=8):
         return None
+
+    #
+    def plot(this,ax=None,show=False):
+
+        # Import useful things
+        import matplotlib as mpl
+        mpl.rcParams['lines.linewidth'] = 0.8
+        mpl.rcParams['font.family'] = 'serif'
+        mpl.rcParams['font.size'] = 12
+        mpl.rcParams['axes.labelsize'] = 16
+        mpl.rcParams['axes.titlesize'] = 16
+
+        from matplotlib.pyplot import plot,figure,title,xlabel,ylabel,legend,subplots,gca,sca
+        from mpl_toolkits.mplot3d import Axes3D
+        from numpy import diff,linspace, meshgrid, amin, amax, ones, array
+
+        #
+        this.__plot_convergence__()
+
+        # Handle optional axes input
+        if ax is None:
+            fig = figure( figsize=2*array([10,4]) )
+            ax = fig.add_subplot(121,projection='3d')
+
+        #
+        domain = this.domain
+        scalar_range = this.scalar_range
+
+        # Plot the raw data points
+        ax.scatter( domain[:,0], domain[:,1], scalar_range, marker='o', color='k',zorder=1, facecolors='k',label='Raw Data')
+
+        # Setup grid points for model
+        padf = 0.1
+        dx = ( max(domain[:,0])-min(domain[:,0]) ) * padf
+        dy = ( max(domain[:,1])-min(domain[:,1]) ) * padf
+        fitx = linspace( min(domain[:,0])-dx, max(domain[:,0])+dx, 45 )
+        fity = linspace( min(domain[:,1])-dy, max(domain[:,1])+dy, 45 )
+        xx,yy = meshgrid( fitx, fity )
+        fitdomain,_ = ndflatten( [xx,yy], yy )
+        # Plot model on grid
+        zz = this.eval( fitdomain ).reshape( xx.shape )
+        ax.plot_wireframe(xx, yy, zz, color='r', rstride=1, cstride=1,zorder=1,alpha=0.5,label='Fit')
+
+        legend(frameon=False)
+
+        ax = fig.add_subplot(122,projection='3d')
+        ax.scatter( domain[:,0], domain[:,1], this.residuals.reshape( domain[:,0].shape ), marker='o', color='b',zorder=1, facecolors='k',label='Residuals')
+        legend(frameon=False)
+
+
+    # Define function for plotting convergence information
+    def __plot_convergence__(this):
+
+        # Import useful things
+        from numpy import array
+        import matplotlib as mpl
+        mpl.rcParams['lines.linewidth'] = 0.8
+        mpl.rcParams['font.family'] = 'serif'
+        mpl.rcParams['font.size'] = 12
+        mpl.rcParams['axes.labelsize'] = 16
+        mpl.rcParams['axes.titlesize'] = 16
+        from matplotlib.pyplot import plot,figure,title,xlabel,ylabel,legend,subplot,gca,sca,axhline,yscale
+        #
+        est_list = array(this.estimator_series)
+        est0 = min(est_list)
+        est1 = est_list[-1]
+        fig = figure( figsize=3*array([4.2,2]) )
+        clr = rgb(1)
+        #
+        subplot(1,2,1)
+        plot(est_list,linestyle='-',color=clr[0] )
+        axhline( est1, color='k', linestyle=':' )
+        axhline( est0, color='k', linestyle='--' )
+        xlabel('$k$ (iteration)')
+        ylabel(r'$\mu$ (estimator)')
+        #
+        subplot(1,2,2)
+        x = abs(est_list-est0)
+        plot(x,linestyle='-',color=clr[0] )
+        plot(x,'ok',alpha=0.7,mec='k',mfc='none' )
+        xlabel('$k$')
+        ylabel(r'$\mu-\mu_0$ ')
+        yscale('log')
+        #
+        return fig
+
+    #
+    def __validate_inputs__(this,domain,scalar_range,numerator_symbols,denominator_symbols,labels,verbose ):
+
+        # Import usefuls
+        from numpy import ndarray,isfinite,complex256,float128,double,mean,std
+
+        #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+        ''' Validate the domain: '''
+        #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+        # * This input should be an NxM ndarray, where N is thew number of dimensions in the domain, and M is the number of samples along the given dimensions.
+        # * NOTE the M>=N will be inforced so that the regression problem is well posed.
+
+        # Type check
+        if not isinstance(domain,ndarray):
+            msg = 'domain input must be numpy array'
+            error(msg,'mvpolyfit')
+
+        # Check for 1D domain; reshape for consistent indexing below
+        if len(domain.shape)==1: domain = domain.reshape(len(domain),1)
+
+        # Determine the number of domain dimensions:
+        if len(domain.shape)==1: domain = domain.reshape(len(domain),1)
+        this.domain_dimension = domain.shape[-1]
+
+        # Dimension check for well-posedness
+        N,M = domain.shape
+        if N<M:
+            msg = 'number of samples (%i) found to be less than number of dimensions in domain (%i); this means that the problem as posed is underconstrained; please add more points to your sample space' % (N,M)
+            error(msg,'mnpolyfit')
+
+        #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+        ''' Validate the range '''
+        #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+        # The range must be an iterable of length M
+        if M != len(scalar_range):
+            msg = 'the sample range must be an iterable of length M; length of %i found insted'%len(scalar_range)
+        # Members of the range must all be floats
+        for r in scalar_range:
+            if not isinstance(r,(float,int,complex,complex256,double,float128)):
+                msg = 'all member of the input range must be floats; %s found instead'%r
+                error(msg,'mvpolyfit')
+
+        #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+        ''' Validate the basis symbols '''
+        #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+        # Common checks between numerator and denominator symbols
+        for basis_symbols in [numerator_symbols,denominator_symbols]:
+            # The basis symbols should be stored in an iterable, and each should be a string
+            try:
+                for k in basis_symbols:
+                    _ = None
+            except:
+                msg = 'input basis_symbols must be iterable and contain strings '
+                error( msg, 'mvpolyfit' )
+            # They must all be strings
+            for k in basis_symbols:
+                if not isinstance(k,str):
+                    msg = 'all basis symbols must be str'
+                    error(msg,'mvpolyfit')
+
+            # TODO: Check content of strings to ensure valid format -- can it be inderstood by mvpolyfit?
+
+            # Cleanly format basis symbols, and remove possible duplicates, or linearly dependent symbols
+            for s in basis_symbols:
+                s = sorted(s)
+            # Get unique values
+            basis_symbols = list( set(basis_symbols) )
+            basis_symbols = sorted( basis_symbols, key=lambda k: len(k) )
+
+        #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+        ''' Setup data centering and adjust input symbols '''
+        #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+        # Shorthand
+        this.__mu__, this.__sigma__ = mean(scalar_range), std(scalar_range)
+        this.centered_scalar_range = (scalar_range - this.__mu__) / this.__sigma__
+        this.denominator_symbols = sorted( list(denominator_symbols) )
+        __numerator_symbols__ = numerator_symbols
+        this.numerator_symbols = sorted(list( set( list(numerator_symbols) + denominator_symbols ) ))
+
+        #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+        ''' Store additional inputs for later use '''
+        #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+        this.verbose = verbose
+        this.domain = domain
+        this.scalar_range = scalar_range
+        this.labels = {} if labels is None else labels
 
 
 # High level Positive greedy algorithm ("Positive" becuase points are added greedily)
