@@ -327,8 +327,6 @@ class mvrfit:
         # Cast both as list
         numerator_symbols   = list( numerator_symbols )
         denominator_symbols = list( denominator_symbols )
-        # # Remove constant symbol from denominator IF it exists
-        # if 'K' in denominator_symbols: denominator_symbols.remove('K')
         # Common checks between numerator and denominator symbols
         for basis_symbols in [numerator_symbols,denominator_symbols]:
             # The basis symbols should be stored in an iterable, and each should be a string
@@ -361,7 +359,7 @@ class mvrfit:
         this.centered_scalar_range = (scalar_range - this.__mu__) / this.__sigma__
         this.denominator_symbols = sorted( list(denominator_symbols) )
         __numerator_symbols__ = numerator_symbols
-        this.numerator_symbols = sorted(list( set( list(numerator_symbols) + denominator_symbols ) ))
+        this.numerator_symbols = sorted(list( set( ['K'] + list(numerator_symbols) + denominator_symbols ) ))
 
         #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
         ''' Store additional inputs for later use '''
