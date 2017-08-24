@@ -92,7 +92,7 @@ class mvrfit:
     def __fit__(this,tol=1e-4):
 
         # Import usefuls
-        from numpy import array,dot,mean,std,var
+        from numpy import array,dot,mean,std,var,sqrt
 
         # Unpack useful information
         domain = this.domain
@@ -140,7 +140,9 @@ class mvrfit:
         this.numerator_coeffs = numerator_coeffs
         this.denominator_coeffs = denominator_coeffs
         this.residuals = residuals
+        this.frmse = sqrt( est_list[-1] )
         this.__fitfun__ = fitfun
+        this.bin = {}
 
     # Create a functional representation of the fit
     def eval(this,vec):
@@ -151,7 +153,7 @@ class mvrfit:
     #
     def __str__(this,python_labels=None):
         # Handle the labels input
-        return this.__str_python__(labels=labels)
+        return this.__str_python__(python_labels=python_labels)
 
     #
     def __str_python__(this,python_labels=None,precision=8):
@@ -393,7 +395,7 @@ def gmvrfit( domain,
     domain_dimension = domain.shape[-1]
 
     # Check for nonfinite values in range
-    mask = isfinite( range_map['forward'](domain,scalar_range) )
+    mask = isfinite( scalar_range )
     if sum(mask) != len(scalar_range):
         scalar_range = scalar_range[mask]
         domain = domain[mask,:]
@@ -408,13 +410,15 @@ def gmvrfit( domain,
         trial_denominator_symbols = [ k[0] for k in trial_boundary if not k[1] ]
         foo = mvrfit(domain,scalar_range,trial_numerator_symbols,trial_denominator_symbols)
         # estimator = foo.frmse
-        estimator = foo.maxres if maxres_estimator else foo.frmse
+        estimator = foo.frmse
         return estimator,foo
     def mvplotfun( foo ): foo.plot(show=show)
 
     # Create a lexicon of symbols to consider for model learning
     a_maxbulk = mvsyms( domain_dimension, maxdeg )
     b_maxbulk = copy(a_maxbulk)
+    # NOTE that the denomintor symbol space cannot have a constant
+    # term by construction of mvrslv0's algorithm.
     if 'K' in b_maxbulk: b_maxbulk.remove('K')
 
     # Define the space of all possible degrees bounded above by maxdeg
@@ -495,20 +499,16 @@ def gmvrfit( domain,
 
         if verbose: print '\n%s\n# Degree Tempered Positive Greedy Solution:\n%s\n'%(10*'====',10*'====')+str(A.answer)
 
+        # Apply a negative greedy process to futher refine the symbol content
+        B = ngreedy( boundary, action, plot = plot, show=show, plotfun = mvplotfun, verbose = verbose, ref_est_list = est_list )
         #
-        if apply_negative:
-            # Apply a negative greedy process to futher refine the symbol content
-            B = ngreedy( boundary, action, plot = plot, show=show, plotfun = mvplotfun, verbose = verbose, ref_est_list = est_list, permanent = permanent_symbols ) if apply_negative==True else None
-            #
-            if apply_negative and verbose: print '\n%s\n# Negative Greedy Solution:\n%s\n'%(10*'====',10*'====')+str(B.answer)
-            #
-            ans = B.answer
-        else:
-            ans = A.answer
+        if verbose: print '\n%s\n# Negative Greedy Solution:\n%s\n'%(10*'====',10*'====')+str(B.answer)
+        #
+        ans = B.answer
 
         # Store the greedy results in an ad-hoc way
         ans.bin['pgreedy_result'] = A
-        ans.bin['ngreedy_result'] = B if apply_negative else None
+        ans.bin['ngreedy_result'] = B
 
         #
         if verbose: print '\nFit Information:\n%s\n'%(10*'----')+str(ans)
