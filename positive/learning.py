@@ -62,20 +62,21 @@ class mvrfit:
     '''
     '''
     #
-    def __init__( this,                 # The current object
-                  domain,               # The N-D domain over which a scalar will be modeled: list of vector coordinates
-                  scalar_range,         # The scalar range to model on the domain: 1d iterable of range values corresponding to domain entries
-                  numerator_symbols,    # These symbols encode which combinations of dimensions will be used for the numerator's vandermonde matrix
-                  denominator_symbols,  # These symbols encode which combinations of dimensions will be used for the denominators's vandermonde matrix
-                  labels = None,        # Domain and range labels for string creation
-                  plot = False,         # Toggle for plotting
-                  tol = 1e-4,           # Tolerance for refinement of solution
-                  verbose = False ):    # Toggle for letting the people know.
+    def __init__( this,                     # The current object
+                  domain,                   # The N-D domain over which a scalar will be modeled: list of vector coordinates
+                  scalar_range,             # The scalar range to model on the domain: 1d iterable of range values corresponding to domain entries
+                  numerator_symbols,        # These symbols encode which combinations of dimensions will be used for the numerator's vandermonde matrix
+                  denominator_symbols,      # These symbols encode which combinations of dimensions will be used for the denominators's vandermonde matrix
+                  labels = None,            # Domain and range labels for string creation
+                  plot = False,             # Toggle for plotting
+                  tol = 1e-4,               # Tolerance for refinement of solution
+                  take_raw_symbols = False, # By defualt, adjust numerator symbols according to range centering
+                  verbose = False ):        # Toggle for letting the people know.
 
         #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
         ''' Validate Inputs '''
         #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
-        this.__validate_inputs__(domain,scalar_range,numerator_symbols,denominator_symbols,labels,verbose)
+        this.__validate_inputs__(domain,scalar_range,numerator_symbols,denominator_symbols,labels,take_raw_symbols,verbose)
 
         #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
         ''' Perform the fit '''
@@ -85,8 +86,7 @@ class mvrfit:
         #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
         ''' Envoke optional plotting '''
         #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
-        if plot:
-            this.plot()
+        if plot: this.plot()
 
     # Perform the fit
     def __fit__(this,tol=1e-4):
@@ -106,7 +106,14 @@ class mvrfit:
         numerator_coeffs, denominator_coeffs, fitfun = mvrslv0( domain, centered_scalar_range, numerator_symbols, denominator_symbols, mu=mu, sigma=sigma )
         residuals = scalar_range - fitfun( domain )
 
-        #
+        #-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-#
+        ''' Construct Y(0) = A + Y(n)B = ALPHA*coeffs(n+1), and
+        then solve for coeffs = ALPHA^-1 * Y(0) using mvrslv0.
+        The new coeffs, define the new Y for the RHS via
+        Y(n+1) = A(coeffs) / ( 1-B(coeffs) ). Then solve again
+        Y(0) = A + Y(n+1)B ... do this until the process has
+        converged according to an error estimate. '''
+        #-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-#
         done = False;
         k = 0; kmax = 100; last_est = 1.0
         est_list = []
@@ -185,7 +192,7 @@ class mvrfit:
     def __str_latex__(this,labels=None,precision=8):
         return None
 
-    #
+    # High level plotting function
     def plot(this,ax=None,show=False):
 
         # Import useful things
@@ -196,24 +203,227 @@ class mvrfit:
         mpl.rcParams['axes.labelsize'] = 16
         mpl.rcParams['axes.titlesize'] = 16
 
-        from matplotlib.pyplot import plot,figure,title,xlabel,ylabel,legend,subplots,gca,sca
+        from matplotlib.pyplot import plot,figure,title,xlabel,ylabel,legend,\
+        subplots,gca,sca,subplot,tight_layout,subplot2grid
         from mpl_toolkits.mplot3d import Axes3D
         from numpy import diff,linspace, meshgrid, amin, amax, ones, array
 
+        # Determine if range is complex; this effects plotting flow control
+        range_is_complex = this.scalar_range.dtype == complex
+
+        # Setup the dimnesions of the plot
+        spdim = '23' if range_is_complex else '13'
+
+        # Initiate the figure
+        fig = figure( figsize=2*array([8.5,3.5]) )
+        # fig = figure( figsize=2.5*( array([7,4]) if range_is_complex else array([7,2]) ) )
+        subplot( spdim+'1' )
+        fig.patch.set_facecolor('white')
+        if range_is_complex:
+            tight_layout(w_pad=5,h_pad=0,pad=1)
+        else:
+            tight_layout(w_pad=9,h_pad=0,pad=1)
+
         #
-        this.__plot_convergence__(show=show)
+        ax1 = subplot2grid((2,4), (0,0),colspan=2,rowspan=2,projection='3d')
+        ax2 = subplot2grid((2,4), (0,2))
+        ax3 = subplot2grid((2,4), (1,2))
+        ax4 = subplot2grid((2,4), (0,3))
+        ax5 = subplot2grid((2,4), (1,3))
+
+        #
+        this.__plot3D__(ax1)
+        this.__plotFl__(ax2)
+        this.__plotHi__(ax3)
+
+
+        # --------------------------------------------- #
+        # Plot Convergence of Result
+        # --------------------------------------------- #
+        this.__plot_convergence__(ax4,ax5,show=show)
+
+        #
+        if show:
+            from matplotlib.pyplot import show,draw
+            draw();show()
+
+    # Plot residual histograms
+    def __plotHi__(this,ax=None,_map=None,kind=None):
+
+        # Import useful things
+        import matplotlib as mpl
+        mpl.rcParams['lines.linewidth'] = 0.8
+        mpl.rcParams['font.family'] = 'serif'
+        mpl.rcParams['font.size'] = 12
+        mpl.rcParams['axes.labelsize'] = 16
+        mpl.rcParams['axes.titlesize'] = 16
+
+        from matplotlib.pyplot import plot,figure,title,xlabel,ylabel,legend,subplots,gca,sca,xlim,yticks
+        from numpy import diff,linspace,meshgrid,amin,amax,ones,array,angle,ones,sqrt,pi,mean
+        from mpl_toolkits.mplot3d import Axes3D
+        from scipy.stats import norm
+
+        # Handle optinal map input: transform the range values for plotting use
+        _map = (lambda x: x) if _map is None else _map
+
+        # Handle optional axes input
+        if ax is None:
+            fig = figure()
+            ax = fig.subplot(111,projection='3d')
+        else:
+            sca(ax)
+
+        # Extract desired residuals
+        res = this.residuals
+
+        # Extract desired normal fit
+        from scipy.stats import norm
+        mu,std = norm.fit( res.real )
+
+        # Plot histogram
+        n, bins, patches = ax.hist( res, 20,normed=True, facecolor=0.92*ones((3,)), alpha=1.0 )
+
+        # Plot estimate normal distribution
+        xmin,xmax=xlim()
+        x = linspace( mu-5*std, mu+5*std, 2e2 )
+        pdf =  norm.pdf( x, mu, std ) * sum(n) * (bins[1]-bins[0])
+        # pdf =  norm.pdf( x, mu, std ) * len(res) * (bins[1]-bins[0])
+        plot( x, pdf, 'r', label='Normal Approx.' )
+        xlim(lim(bins))
+        # yticks([])
+
+
+        # Decorate plot
+        # title(r'$frmse = %1.4e$'%(this.frmse))
+        xlabel('Residaul Error')
+        # ylabel('Count in Bin')
+        # legend( frameon=False )
+
+    # Plot flattened ND data on index
+    def __plotFl__(this,ax=None,_map=None):
+
+        # Import useful things
+        import matplotlib as mpl
+        mpl.rcParams['lines.linewidth'] = 0.8
+        mpl.rcParams['font.family'] = 'serif'
+        mpl.rcParams['font.size'] = 12
+        mpl.rcParams['axes.labelsize'] = 16
+        mpl.rcParams['axes.titlesize'] = 16
+
+        from matplotlib.pyplot import plot,figure,title,xlabel,ylabel,\
+                                      legend,subplots,gca,sca,xlim,text
+        from mpl_toolkits.mplot3d import Axes3D
+        from numpy import diff,linspace, meshgrid, amin, amax, ones, array, arange
+
+        # Handle optional axes input
+        if ax is None:
+            fig = figure()
+            ax = fig.subplot(111)
+        else:
+            sca(ax)
+
+        #
+        ax.xaxis.tick_top()
+
+        # Handle optinal map input: transform the range values for plotting use
+        _map = (lambda x: x) if _map is None else _map
+
+        #
+        index = arange( len(this.scalar_range) )+1
+        plot( index, _map(this.scalar_range), 'ok', mfc=0.6*array([1,1,1]), mec='k', alpha=0.95, ms=4 )
+        plot( index, _map(this.eval(this.domain)), 'o', ms = 8, mfc='none', mec='r', alpha=0.55  )
+        plot( index, _map(this.eval(this.domain)), 'x', ms = 5, mfc='none', mec='r', alpha=0.55  )
+        ax.set_xlim( [-1,len(_map(this.scalar_range))+1] )
+        dy = 0.05 * ( amax(_map(this.scalar_range)) - amin(_map(this.scalar_range)) )
+        ax.set_ylim( array([amin(_map(this.scalar_range)),amax(_map(this.scalar_range))]) + dy*array([-1,1]) )
+
+        # for k in index:
+        #     j = k-1
+        #     text( k, _map(this.range[j]), str(j), ha='center', va='center', size=12, alpha=0.6 )
+        #     if this.data_label is not None: print '[%i]>> %s' % (j,this.data_label[j])
+
+        #
+        xlabel('Domain Index')
+        ylabel(r'$f( \vec{x} )$')
+
+    # Plot 1D domain, 1D range
+    def __plot2D__(this,
+                   ax=None,
+                   _map=None,
+                   fit_xmin=None,   # Lower bound to evaluate fit domain
+                   fit_xmax=None,   # Upper bound to evaluate fit domain
+                   verbose=None):
+
+        # Import useful things
+        import matplotlib as mpl
+        mpl.rcParams['lines.linewidth'] = 0.8
+        mpl.rcParams['font.family'] = 'serif'
+        mpl.rcParams['font.size'] = 12
+        mpl.rcParams['axes.labelsize'] = 16
+        mpl.rcParams['axes.titlesize'] = 16
+
+        from matplotlib.pyplot import plot,figure,title,xlabel,ylabel,legend,subplots,gca,sca,xlim
+        from mpl_toolkits.mplot3d import Axes3D
+        from numpy import diff,linspace, meshgrid, amin, amax, ones, array
+
+        # Handle optional axes input
+        if ax is None:
+            fig = figure( figsize=2*array([10,4]) )
+            ax = fig.subplot(111,projection='3d')
+
+        # Handle optinal map input: transform the range values for plotting use
+        _map = (lambda x: x) if _map is None else _map
+
+        #
+        ax.plot( this.domain[:,0], _map(this.range), 'ok',label='Data', mfc='none', ms=8, alpha=1 )
+
+        # Take this.domain over which to plot fit either from data or from inputs
+        dx = ( max(this.domain[:,0])-min(this.domain[:,0]) ) * 0.1
+        fit_xmin = min(this.domain[:,0])-dx if fit_xmin is None else fit_xmin
+        fit_xmax = max(this.domain[:,0])+dx if fit_xmax is None else fit_xmax
+
+        # NOTE that this could be replaced b a general system where a list of bounds is input
+
+        #
+        fitx = linspace( fit_xmin, fit_xmax, 2e2 )
+        # fitx = linspace( min(domain[:,0])-dx, max(domain[:,0])+dx, 2e2 )
+        ax.plot( fitx, _map(this.eval(fitx)), '-r', alpha=1,label='Fit', linewidth=1 )
+
+        #
+        xlim(lim(fitx))
+
+        #
+        xlabel( '$x_0$' )
+        ylabel( '$f(x_0,x_1)$' )
+
+    # Plot 2D domain, 1D Range
+    def __plot3D__(this,ax=None,_map = lambda x: x ,show=False):
+
+        # Import useful things
+        import matplotlib as mpl
+        mpl.rcParams['lines.linewidth'] = 0.8
+        mpl.rcParams['font.family'] = 'serif'
+        mpl.rcParams['font.size'] = 12
+        mpl.rcParams['axes.labelsize'] = 16
+        mpl.rcParams['axes.titlesize'] = 16
+
+        from matplotlib.pyplot import plot,figure,title,xlabel,ylabel,legend,subplots,gca,sca,gcf
+        from mpl_toolkits.mplot3d import Axes3D
+        from numpy import diff,linspace, meshgrid, amin, amax, ones, array
 
         # Handle optional axes input
         if ax is None:
             fig = figure( figsize=2*array([10,4]) )
             ax = fig.add_subplot(121,projection='3d')
+        else:
+            sca(ax)
 
         #
         domain = this.domain
         scalar_range = this.scalar_range
 
         # Plot the raw data points
-        ax.scatter( domain[:,0], domain[:,1], scalar_range, marker='o', color='k',zorder=1, facecolors='k',label='Raw Data')
+        ax.scatter( domain[:,0], domain[:,1], _map(scalar_range), marker='o', color='k',zorder=1, facecolors='k',label='Raw Data')
 
         # Setup grid points for model
         padf = 0.1
@@ -224,22 +434,22 @@ class mvrfit:
         xx,yy = meshgrid( fitx, fity )
         fitdomain,_ = ndflatten( [xx,yy], yy )
         # Plot model on grid
-        zz = this.eval( fitdomain ).reshape( xx.shape )
-        ax.plot_wireframe(xx, yy, zz, color='r', rstride=1, cstride=1,zorder=1,alpha=0.5,label='Fit')
+        zz = _map( this.eval( fitdomain ).reshape( xx.shape ) )
+        ax.plot_wireframe(xx, yy, _map(zz), color='r', rstride=1, cstride=1,zorder=1,alpha=0.5,label='Fit')
 
         legend(frameon=False)
 
-        ax = fig.add_subplot(122,projection='3d')
-        ax.scatter( domain[:,0], domain[:,1], this.residuals.reshape( domain[:,0].shape ), marker='o', color='b',zorder=1, facecolors='k',label='Residuals')
-        legend(frameon=False)
+        # ax = gcf().add_subplot(122,projection='3d')
+        # ax.scatter( domain[:,0], domain[:,1], this.residuals.reshape( domain[:,0].shape ), marker='o', color='b',zorder=1, facecolors='k',label='Residuals')
+        # legend(frameon=False)
+
         #
         if show:
             from matplotlib.pyplot import show
             show()
 
-
     # Define function for plotting convergence information
-    def __plot_convergence__(this,show=False):
+    def __plot_convergence__(this,ax1=None,ax2=None,fig=None,show=False):
 
         # Import useful things
         from numpy import array
@@ -255,18 +465,28 @@ class mvrfit:
         est_list = array(this.estimator_series)
         est0 = min(est_list)
         est1 = est_list[-1]
-        fig = figure( figsize=3*array([4.2,2]) )
-        clr = rgb(1)
+        if fig is None:
+            fig = figure( figsize=3*array([4.2,2]) )
+        # clr = rgb(1)
+        clr = ['r','r']
         #
-        subplot(1,2,1)
+        if (ax1 is None) or (ax2 is None):
+            ax1 = subplot(1,2,1)
+            axs = subplot(1,2,2)
+        #
+        sca(ax1)
+        ax1.xaxis.tick_top()
+        ax1.yaxis.tick_right()
+        ax1.ticklabel_format(useOffset=True)
         plot(est_list,linestyle='-',color=clr[0] )
         axhline( est1, color='k', linestyle=':' )
         axhline( est0, color='k', linestyle='--' )
         xlabel('$k$ (iteration)')
         ylabel(r'$\mu$ (estimator)')
         #
-        subplot(1,2,2)
+        sca(ax2)
         x = abs(est_list-est0)
+        ax2.yaxis.tick_right()
         plot(x,linestyle='-',color=clr[0] )
         plot(x,'ok',alpha=0.7,mec='k',mfc='none' )
         xlabel('$k$')
@@ -279,8 +499,8 @@ class mvrfit:
         #
         return fig
 
-    #
-    def __validate_inputs__(this,domain,scalar_range,numerator_symbols,denominator_symbols,labels,verbose ):
+    # Validate inputs and store important low-level fields
+    def __validate_inputs__(this,domain,scalar_range,numerator_symbols,denominator_symbols,labels,take_raw_symbols,verbose ):
 
         # Import usefuls
         from numpy import ndarray,isfinite,complex256,float128,double,mean,std
@@ -359,7 +579,12 @@ class mvrfit:
         this.centered_scalar_range = (scalar_range - this.__mu__) / this.__sigma__
         this.denominator_symbols = sorted( list(denominator_symbols) )
         __numerator_symbols__ = numerator_symbols
-        this.numerator_symbols = sorted(list( set( ['K'] + list(numerator_symbols) + denominator_symbols ) ))
+
+        # IF it is desired to use only the raw numerator symbols, oradjust them according to centering
+        if take_raw_symbols:
+            this.numerator_symbols = sorted(list( set( ['K'] + list(numerator_symbols) ) ))
+        else:
+            this.numerator_symbols = sorted(list( set( ['K'] + list(numerator_symbols) + denominator_symbols ) ))
 
         #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
         ''' Store additional inputs for later use '''
@@ -406,113 +631,95 @@ def gmvrfit( domain,
         # NOTE that the code below must be consistent with the definition of "bulk" in the degree_space for-loops below.
         trial_numerator_symbols   = [ k[0] for k in trial_boundary if k[1] ]
         trial_denominator_symbols = [ k[0] for k in trial_boundary if not k[1] ]
-        foo = mvrfit(domain,scalar_range,trial_numerator_symbols,trial_denominator_symbols)
+        # NOTE that here we tell mvrfit to use the raw input symbols, and NOT automatically adjust them according to range centering
+        foo = mvrfit(domain,scalar_range,trial_numerator_symbols,trial_denominator_symbols,take_raw_symbols=True)
         # estimator = foo.frmse
         estimator = foo.frmse
         return estimator,foo
     def mvplotfun( foo ): foo.plot(show=show)
 
     # Create a lexicon of symbols to consider for model learning
-    a_maxbulk = mvsyms( domain_dimension, maxdeg )
-    b_maxbulk = copy(a_maxbulk)
-    # NOTE that the denomintor symbol space cannot have a constant
-    # term by construction of mvrslv0's algorithm.
-    if 'K' in b_maxbulk: b_maxbulk.remove('K')
-
+    maxbulk = mvsyms( domain_dimension, maxdeg )
     # Define the space of all possible degrees bounded above by maxdeg
     degree_space = range(mindeg,maxdeg+1)
-
     # Increment through degrees
-    last_min_est = inf
-    for a_deg in degree_space:
+    last_min_est,last_d_est = inf,inf
+    for deg in degree_space:
+        # Let the people know
+        if verbose: alert('Now working deg = %i' % deg)
+        #
+        a_bulk = [ s for s in maxbulk if len(s)<=deg ] if deg>0 else mvsyms(domain_dimension,deg)
+        b_bulk = [ s for s in maxbulk if len(s)<=deg and s!='K' ]
+        # Numerator + Denominator
+        bulk = [ (a,True) for a in a_bulk ] + [ (b,False) for b in b_bulk ]
 
-        # Determine the x-bulk for this degree value
-        a_bulk = [ s for s in a_maxbulk if len(s)<=a_deg ] if a_deg>0 else mvsyms(domain_dimension,a_deg)
+        # Apply a positive greedy process to estimate the optimal model's symbol content (i.e. "boundary", the greedy process moves symbols from the bulk to the boundary)
+        A_ = pgreedy( bulk, action, fitatol=fitatol, initial_boundary=initial_boundary, verbose = False  )
+
+        # Meter the stopping condition
+        d_est = amin(A_.estimator_list)-last_min_est
+        the_estimator_is_worse = amin(A_.estimator_list) > last_min_est
+        temper_fitatol = fitatol
+        the_estimator_hasnt_changed_a_lot = abs(d_est)<temper_fitatol and d_est!=0
+        the_estimator_hasnt_changed_since_last_deg_value = (d_est==0) and (last_d_est==0)
+        we_are_at_maxdeg = deg == maxdeg
+        done =    the_estimator_is_worse \
+               or the_estimator_hasnt_changed_a_lot \
+               or we_are_at_maxdeg \
+               or the_estimator_hasnt_changed_since_last_deg_value
 
         # Let the people know
-        if verbose: alert('Now working a_deg = %i' % a_deg)
+        if verbose:
+
+            if the_estimator_is_worse:
+                exit_msg = 'the estimator was made worse by using this max degree'
+            elif the_estimator_hasnt_changed_a_lot:
+                exit_msg = 'the estimator has changed by |%f| < %f' % (d_est,temper_fitatol)
+            elif we_are_at_maxdeg:
+                exit_msg = 'we are at the maximum degree of %i' % maxdeg
+            elif the_estimator_hasnt_changed_since_last_deg_value:
+                exit_msg = 'the estimator hasnt changes since the last degree value'
+
+            print '&& The estimator has changed by %f' % d_est
+            print '&& '+ ('Degree tempering will continue.' if not done else 'Degree tempering has completed becuase %s. The results of the last iteration will be kept.'%exit_msg)
 
         #
-        for b_deg in degree_space:
-
-            # Determine the x-bulk for this degree value
-            b_bulk = [ s for s in b_maxbulk if len(s)<=b_deg ] if b_deg>0 else mvsyms(domain_dimension,b_deg)
-
-            # Let the people know
-            if verbose: alert('Now working b_deg = %i' % b_deg)
-
-            '''
-            While the desired process is in some way 2D, we can always flatten the space,
-            thereby making it 1D. To do this, we need a way of labeling when symbols in the
-            flat 1D bulk belong to either a_bulk or b_bulk. Here we choose to do this by making
-            symbols tupled with a label which destinguishes between bulks.
-            NOTE that the greedy process' action must now understand the new symbols.
-            '''
-            # Numerator + Denominator
-            bulk = [ (a,True) for a in a_bulk ] + [ (b,False) for b in b_bulk ]
-
-            # Apply a positive greedy process to estimate the optimal model's symbol content (i.e. "boundary", the greedy process moves symbols from the bulk to the boundary)
-            A_ = pgreedy( bulk, action, fitatol=fitatol, initial_boundary=initial_boundary, verbose = False  )
-
-            # Meter the stopping condition
-            d_est = amin(A_.estimator_list)-last_min_est
-            the_estimator_is_worse = amin(A_.estimator_list) > last_min_est
-            temper_fitatol = fitatol
-            the_estimator_hasnt_changed_a_lot = abs(d_est)<temper_fitatol and d_est!=0
-            we_are_at_maxdeg = a_deg == b_deg == maxdeg
-            done =    the_estimator_is_worse \
-                   or the_estimator_hasnt_changed_a_lot \
-                   or we_are_at_maxdeg
-
-            # Let the people know
+        print done
+        if (not done) or not ('A' in locals()):
+            A = A_
+            boundary,est_list = A.boundary, A.estimator_list
+            last_min_est = est_list[-1]
+            last_d_est = d_est
             if verbose:
+                print '&& The current boundary is %s' % boundary
+                print '&& The current estimator value is %f\n' % est_list[-1]
+        else:
+            if plot:
+                A.answer.plot()
+                A.plot()
+            if verbose:
+                print '&& The Final boundary is %s' % boundary
+                print '&& The Final estimator value is %f\n' % est_list[-1]
+            break
 
-                if the_estimator_is_worse:
-                    exit_msg = 'the estimator was made worse by using this max degree'
-                elif the_estimator_hasnt_changed_a_lot:
-                    exit_msg = 'the estimator has changed by |%f| < %f' % (d_est,temper_fitatol)
-                elif we_are_at_maxdeg:
-                    exit_msg = 'we are at the maximum degree of %i' % maxdeg
+    if verbose: print '\n%s\n# Degree Tempered Positive Greedy Solution:\n%s\n'%(10*'====',10*'====')+str(A.answer)
 
-                print '&& The estimator has changed by %f' % d_est
-                print '&& '+ ('Degree tempering will continue.' if not done else 'Degree tempering has completed becuase %s. The results of the last iteration wil be kept.'%exit_msg)
+    # Apply a negative greedy process to futher refine the symbol content
+    B = ngreedy( boundary, action, plot = plot, show=show, plotfun = mvplotfun, verbose = verbose, ref_est_list = est_list )
+    #
+    if verbose: print '\n%s\n# Negative Greedy Solution:\n%s\n'%(10*'====',10*'====')+str(B.answer)
+    #
+    ans = B.answer
 
-            #
-            if (not done) or not ('A' in locals()):
-                A = A_
-                boundary,est_list = A.boundary, A.estimator_list
-                last_min_est = est_list[-1]
-                if verbose:
-                    print '&& The current boundary is %s' % boundary
-                    print '&& The current estimator value is %f\n' % est_list[-1]
-            else:
-                if plot:
-                    A.answer.plot()
-                    A.plot()
-                if verbose:
-                    print '&& The Final boundary is %s' % boundary
-                    print '&& The Final estimator value is %f\n' % est_list[-1]
-                break
+    # Store the greedy results in an ad-hoc way
+    ans.bin['pgreedy_result'] = A
+    ans.bin['ngreedy_result'] = B
 
+    #
+    if verbose: print '\nFit Information:\n%s\n'%(10*'----')+str(ans)
 
-        if verbose: print '\n%s\n# Degree Tempered Positive Greedy Solution:\n%s\n'%(10*'====',10*'====')+str(A.answer)
-
-        # Apply a negative greedy process to futher refine the symbol content
-        B = ngreedy( boundary, action, plot = plot, show=show, plotfun = mvplotfun, verbose = verbose, ref_est_list = est_list )
-        #
-        if verbose: print '\n%s\n# Negative Greedy Solution:\n%s\n'%(10*'====',10*'====')+str(B.answer)
-        #
-        ans = B.answer
-
-        # Store the greedy results in an ad-hoc way
-        ans.bin['pgreedy_result'] = A
-        ans.bin['ngreedy_result'] = B
-
-        #
-        if verbose: print '\nFit Information:\n%s\n'%(10*'----')+str(ans)
-
-        #
-        return ans
+    #
+    return ans
 
 #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
 # Given a 1D array, determine the set of N lines that are optimally representative  #
