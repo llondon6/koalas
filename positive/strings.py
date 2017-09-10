@@ -71,6 +71,11 @@ def poly2pystr(basis_symbols,coeffs,labels=None,precision=8):
     # Import usefuls
     from positive.api import error
 
+    #
+    if len(basis_symbols)==len(coeffs)==0:
+        basis_symbols=['']
+        coeffs = [0]
+
     # Count the number of unique domain variables
     domain_dimension = len( set(''.join(basis_symbols).replace('K','')) )
 

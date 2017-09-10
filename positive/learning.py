@@ -7,7 +7,7 @@ from positive import *
 #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
 
 # Invert Psi = A + Psi*B, for Psi = A/(1-B)
-def mvrslv0( domain, centered_scalar_range, numerator_symbols, denominator_symbols, mu=0, sigma=1.0, right_centered_scalar_range=None ):
+def mvrslv0( domain, centered_scalar_range, numerator_symbols, denominator_symbols, mu=0, sigma=1.0, right_centered_scalar_range=None, verbose=False ):
     '''
 
     Lionel London 2017 lionel.london@ligo.org
@@ -115,7 +115,7 @@ class mvrfit:
         converged according to an error estimate. '''
         #-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-#
         done = False;
-        k = 0; kmax = 100; last_est = 1.0
+        k = 0; kmax = 200; last_est = 1.0
         est_list = []
         while not done:
             # Redefine the range values to be used on the right-hand-side
@@ -132,7 +132,7 @@ class mvrfit:
             z = abs(last_est-est) / (est_list[0] if k>0 else 1.0)
             #
             k_is_large = k>kmax
-            if k_is_large and this.verbose: warning('Iterative refinement did not converger.')
+            if k_is_large and this.verbose: warning('Iterative refinement did not converge.')
             z_is_small = z<tol
             # if z_is_small and this.verbose: alert('Exiting because z is small')
             #est_grew = est > last_est
@@ -178,13 +178,15 @@ class mvrfit:
         # Create polynomial string for numerator
         numerator_str   = poly2pystr( this.numerator_symbols, this.numerator_coeffs, labels=python_labels, precision=precision ).split(':')[-1]
         # Create polynomial string for denominator
-        denominator_str = poly2pystr( this.denominator_symbols, -this.denominator_coeffs, labels=python_labels, precision=precision ).split(':')[-1]
+        denominator_str = '/ ( 1.0 + %s )'%poly2pystr( this.denominator_symbols, -this.denominator_coeffs, labels=python_labels, precision=precision ).split(':')[-1] if len(this.denominator_symbols)>0 else ''
         # Create lambda sytax
         funlabel = 'f' if python_labels is None else python_labels[0]
         varlabels = [ 'x%i'%k for k in range(domain_dimension) ] if python_labels is None else python_labels[1]
         lambda_syntax = '%s = lambda %s: ' % ( funlabel, ','.join(varlabels) )
         # Construct the output string
-        model_str = lambda_syntax + '%s  +  %s * ( %s ) / ( 1.0 + %s )' % ( ('%%1.%ie'%precision)%this.__mu__, ('%%1.%ie'%precision)%this.__sigma__, numerator_str, denominator_str )
+        mu_str = ('%%1.%ie'%precision)%this.__mu__ if not isinstance(this.__mu__,complex) else complex2str(this.__mu__,precision)
+        sigma_str = ('%%1.%ie'%precision)%this.__sigma__ if not isinstance(this.__sigma__,complex) else complex2str(this.__sigma__,complex)
+        model_str = lambda_syntax + '%s  +  %s * ( %s ) %s' % ( mu_str, sigma_str, numerator_str, denominator_str )
         #
         return model_str
 
@@ -193,7 +195,7 @@ class mvrfit:
         return None
 
     # High level plotting function
-    def plot(this,ax=None,show=False):
+    def plot(this,ax=None,show=False,fit_xmin=None,fit_xmax=None):
 
         # Import useful things
         import matplotlib as mpl
@@ -203,6 +205,7 @@ class mvrfit:
         mpl.rcParams['axes.labelsize'] = 16
         mpl.rcParams['axes.titlesize'] = 16
 
+        from positive.plotting import rgb
         from matplotlib.pyplot import plot,figure,title,xlabel,ylabel,legend,\
         subplots,gca,sca,subplot,tight_layout,subplot2grid
         from mpl_toolkits.mplot3d import Axes3D
@@ -210,6 +213,7 @@ class mvrfit:
 
         # Determine if range is complex; this effects plotting flow control
         range_is_complex = this.scalar_range.dtype == complex
+        clr = rgb(2,jet=True)
 
         # Setup the dimnesions of the plot
         spdim = '23' if range_is_complex else '13'
@@ -225,16 +229,38 @@ class mvrfit:
             tight_layout(w_pad=9,h_pad=0,pad=1)
 
         #
-        ax1 = subplot2grid((2,4), (0,0),colspan=2,rowspan=2,projection='3d')
+        dim = this.domain.shape[-1] + 1
+
+        #
+        ax1 = subplot2grid((2,4), (0,0),colspan=2,rowspan=2,projection='3d') if dim==3 else subplot2grid((2,4), (0,0),colspan=2,rowspan=2)
         ax2 = subplot2grid((2,4), (0,2))
         ax3 = subplot2grid((2,4), (1,2))
         ax4 = subplot2grid((2,4), (0,3))
         ax5 = subplot2grid((2,4), (1,3))
 
         #
-        this.__plot3D__(ax1)
-        this.__plotFl__(ax2)
-        this.__plotHi__(ax3)
+        if not range_is_complex:
+            #
+            if dim==3:
+                this.__plot3D__(ax1)
+            elif dim==2:
+                this.__plot2D__(ax1)
+            #
+            this.__plotFl__(ax2)
+            this.__plotHi__(ax3)
+        else:
+            #
+            if dim == 3:
+                this.__plot3D__(ax1)
+            elif dim == 2:
+                this.__plot2D__(ax1,_map=lambda s: s.imag, color = clr[0],fit_xmin=fit_xmin,fit_xmax=fit_xmax )
+                this.__plot2D__(ax1,_map=lambda s: s.real, color = clr[1],fit_xmin=fit_xmin,fit_xmax=fit_xmax )
+            #
+            this.__plotFl__(ax2,_map=lambda s: s.imag, color = clr[0])
+            this.__plotFl__(ax2,_map=lambda s: s.real, color = clr[1])
+            #
+            this.__plotHi__(ax3,_map=lambda s: s.imag, color = clr[0],alpha=0.2)
+            this.__plotHi__(ax3,_map=lambda s: s.real, color = clr[1],alpha=0.2)
 
 
         # --------------------------------------------- #
@@ -248,7 +274,7 @@ class mvrfit:
             draw();show()
 
     # Plot residual histograms
-    def __plotHi__(this,ax=None,_map=None,kind=None):
+    def __plotHi__(this,ax=None,_map=None,kind=None,color='r',alpha=1):
 
         # Import useful things
         import matplotlib as mpl
@@ -262,6 +288,7 @@ class mvrfit:
         from numpy import diff,linspace,meshgrid,amin,amax,ones,array,angle,ones,sqrt,pi,mean
         from mpl_toolkits.mplot3d import Axes3D
         from scipy.stats import norm
+        from matplotlib.ticker import ScalarFormatter
 
         # Handle optinal map input: transform the range values for plotting use
         _map = (lambda x: x) if _map is None else _map
@@ -274,33 +301,36 @@ class mvrfit:
             sca(ax)
 
         # Extract desired residuals
-        res = this.residuals
+        res = _map( 100*this.residuals/abs(this.scalar_range) )
 
         # Extract desired normal fit
         from scipy.stats import norm
-        mu,std = norm.fit( res.real )
+        mu,std = norm.fit( res )
 
         # Plot histogram
-        n, bins, patches = ax.hist( res, 20,normed=True, facecolor=0.92*ones((3,)), alpha=1.0 )
+        n, bins, patches = ax.hist( res, 20,normed=True, facecolor=0.92*ones((3,)) if color is 'r' else color, alpha=alpha )
 
         # Plot estimate normal distribution
         xmin,xmax=xlim()
-        x = linspace( mu-5*std, mu+5*std, 2e2 )
+        x = linspace( mu-3*std, mu+3*std, 2e2 )
         pdf =  norm.pdf( x, mu, std ) * sum(n) * (bins[1]-bins[0])
         # pdf =  norm.pdf( x, mu, std ) * len(res) * (bins[1]-bins[0])
-        plot( x, pdf, 'r', label='Normal Approx.' )
-        xlim(lim(bins))
+        plot( x, pdf, color=color, label='Normal Approx.' )
+        #xlim(lim(bins))
+        xfmt = ScalarFormatter()
+        xfmt.set_useOffset(0)
+        gca().xaxis.set_major_formatter(xfmt)
         # yticks([])
 
 
         # Decorate plot
         # title(r'$frmse = %1.4e$'%(this.frmse))
-        xlabel('Residaul Error')
+        xlabel(r'% Error')
         # ylabel('Count in Bin')
         # legend( frameon=False )
 
     # Plot flattened ND data on index
-    def __plotFl__(this,ax=None,_map=None):
+    def __plotFl__(this,ax=None,_map=None,color='r'):
 
         # Import useful things
         import matplotlib as mpl
@@ -331,11 +361,11 @@ class mvrfit:
         #
         index = arange( len(this.scalar_range) )+1
         plot( index, _map(this.scalar_range), 'ok', mfc=0.6*array([1,1,1]), mec='k', alpha=0.95, ms=4 )
-        plot( index, _map(this.eval(this.domain)), 'o', ms = 8, mfc='none', mec='r', alpha=0.55  )
-        plot( index, _map(this.eval(this.domain)), 'x', ms = 5, mfc='none', mec='r', alpha=0.55  )
+        plot( index, _map(this.eval(this.domain)), 'o', ms = 8, mfc='none', mec=color, alpha=0.55  )
+        plot( index, _map(this.eval(this.domain)), 'x', ms = 5, mfc='none', mec=color, alpha=0.55  )
         ax.set_xlim( [-1,len(_map(this.scalar_range))+1] )
         dy = 0.05 * ( amax(_map(this.scalar_range)) - amin(_map(this.scalar_range)) )
-        ax.set_ylim( array([amin(_map(this.scalar_range)),amax(_map(this.scalar_range))]) + dy*array([-1,1]) )
+        # ax.set_ylim( array([amin(_map(this.scalar_range)),amax(_map(this.scalar_range))]) + dy*array([-1,1]) )
 
         # for k in index:
         #     j = k-1
@@ -352,6 +382,7 @@ class mvrfit:
                    _map=None,
                    fit_xmin=None,   # Lower bound to evaluate fit domain
                    fit_xmax=None,   # Upper bound to evaluate fit domain
+                   color = 'r',
                    verbose=None):
 
         # Import useful things
@@ -370,12 +401,14 @@ class mvrfit:
         if ax is None:
             fig = figure( figsize=2*array([10,4]) )
             ax = fig.subplot(111,projection='3d')
+        else:
+            sca(ax)
 
         # Handle optinal map input: transform the range values for plotting use
         _map = (lambda x: x) if _map is None else _map
 
         #
-        ax.plot( this.domain[:,0], _map(this.range), 'ok',label='Data', mfc='none', ms=8, alpha=1 )
+        ax.plot( this.domain[:,0], _map(this.scalar_range), 'ok',label='Data', mfc='none', ms=8, alpha=1 )
 
         # Take this.domain over which to plot fit either from data or from inputs
         dx = ( max(this.domain[:,0])-min(this.domain[:,0]) ) * 0.1
@@ -385,16 +418,16 @@ class mvrfit:
         # NOTE that this could be replaced b a general system where a list of bounds is input
 
         #
-        fitx = linspace( fit_xmin, fit_xmax, 2e2 )
+        fitx = linspace( fit_xmin, fit_xmax, 1e3 )
         # fitx = linspace( min(domain[:,0])-dx, max(domain[:,0])+dx, 2e2 )
-        ax.plot( fitx, _map(this.eval(fitx)), '-r', alpha=1,label='Fit', linewidth=1 )
+        ax.plot( fitx, _map(this.eval(fitx)), color=color, alpha=1,label='Fit', linewidth=1 )
 
         #
         xlim(lim(fitx))
 
         #
         xlabel( '$x_0$' )
-        ylabel( '$f(x_0,x_1)$' )
+        ylabel( '$f(x_0)$' )
 
     # Plot 2D domain, 1D Range
     def __plot3D__(this,ax=None,_map = lambda x: x ,show=False):
@@ -452,15 +485,16 @@ class mvrfit:
     def __plot_convergence__(this,ax1=None,ax2=None,fig=None,show=False):
 
         # Import useful things
-        from numpy import array
+        from numpy import array,mean
         import matplotlib as mpl
         mpl.rcParams['lines.linewidth'] = 0.8
         mpl.rcParams['font.family'] = 'serif'
         mpl.rcParams['font.size'] = 12
         mpl.rcParams['axes.labelsize'] = 16
         mpl.rcParams['axes.titlesize'] = 16
-        from matplotlib.pyplot import plot,figure,title,xlabel,ylabel,legend,subplot,gca,sca,axhline,yscale
+        from matplotlib.pyplot import plot,figure,title,xlabel,ylabel,legend,subplot,gca,sca,axhline,yscale,xticks
         from positive.plotting import rgb
+        from matplotlib.ticker import ScalarFormatter
         #
         est_list = array(this.estimator_series)
         est0 = min(est_list)
@@ -475,14 +509,18 @@ class mvrfit:
             axs = subplot(1,2,2)
         #
         sca(ax1)
-        ax1.xaxis.tick_top()
+        # ax1.xaxis.tick_top()
+        xticks([])
         ax1.yaxis.tick_right()
         ax1.ticklabel_format(useOffset=True)
         plot(est_list,linestyle='-',color=clr[0] )
         axhline( est1, color='k', linestyle=':' )
         axhline( est0, color='k', linestyle='--' )
-        xlabel('$k$ (iteration)')
+        # xlabel('$k$ (iteration)')
         ylabel(r'$\mu$ (estimator)')
+        yfmt = ScalarFormatter()
+        yfmt.set_useOffset(mean(est_list))
+        ax1.yaxis.set_major_formatter(yfmt)
         #
         sca(ax2)
         x = abs(est_list-est0)
@@ -491,7 +529,7 @@ class mvrfit:
         plot(x,'ok',alpha=0.7,mec='k',mfc='none' )
         xlabel('$k$')
         ylabel(r'$\mu-\mu_0$ ')
-        yscale('log')
+        if len(est_list)>2: yscale('log')
         #
         if show:
             from matplotlib.pyplot import show
@@ -605,6 +643,7 @@ def gmvrfit( domain,
              plot = False,
              show = False,
              verbose = False,
+             apply_negative = True,
              **kwargs ):
 
     # Import stuff
@@ -704,16 +743,20 @@ def gmvrfit( domain,
 
     if verbose: print '\n%s\n# Degree Tempered Positive Greedy Solution:\n%s\n'%(10*'====',10*'====')+str(A.answer)
 
-    # Apply a negative greedy process to futher refine the symbol content
-    B = ngreedy( boundary, action, plot = plot, show=show, plotfun = mvplotfun, verbose = verbose, ref_est_list = est_list )
     #
-    if verbose: print '\n%s\n# Negative Greedy Solution:\n%s\n'%(10*'====',10*'====')+str(B.answer)
-    #
-    ans = B.answer
+    if apply_negative:
+        # Apply a negative greedy process to futher refine the symbol content
+        B = ngreedy( boundary, action, plot = plot, show=show, plotfun = mvplotfun, verbose = verbose, ref_est_list = est_list )
+        #
+        if verbose: print '\n%s\n# Negative Greedy Solution:\n%s\n'%(10*'====',10*'====')+str(B.answer)
+        #
+        ans = B.answer
+    else:
+        ans = A.answer
 
     # Store the greedy results in an ad-hoc way
     ans.bin['pgreedy_result'] = A
-    ans.bin['ngreedy_result'] = B
+    ans.bin['ngreedy_result'] = B if apply_negative else None
 
     #
     if verbose: print '\nFit Information:\n%s\n'%(10*'----')+str(ans)
@@ -1874,6 +1917,38 @@ class mvpolyfit:
         #
         this.data_label = None
 
+
+# LEGACY polynomial fitting in 1D with stepwise regression
+def apolyfit(x,y,order=None,tol=1e-3):
+    #
+    from numpy import polyfit,poly1d,std,inf
+
+    #
+    givenorder = False if order is None else True
+
+    #
+    done = False; k = 0; ordermax = len(x)-1; oldr = inf
+    while not done:
+
+        order = k if givenorder is False else order
+        fit = poly1d(polyfit(x,y,order))
+        r = std( fit(x)-y ) / ( std(y) if std(y)>1e-15 else 1.0 )
+        k += 1
+
+        dr = oldr-r # ideally dr > 0
+
+        if order==ordermax:
+            done = True
+        if dr <= tol:
+            done = True
+        if dr < 0:
+            done = True
+
+        if givenorder:
+            done = True
+
+    #
+    return fit
 
 # High level Positive greedy algorithm ("Positive" becuase points are added greedily)
 # NOTE that this function answers: Which model basis elements need to be added in order to optimize efffectualness?

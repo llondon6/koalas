@@ -128,14 +128,14 @@ def thisfun():
     return inspect.stack()[2][3]
 
 # Alert wrapper
-def alert(msg,fname=None,say=False,output_string=False,heading=None):
+def alert(msg,fname=None,say=False,output_string=False,heading=None,header=None,pattern=None):
     import os
     if fname is None:
         fname = thisfun()
     if say: os.system( 'say "%s"' % msg )
     _msg = '('+cyan(fname)+')>> '+msg
-    if heading:
-        hl = '-~' * int( len(_msg.replace('033','') )/2 )
+    if heading or header:
+        hl = ('-~' if pattern is None else pattern) * int( len(_msg.replace('033','') )/2 )
         _msg = '\n# %s #\n%s\n# %s #\n'%(hl,bold(_msg),hl)
     if not output_string:
         print _msg
