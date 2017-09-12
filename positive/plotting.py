@@ -30,7 +30,7 @@ def rgb( N,                     #
     '''
 
     #
-    from numpy import array,pi,sin,arange,linspace,amax
+    from numpy import array,pi,sin,arange,linspace,amax,mean,sqrt
 
     # If bad first intput, let the people know.
     if not isinstance( N, int ):
@@ -91,8 +91,13 @@ def rgb( N,                     #
             R = r*t
             G = g*t
             B = b*t
-        #
-        clr.append( abs(R+G+B) )
+        # Ensure that all color vectors have a mean that is the golden ratio (less than one)
+        V = abs(R+G+B)
+        V /= mean(V)*0.5*(1+sqrt(5))
+        # But make sure that all values are bounded by one
+        V = array([ min(v,1) for v in V ])
+        # Add color vector to output
+        clr.append( V )
 
     #
     if plot:
