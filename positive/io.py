@@ -1,5 +1,7 @@
 #
 from positive import *
+from positive.api import *
+from positive.io import *
 
 # Function for untaring datafiles
 def untar(tar_file,savedir='',verbose=False,cleanup=False):
