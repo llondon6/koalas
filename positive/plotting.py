@@ -1,16 +1,16 @@
 #
 from positive import *
 
-# Return the min and max limits of an 1D array
-def lim(x):
-    # Import useful bit
-    from numpy import array,ndarray
-    if not isinstance(x,ndarray):
-        x = array(x)
-    # Columate input.
-    z = x.reshape((x.size,))
-    # Return min and max as list
-    return array([min(z),max(z)]) + (0 if len(z)==1 else array([-1e-20,1e-20]))
+# # Return the min and max limits of an 1D array
+# def lim(x):
+#     # Import useful bit
+#     from numpy import array,ndarray
+#     if not isinstance(x,ndarray):
+#         x = array(x)
+#     # Columate input.
+#     z = x.reshape((x.size,))
+#     # Return min and max as list
+#     return array([min(z),max(z)]) + (0 if len(z)==1 else array([-1e-20,1e-20]))
 
 
 # Function to produce array of color vectors

@@ -325,7 +325,7 @@ def single_outsider( A ):
 
 
 # Return the min and max limits of an 1D array
-def lim(x):
+def lim(x,dilate=0):
 
     # Import useful bit
     from numpy import array,amin,amax,ndarray
@@ -336,8 +336,14 @@ def lim(x):
     # Columate input.
     z = x.reshape((x.size,))
 
+    #
+    dz = array([min(z),max(z)]) + (0 if len(z)==1 else array([-1e-20,1e-20]))
+
+    #
+    ans = dz + dz*dilate*array([-1,1])
+
     # Return min and max as list
-    return array([amin(z),amax(z)])
+    return ans
 
 # Determine whether numpy array is uniformly spaced
 def isunispaced(x,tol=1e-5):
