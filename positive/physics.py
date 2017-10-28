@@ -130,6 +130,17 @@ def Mf14067295( m1,m2,chi1,chi2,chif=None ):
     if np.any(abs(chi2>1)):
       raise ValueError("chi2 has to be in [-1, 1]")
 
+
+    # Swapping inputs to conform to fit conventions
+    # NOTE: See page 2 of https://arxiv.org/pdf/1406.7295.pdf
+    if m1>m2:
+        #
+        m1_,m2_ = m1,m2
+        chi1_,chi2_ = chi1,chi2
+        #
+        m1,m2 = m2_,m1_
+        chi1,chi2 = chi2_,chi1_
+
     # binary parameters
     m = m1+m2
     q = m1/m2

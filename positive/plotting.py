@@ -126,7 +126,7 @@ def rgb( N,                     #
 
 
 # Plot 2d surface and related scatter points
-def splot(domain,scalar_range,domain2=None,scalar_range2=None,kind=None,ms=35,cbfs=12):
+def splot(domain,scalar_range,domain2=None,scalar_range2=None,kind=None,ms=60,cbfs=12):
     '''Plot 2d surface and related scatter points '''
 
     # Import usefult things
@@ -180,3 +180,65 @@ def splot(domain,scalar_range,domain2=None,scalar_range2=None,kind=None,ms=35,cb
 
     #
     return gca()
+
+
+#
+def sYlm_mollweide_plot(l,m,ax=None,title=None,N=100,form=None,s=-2,colorbar_shrink=0.68):
+    '''
+    Plot spin weighted spherical harmonic.
+    '''
+
+    #
+    from matplotlib.pyplot import subplots,gca,gcf,figure,colorbar,draw
+    from numpy import array,pi,linspace,meshgrid
+
+    # Coordinate arrays for the graphical representation
+    x = linspace(-pi, pi, N)
+    y = linspace(-pi/2, pi/2, N/2)
+    X, Y = meshgrid(x, y)
+
+    # Spherical coordinate arrays derived from x, y
+    theta = pi/2 - y
+    phi = x.copy()
+
+    #
+    if form in (None,'r','re','real'):
+        SYLM_fun = lambda S,L,M,TH,PH: sYlm(S,L,M,TH,PH).real.T
+        title = r'$\Re(_{%i}Y_{%i%i})$'%(s,l,m)
+    elif form in ('i','im','imag'):
+        SYLM_fun = lambda S,L,M,TH,PH: sYlm(S,L,M,TH,PH).imag.T
+        title = r'$\Im(_{%i}Y_{%i%i})$'%(s,l,m)
+    elif form in ('a','ab','abs'):
+        SYLM_fun = lambda S,L,M,TH,PH: abs(sYlm(S,L,M,TH,PH)).T
+        title = r'$|_{%i}Y_{%i%i}|$'%(s,l,m)
+    elif form in ('+','plus'):
+        SYLM_fun = lambda S,L,M,TH,PH: ( sYlm(S,L,M,TH,PH) + sYlm(S,L,-M,TH,PH) ).real.T
+        title = r'$ _{%i}Y^{+}_{%i%i} = \Re \; \left[  \sum_{m\in \{%i,%i\}} \, _{%i} Y_{%i m} \; \right] $'%(s,l,m,m,-m,s,l,)
+    elif form in ('x','cross'):
+        SYLM_fun = lambda S,L,M,TH,PH: ( sYlm(S,L,M,TH,PH) + sYlm(S,L,-M,TH,PH) ).imag.T
+        title = r'$ _{%i}Y^{+}_{%i%i} = \Im \; \left[  \sum_{m\in \{%i,%i\}} \, _{%i} Y_{%i m} \; \right] $'%(s,l,m,m,-m,s,l,)
+
+    #
+    Z = SYLM_fun( -2,l,m,theta,phi )
+
+    xlabels = ['$210^\circ$', '$240^\circ$','$270^\circ$','$300^\circ$','$330^\circ$',
+               '$0^\circ$', '$30^\circ$', '$60^\circ$', '$90^\circ$','$120^\circ$', '$150^\circ$']
+
+    ylabels = ['$165^\circ$', '$150^\circ$', '$135^\circ$', '$120^\circ$',
+               '$105^\circ$', '$90^\circ$', '$75^\circ$', '$60^\circ$',
+               '$45^\circ$','$30^\circ$','$15^\circ$']
+
+    #
+    if ax is None:
+        fig, ax = subplots(subplot_kw=dict(projection='mollweide'), figsize= 1*array([10,8]) )
+
+    #
+    im = ax.pcolormesh(X,Y,Z)
+    ax.set_xticklabels(xlabels, fontsize=14)
+    ax.set_yticklabels(ylabels, fontsize=14)
+    # ax.set_title( title, fontsize=20)
+    ax.set_xlabel(r'$\phi$', fontsize=20)
+    ax.set_ylabel(r'$\theta$', fontsize=20)
+    ax.grid()
+    colorbar(im, ax=ax, orientation='horizontal',shrink=colorbar_shrink,label=title)
+    gcf().canvas.draw_idle()

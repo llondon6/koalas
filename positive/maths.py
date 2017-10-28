@@ -715,25 +715,56 @@ def diff5( time, ff ):
 # Simple combinatoric function -- number of ways to select k of n when order doesnt matter
 def nchoosek(n,k): return factorial(n)/(factorial(k)*factorial(n-k))
 
-#
+
+# High level function for spin weighted spherical harmonics
+def sYlm(s,l,m,theta,phi,return_mesh=False):
+
+    # Import useful things
+    from numpy import array,vstack,ndarray,exp,double
+
+    # Enforce that theta and phi are arrays
+    phi   = array( phi   if isinstance(phi  ,(list,tuple)) else [double(phi  )]  ) if not isinstance(phi  ,ndarray) else phi
+    theta = array( theta if isinstance(theta,(list,tuple)) else [double(theta)]  ) if not isinstance(theta,ndarray) else theta
+
+    #
+    theta_is_matrix = len(theta.shape)>1
+    phi_is_matrix = len(phi.shape)>1
+    if theta_is_matrix or phi_is_matrix :
+        error('theta and phi inputs must not have dimension greater than 1')
+
+    # Define function to encapsulate azimuthal dependence
+    Am = lambda M,PHI: exp( 1j*M*PHI )
+
+    # IF more than one phi value is given
+    if len(phi)>1 :
+        D = sDlm(s,l,m,theta)
+        Y = vstack(  [ D * Am(m,ph) for ph in phi ]  )
+    else: # ELSE if a single value is given
+        Y = sDlm(s,l,m,theta) * Am(m,phi)
+
+    #
+    if not return_mesh:
+        return Y
+    else:
+        from numpy import meshgrid
+        THETA,PHI = meshgrid(theta,phi)
+        return Y,THETA,PHI
+
 # Use formula from wikipedia to calculate the harmonic
 # See http://en.wikipedia.org/wiki/Spin-weighted_spherical_harmonics#Calculating
 # for more information.
-def sYlm(s,l,m,theta,phi):
+def sDlm(s,l,m,theta):
 
     #
-    from numpy import pi,ones,sin,tan,exp,array,double,sqrt,zeros
+    from numpy import pi,ones,sin,tan,exp,array,double,sqrt,zeros,ones_like
     from scipy.misc import factorial,comb
 
     #
     if isinstance(theta,(float,int,double)): theta = [theta]
-    if isinstance(phi,(float,int,double)): phi = [phi]
     theta = array(theta)
-    phi = array(phi)
 
     #
     theta = array([ double(k) for k in theta ])
-    phi = array([ double(k) for k in phi ])
 
     # Ensure regular output (i.e. no nans)
     theta[theta==0.0] = 1e-9
@@ -744,12 +775,7 @@ def sYlm(s,l,m,theta,phi):
     cot = lambda x: 1.0/double(tan(x))
 
     # Pre-allocatetion array for calculation (see usage below)
-    if min(theta.shape)!=1 and min(phi.shape)!=1:
-        X = ones( len(theta) )
-        if theta.shape != phi.shape:
-            error('Input dim error: theta and phi inputs must be same size.')
-    else:
-        X = ones( theta.shape )
+    X = ones_like( theta )
 
 
     # Calcualte the "pre-sum" part of sYlm
@@ -771,14 +797,14 @@ def sYlm(s,l,m,theta,phi):
                 B[k] = B[k] + a
 
     # Calculate final output array
-    Y = A*B*exp( 1j*m*phi )
+    D = A*B
 
     #
-    if sum(abs(Y.imag)) == 1e-7:
-        Y = Y.real
+    if (sum(abs(D.imag)) <= 1e-7).all():
+        D = D.real
 
     #
-    return Y
+    return D
 
 
 
@@ -1393,7 +1419,7 @@ def is_iterable(obj):
     """
     return hasattr(obj, '__iter__') and not isinstance(obj, str)
 
-
+# Class for ordered sets
 class OrderedSet(MutableSet):
     __version__ = '1.3'
     """
@@ -1510,3 +1536,13 @@ class OrderedSet(MutableSet):
             return False
         else:
             return set(self) == other_as_set
+
+
+
+
+
+
+'''
+Maths functions for implementation of matrix method for corotating frame.
+Reference: https://arxiv.org/pdf/1110.2965.pdf
+'''
