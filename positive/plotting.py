@@ -216,7 +216,7 @@ def sYlm_mollweide_plot(l,m,ax=None,title=None,N=100,form=None,s=-2,colorbar_shr
         title = r'$ _{%i}Y^{+}_{%i%i} = \Re \; \left[  \sum_{m\in \{%i,%i\}} \, _{%i} Y_{%i m} \; \right] $'%(s,l,m,m,-m,s,l,)
     elif form in ('x','cross'):
         SYLM_fun = lambda S,L,M,TH,PH: ( sYlm(S,L,M,TH,PH) + sYlm(S,L,-M,TH,PH) ).imag.T
-        title = r'$ _{%i}Y^{+}_{%i%i} = \Im \; \left[  \sum_{m\in \{%i,%i\}} \, _{%i} Y_{%i m} \; \right] $'%(s,l,m,m,-m,s,l,)
+        title = r'$ _{%i}Y^{\times}_{%i%i} = \Im \; \left[  \sum_{m\in \{%i,%i\}} \, _{%i} Y_{%i m} \; \right] $'%(s,l,m,m,-m,s,l,)
 
     #
     Z = SYLM_fun( -2,l,m,theta,phi )
