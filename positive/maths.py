@@ -396,6 +396,7 @@ def ffintegrate(t,y,w0,n=1):
     # If x is not a numpy array, then let the people know.
     if not type(y).__name__=='ndarray':
         msg = '(!!) The second input must be a numpy array of 1 dimension.'
+        error(msg)
 
     # If nonuniform time steps are found, then let the people know.
     if not isunispaced(t):
@@ -1124,12 +1125,24 @@ def expsin_window( N ):
     return ans
 
 #
-def spline_diff(t,y):
+def spline_diff(t,y,k=3):
+    '''
+    Wrapper for InterpolatedUnivariateSpline derivative function
+    '''
 
     #
     from scipy.interpolate import InterpolatedUnivariateSpline as spline
-    return spline(t,y).derivative()(t)
+    return spline(t,y,k=k).derivative()(t)
 
+#
+def spline_antidiff(t,y,k=3):
+    '''
+    Wrapper for InterpolatedUnivariateSpline antiderivative function
+    '''
+
+    #
+    from scipy.interpolate import InterpolatedUnivariateSpline as spline
+    return spline(t,y,k=k).antiderivative()(t)
 
 # Sinc Intepolation
 # from -- https://gist.github.com/endolith/1297227
