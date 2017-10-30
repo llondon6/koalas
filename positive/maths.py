@@ -326,9 +326,22 @@ def single_outsider( A ):
 
 # Return the min and max limits of an 1D array
 def lim(x,dilate=0):
+    '''
+    Return the min and max limits of an 1D array.
+
+    INPUT
+    ---
+    x,              ndarray
+    dilate=0,       fraction of max-min by which to expand or contract output
+
+    RETURN
+    ---
+    array with [min(x),max(x)]
+
+    '''
 
     # Import useful bit
-    from numpy import array,amin,amax,ndarray
+    from numpy import array,amin,amax,ndarray,diff
 
     # ensure is array
     if not isinstance(x,ndarray): x = array(x)
@@ -337,10 +350,10 @@ def lim(x,dilate=0):
     z = x.reshape((x.size,))
 
     #
-    dz = array([min(z),max(z)]) + (0 if len(z)==1 else array([-1e-20,1e-20]))
+    ans = array([min(z),max(z)]) + (0 if len(z)==1 else array([-1e-20,1e-20]))
 
     #
-    ans = dz + dz*dilate*array([-1,1])
+    if dilate != 0: ans += diff(ans)*dilate*array([-1,1])
 
     # Return min and max as list
     return ans
