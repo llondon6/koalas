@@ -280,3 +280,142 @@ def jf14067295(m1, m2, chi1, chi2):
     chif = x[0]
 
     return chif
+
+
+
+#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+# Post-Newtonian methods
+#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+
+#
+def mishra( f, m1,m2, X1,X2, lm,    # Intrensic parameters and l,m
+            lnhat   = None,         # unit direction of orbital angular momentum
+            vmax    = None,         # maximum power (integer) allwed for V parameter
+            verbose = False ):      # toggle for letting the people know
+    '''
+    PN formulas from "Ready-to-use post-Newtonian gravitational waveforms for binary black holes with non-precessing spins: An update"
+    *   https://arxiv.org/pdf/1601.05588.pdf
+    *   https://arxiv.org/pdf/0810.5336.pdf
+    '''
+
+    # Import usefuls
+    from numpy import pi,array,dot,sqrt,log,inf,ones
+
+    # Handle zero values
+    f[f==0] = 1e-5 * min(abs(f))
+
+    #
+    l,m = lm
+
+    #
+    M = m1+m2
+
+    # Normalied mass difference
+    delta = (m1-m2)/(m1+m2)
+
+    # Symmetric mass ratio
+    eta = float(m1)*m2/(M*M)
+
+    # Frequency parameter (note that this is the same as the paper's \nu)
+    V = lambda m: pow(2.0*pi*M*f/m,1.0/3)
+
+    # Here we handle the vmax input using a lambda function
+    if vmax is None: vmax = inf
+    e = ones(12)        # This identifier will be used to turn off terms
+    e[(vmax+1):] = 0    # NOTE that e will effectively be indexed starting
+                        # from 1 not 0, so it must have more elements than needed.
+
+
+    # Handle default behavior for
+    lnhat = array([0,0,1]) if lnhat is None else lnhat
+
+    # Symmetric and Anti-symmettric spins
+    Xs = 0.5 * ( X1+X2 )
+    Xa = 0.5 * ( X1-X2 )
+
+    # Dictionary for FD multipole terms (eq. 12)
+    H = {}
+
+    #
+    H[2,2] = lambda v: -1 + v**2  * e[2] *  ( (323.0/224.0)-(eta*451.0/168.0) ) \
+                          + v**3  * e[3] *  ( -(27.0/8)*delta*dot(Xa,lnhat) + dot(Xs,lnhat)*((-27.0/8)+(eta*11.0/6)) ) \
+                          + v**4  * e[4] *  ( (27312085.0/8128512)+(eta*1975055.0/338688) - (105271.0/24192)*eta*eta + dot(Xa,lnhat)**2 * ((113.0/32)-eta*14) + delta*(113.0/16)*dot(Xa,lnhat)*dot(Xs,lnhat) + dot(Xs,lnhat)**2 * ((113.0/32) - (eta/8)) )
+
+    #
+    H[2,1] = lambda v: -(sqrt(2)/3) * ( v    * delta \
+                                      - v**2 * e[2] * 1.5*( dot(Xa,lnhat)+delta*dot(Xs,lnhat) ) \
+                                      + v**3 * e[3] * delta*( (335.0/672)+(eta*117.0/56) ) \
+                                      + v**4 * e[4] * ( dot(Xa,lnhat)*(4771.0/1344 - eta*11941.0/336) + delta*dot(Xs,lnhat)*(4771.0/1344 - eta*2549.0/336) + delta*(-1j*0.5-pi-2*1j*log(2)) ) \
+                                      )
+
+    #
+    H[3,3] = lambda v: -0.75*sqrt(5.0/7) \
+                        *(v           * delta \
+                        + v**3 * e[3] * delta * ( -(1945.0/672) + eta*(27.0/8) )\
+                        + v**4 * e[4] * ( dot(Xa,lnhat)*( (161.0/24) - eta*(85.0/3) ) + delta*dot(Xs,lnhat)*( (161.0/24) - eta*(17.0/3) ) + delta*(-1j*21.0/5 + pi + 6j*log(3.0/2)) ) \
+                        )
+
+    #
+    H[3,2] = lambda v: -(1.0/3)*sqrt(5.0/7) * (\
+                        v**2   * e[2] * (1-3*eta) \
+                        + v**3 * e[3] * 4*eta*dot(Xs,lnhat) \
+                        + v**4 * e[4] * (-10471.0/10080 + eta*12325.0/2016 - eta*eta*589.0/72) \
+                        )
+
+    #
+    H[4,4] = lambda v: -(4.0/9)*sqrt(10.0/7) \
+                        * ( v**2 * e[2] * (1-3*eta) \
+                        +   v**4 * e[4] * (-158383.0/36960 + eta*128221.0/7392 - eta*eta*1063.0/88) \
+                        )
+
+    #
+    H[4,3] = lambda v: -(3.0/4)*sqrt(3.0/35) * (
+                        v**3 * e[3] * delta*(1-2*eta) \
+                        + v**4 * e[4] * (5.0/2)*eta*( dot(Xa,lnhat) - delta*dot(Xs,lnhat) )\
+                        )
+
+    #
+    hlm_amp = M*M*pi * sqrt(eta*2.0/3)*(V(m)**-3.5) * H[l,m]( V(m) )
+
+    #
+    return abs(hlm_amp)
+
+
+# leading order amplitudes in freq fd strain via spa
+def lamp_spa(f,eta,lm=(2,2)):
+    # freq domain amplitude from leading order in f SPA
+    # made using ll-LeadingOrderAmplitudes.nb in PhenomHM repo
+    from numpy import pi,sqrt
+
+    #
+    warning('This function has a bug related the a MMA bug of unknown origin -- ampliutdes are off by order 1 factors!!')
+
+    # Handle zero values
+    f[f==0] = 1e-5 * min(abs(f))
+
+    #
+    hf = {}
+    #
+    hf[2,2] = (sqrt(0.6666666666666666)*sqrt(eta))/(f**1.1666666666666667*pi**0.16666666666666666)
+    #
+    hf[2,1] = (sqrt(0.6666666666666666)*sqrt(eta - 4*eta**2)*pi**0.16666666666666666)/(3.*f**0.8333333333333334)
+    #
+    hf[3,3] = (3*sqrt(0.7142857142857143)*sqrt(eta - 4*eta**2)*pi**0.16666666666666666)/(4.*f**0.8333333333333334)
+    #
+    hf[3,2] = (sqrt(0.47619047619047616)*eta*sqrt(pi))/(3.*sqrt(eta*f)) - (sqrt(0.47619047619047616)*eta**2*sqrt(pi))/sqrt(eta*f)
+    #
+    hf[3,1] = (sqrt(eta - 4*eta**2)*pi**0.16666666666666666)/(12.*sqrt(21)*f**0.8333333333333334)
+    #
+    hf[4,4] = (8*sqrt(0.47619047619047616)*eta*sqrt(pi))/(9.*sqrt(eta*f)) - (8*sqrt(0.47619047619047616)*eta**2*sqrt(pi))/(3.*sqrt(eta*f))
+    #
+    hf[4,3] = (3*sqrt(0.08571428571428572)*sqrt(eta - 4*eta**2)*pi**0.8333333333333334)/(4.*f**0.16666666666666666) - (3*sqrt(0.08571428571428572)*eta*sqrt(eta - 4*eta**2)*pi**0.8333333333333334)/(2.*f**0.16666666666666666)
+    #
+    hf[4,2] = (sqrt(3.3333333333333335)*eta*sqrt(pi))/(63.*sqrt(eta*f)) - (sqrt(3.3333333333333335)*eta**2*sqrt(pi))/(21.*sqrt(eta*f))
+    #
+    hf[4,1] = (sqrt(eta - 4*eta**2)*pi**0.8333333333333334)/(84.*sqrt(15)*f**0.16666666666666666) - (eta*sqrt(eta - 4*eta**2)*pi**0.8333333333333334)/(42.*sqrt(15)*f**0.16666666666666666)
+    #
+    hf[5,5] = (625*sqrt(eta - 4*eta**2)*pi**0.8333333333333334)/(288.*sqrt(11)*f**0.16666666666666666) - (625*eta*sqrt(eta - 4*eta**2)*pi**0.8333333333333334)/(144.*sqrt(11)*f**0.16666666666666666)
+    #
+    hf[6,6] = 3.6
+    #
+    return hf[lm]
