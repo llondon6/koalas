@@ -132,6 +132,8 @@ def alert(msg,fname=None,say=False,output_string=False,heading=None,header=None,
     import os
     if fname is None:
         fname = thisfun()
+        if fname == "<module>": fname = 'notebook'
+        if fname == "__main__": fname = 'script'
     if say: os.system( 'say "%s"' % msg )
     _msg = '('+cyan(fname)+')>> '+msg
     if heading or header:
@@ -151,10 +153,13 @@ def say(msg,fname=None):
         os.system( 'say "%s says: %s"' % (fname,msg) )
 
 # Warning wrapper
-def warning(msg,fname=None,output_string=False):
+def warning(msg,fname=None,output_string=False,heading=None,header=None,pattern=None):
     if fname is None:
         fname = thisfun()
     _msg = bold('('+yellow(fname+'!')+')>> ')+msg
+    if heading or header:
+        hl = ('-~' if pattern is None else pattern) * int( len(_msg.replace('033','') )/2 )
+        _msg = '\n# %s #\n%s\n# %s #\n'%(hl,bold(_msg),hl)
     if not output_string:
         print _msg
     else:
