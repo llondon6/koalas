@@ -1646,11 +1646,14 @@ class mvpolyfit:
             ax = fig.subplot(111,projection='3d')
 
         # Extract desired residuals
-        res = this.bin['frac_real_res'] if kind in (None,'real') else ( this.bin['frac_amp_res'] if kind.lower() == 'amp' else this.bin['frac_pha_res'] )
+        # res = this.bin['frac_real_res'] if kind in (None,'real') else ( this.bin['frac_amp_res'] if kind.lower() == 'amp' else this.bin['frac_pha_res'] )
+        res = this.residual
         res = res.real
 
         # Extract desired normal fit
-        mu,std = this.bin['frac_real_res_mu_std'] if kind in (None,'real') else ( this.bin['frac_amp_res_mu_std'] if kind.lower() == 'amp' else this.bin['frac_pha_res_mu_std'] )
+        # mu,std = this.bin['frac_real_res_mu_std'] if kind in (None,'real') else ( this.bin['frac_amp_res_mu_std'] if kind.lower() == 'amp' else this.bin['frac_pha_res_mu_std'] )
+        from scipy.stats import norm
+        mu,std = norm.fit( res )
 
         # Plot histogram
         n, bins, patches = ax.hist( res, max([len(res)/5,3]), facecolor=0.92*ones((3,)), alpha=1.0 )
@@ -1665,7 +1668,8 @@ class mvpolyfit:
 
         # Decorate plot
         title(r'$frmse = %1.4e$, $\langle res \rangle =%1.4e$'%(this.frmse,mean(res)))
-        xlabel('Fractional Residaul Error')
+        # xlabel('Fractional Residaul Error')
+        xlabel('Residaul Error')
         ylabel('Count in Bin')
         # legend( frameon=False )
 
@@ -1899,14 +1903,10 @@ class mvpolyfit:
         # Get unique values
         basis_symbols = list( set(basis_symbols) )
         basis_symbols = sorted( basis_symbols, key=lambda k: len(k) )
-        # Ensure that the first entry is the constant term. This is important for centering.
-        basis_symbols = ['K'] + [ s for s in basis_symbols if s!='K' ]
+
+        # NOTE that data should be centered before input here, if centering is desired
 
         # Store low level inputs (More items are stored later)
-        # this.__raw_range__ = scalar_range
-        # this.range_mean = mean(this.__raw_range__)
-        # this.range_std = std(this.__raw_range__)
-        # this.range = (this.__raw_range__ - this.range_mean) / this.range_std
         this.range = scalar_range
         #
         this.domain = domain
@@ -2190,6 +2190,7 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
              temper = True,         # Toggle for applying degree tempering, where the positive greedy process is forward optimized over max polynomial degree
              range_map = None,      # Operation to apply to range before fitting, and inverse. EXAMPLE: range_map = { 'forward': lambda x: external_variable*x, 'backward': lambda y: y/external_variable }
              verbose = False,       # Let the people know
+             homogeneous=False,     # Toggle for homogenous polynomials
              maxres_estimator = False, # Toggle for using abs of max residual as estimator rather then frmse
              **kwargs ):
     '''Adaptive (Greedy) Multivariate polynomial fitting: general domain dimension, but range must be 1D (possibly complex).'''
@@ -2240,6 +2241,9 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
     # Create a lexicon of symbols to consider for model learning
     # NOTE the manual adding of a constant term symbol, "K"
     maxbulk = mvsyms( domain_dimension, maxdeg )
+
+    # Allow for homogenous polynomials
+    if homogeneous: maxbulk = [ s for s in maxbulk if s != 'K' ]
 
     # Define the space of all possible degrees bounded above by maxdeg
     degree_space = range(mindeg,maxdeg+1) if temper else [maxdeg]

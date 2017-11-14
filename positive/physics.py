@@ -290,7 +290,8 @@ def jf14067295(m1, m2, chi1, chi2):
 #
 def mishra( f, m1,m2, X1,X2, lm,    # Intrensic parameters and l,m
             lnhat   = None,         # unit direction of orbital angular momentum
-            vmax    = None,         # maximum power (integer) allwed for V parameter
+            vmax    = 12,         # maximum power (integer) allwed for V parameter
+            factorcheck = False,
             verbose = False ):      # toggle for letting the people know
     '''
     PN formulas from "Ready-to-use post-Newtonian gravitational waveforms for binary black holes with non-precessing spins: An update"
@@ -343,7 +344,7 @@ def mishra( f, m1,m2, X1,X2, lm,    # Intrensic parameters and l,m
 
     #
     H[2,1] = lambda v: -(sqrt(2)/3) * ( v    * delta \
-                                      - v**2 * e[2] * 1.5*( dot(Xa,lnhat)+delta*dot(Xs,lnhat) ) \
+                                      - v**2 * e[2] * 1.5*( dot(Xa,lnhat)+delta*dot(Xs,lnhat) ) * (1 if not factorcheck else 1j ) \
                                       + v**3 * e[3] * delta*( (335.0/672)+(eta*117.0/56) ) \
                                       + v**4 * e[4] * ( dot(Xa,lnhat)*(4771.0/1344 - eta*11941.0/336) + delta*dot(Xs,lnhat)*(4771.0/1344 - eta*2549.0/336) + delta*(-1j*0.5-pi-2*1j*log(2)) ) \
                                       )
