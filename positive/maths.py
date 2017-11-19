@@ -350,7 +350,7 @@ def lim(x,dilate=0):
     z = x.reshape((x.size,))
 
     #
-    ans = array([min(z),max(z)]) + (0 if len(z)==1 else array([-1e-20,1e-20]))
+    ans = array([min(z),max(z)]) + (0 if len(z)>1 else array([-1e-20,1e-20]))
 
     #
     if dilate != 0: ans += diff(ans)*dilate*array([-1,1])

@@ -290,8 +290,8 @@ def jf14067295(m1, m2, chi1, chi2):
 #
 def mishra( f, m1,m2, X1,X2, lm,    # Intrensic parameters and l,m
             lnhat   = None,         # unit direction of orbital angular momentum
-            vmax    = 12,         # maximum power (integer) allwed for V parameter
-            factorcheck = False,
+            vmax    = 10,           # maximum power (integer) allwed for V parameter
+            leading_order = False,  # Toggle for using only leading order behavior
             verbose = False ):      # toggle for letting the people know
     '''
     PN formulas from "Ready-to-use post-Newtonian gravitational waveforms for binary black holes with non-precessing spins: An update"
@@ -334,45 +334,48 @@ def mishra( f, m1,m2, X1,X2, lm,    # Intrensic parameters and l,m
     Xs = 0.5 * ( X1+X2 )
     Xa = 0.5 * ( X1-X2 )
 
+    #
+    U = not leading_order
+
     # Dictionary for FD multipole terms (eq. 12)
     H = {}
 
     #
-    H[2,2] = lambda v: -1 + v**2  * e[2] *  ( (323.0/224.0)-(eta*451.0/168.0) ) \
+    H[2,2] = lambda v: -1 + U*( v**2  * e[2] *  ( (323.0/224.0)-(eta*451.0/168.0) ) \
                           + v**3  * e[3] *  ( -(27.0/8)*delta*dot(Xa,lnhat) + dot(Xs,lnhat)*((-27.0/8)+(eta*11.0/6)) ) \
-                          + v**4  * e[4] *  ( (27312085.0/8128512)+(eta*1975055.0/338688) - (105271.0/24192)*eta*eta + dot(Xa,lnhat)**2 * ((113.0/32)-eta*14) + delta*(113.0/16)*dot(Xa,lnhat)*dot(Xs,lnhat) + dot(Xs,lnhat)**2 * ((113.0/32) - (eta/8)) )
+                          + v**4  * e[4] *  ( (27312085.0/8128512)+(eta*1975055.0/338688) - (105271.0/24192)*eta*eta + dot(Xa,lnhat)**2 * ((113.0/32)-eta*14) + delta*(113.0/16)*dot(Xa,lnhat)*dot(Xs,lnhat) + dot(Xs,lnhat)**2 * ((113.0/32) - (eta/8)) ) )
 
     #
     H[2,1] = lambda v: -(sqrt(2)/3) * ( v    * delta \
-                                      - v**2 * e[2] * 1.5*( dot(Xa,lnhat)+delta*dot(Xs,lnhat) ) * (1 if not factorcheck else 1j ) \
+                                      + U*(- v**2 * e[2] * 1.5*( dot(Xa,lnhat)+delta*dot(Xs,lnhat) ) \
                                       + v**3 * e[3] * delta*( (335.0/672)+(eta*117.0/56) ) \
                                       + v**4 * e[4] * ( dot(Xa,lnhat)*(4771.0/1344 - eta*11941.0/336) + delta*dot(Xs,lnhat)*(4771.0/1344 - eta*2549.0/336) + delta*(-1j*0.5-pi-2*1j*log(2)) ) \
-                                      )
+                                      ))
 
     #
     H[3,3] = lambda v: -0.75*sqrt(5.0/7) \
                         *(v           * delta \
-                        + v**3 * e[3] * delta * ( -(1945.0/672) + eta*(27.0/8) )\
+                        + U*( v**3 * e[3] * delta * ( -(1945.0/672) + eta*(27.0/8) )\
                         + v**4 * e[4] * ( dot(Xa,lnhat)*( (161.0/24) - eta*(85.0/3) ) + delta*dot(Xs,lnhat)*( (161.0/24) - eta*(17.0/3) ) + delta*(-1j*21.0/5 + pi + 6j*log(3.0/2)) ) \
-                        )
+                        ))
 
     #
     H[3,2] = lambda v: -(1.0/3)*sqrt(5.0/7) * (\
                         v**2   * e[2] * (1-3*eta) \
-                        + v**3 * e[3] * 4*eta*dot(Xs,lnhat) \
+                        + U*( v**3 * e[3] * 4*eta*dot(Xs,lnhat) \
                         + v**4 * e[4] * (-10471.0/10080 + eta*12325.0/2016 - eta*eta*589.0/72) \
-                        )
+                        ))
 
     #
     H[4,4] = lambda v: -(4.0/9)*sqrt(10.0/7) \
                         * ( v**2 * e[2] * (1-3*eta) \
-                        +   v**4 * e[4] * (-158383.0/36960 + eta*128221.0/7392 - eta*eta*1063.0/88) \
-                        )
+                        +   U*(v**4 * e[4] * (-158383.0/36960 + eta*128221.0/7392 - eta*eta*1063.0/88) \
+                        ))
 
     #
     H[4,3] = lambda v: -(3.0/4)*sqrt(3.0/35) * (
                         v**3 * e[3] * delta*(1-2*eta) \
-                        + v**4 * e[4] * (5.0/2)*eta*( dot(Xa,lnhat) - delta*dot(Xs,lnhat) )\
+                        + U*v**4 * e[4] * (5.0/2)*eta*( dot(Xa,lnhat) - delta*dot(Xs,lnhat) )\
                         )
 
     #

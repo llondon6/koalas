@@ -3,6 +3,18 @@ from positive import *
 from positive.api import *
 from positive.io import *
 
+# Function to copy files
+def copyfile(src,dst,verbose=True,overwrite=False):
+    from shutil import copyfile as cp
+    from os.path import exists,realpath
+    file_already_exists = exists(dst)
+    if file_already_exists and overwrite:
+        if verbose: alert('Copying: %s --> %s'%(magenta(src),magenta(dst)))
+        if file_already_exists: alert(yellow('The file already exists and will be overwritten.'))
+        cp( src,dst )
+    if file_already_exists and not overwrite:
+        warning( 'File at %s already exists. Since you have not set the overwrite keyword to be True, nothing will be copied.'%red(dst) )
+
 # Function for untaring datafiles
 def untar(tar_file,savedir='',verbose=False,cleanup=False):
     # Save to location of tar file if no other directory given
@@ -91,15 +103,21 @@ class smart_object:
     ~ll2'14
     '''
 
-    def __init__(this,attrfile=None,id=None,overwrite=False,cleanup=False,defaults=None,**kwargs):
+    def __init__(this,attrfile=None,id=None,overwrite=False,cleanup=False,defaults=None,unstring=False,verbose=False,**kwargs):
+
+        #
+        from os.path import isfile
+
         #
         this.valid = False
         this.source_file_path = []
         this.source_dir  = []
+        attrfile = attrfile if attrfile is not None else ''
+        this.unstring = unstring
 
         #
         this.overwrite = overwrite
-        if attrfile is not None:
+        if (attrfile is not None) and (isfile(attrfile)):
 
             if isinstance( attrfile, list ):
 
@@ -116,6 +134,10 @@ class smart_object:
                 msg = 'first input (attrfile key) must of list containing strings, or single string of file location, instead it is %s'%yellow(str(attrfile.__class__.__name__))
                 raise ValueError(msg)
 
+        elif not isfile(attrfile):
+
+            if verbose: warning('Could not find configuration file at "%s"'%red(attrfile),'smart_object')
+
         # Apply defaults
         if isinstance(defaults,dict):
             for attr in defaults:
@@ -131,6 +153,7 @@ class smart_object:
             delattr(this,'overwrite')
             delattr(this,'source_dir')
             delattr(this,'source_file_path')
+            delattr(this,'unstring')
 
     #
     def show( this ):
@@ -208,6 +231,8 @@ class smart_object:
                     #
                     if  not isnumeric(val):   # IF
                         is_number = False
+                        if 'unstring' in this.__dict__:
+                            if this.unstring: val = val.replace("'",'').replace('"','')
                         if VERB: print( '>> Learning character: %s' % val )
                         value.append( val )
                     else:                       # Else
@@ -307,7 +332,7 @@ def mkdir(dir_,rm=False,verbose=False):
     if not os.path.exists(dir_):
         os.makedirs(dir_)
         if verbose:
-            alert('Directory at "%s" does not yet exist %s.'%(magenta(dir_),green('and will be created')),'mkdir')
+            if verbose: alert('Directory at "%s" does not yet exist %s.'%(magenta(dir_),green('and will be created')),'mkdir')
     # Return status
     return os.path.exists(dir_)
 

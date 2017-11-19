@@ -1413,7 +1413,7 @@ class mvpolyfit:
         if varlabel is None:
             varlabel = [ r'x_%i'%k for k in range(this.domain_dimension) ]
         elif len(varlabel) != this.domain_dimension:
-            error( 'Number of variable labels, %i, is not equal to the number of domain dimensions found, %i.'%( len(varlabel), M ) , 'mvpolyfit' )
+            error( 'Number of variable labels, %i, is not equal to the number of domain dimensions found, %i.'%( len(varlabel), this.domain_dimension ) , 'mvpolyfit' )
 
         # Create a simple string representation of the fit
         latex_str = r'%s  \; &= \; %s %s\,x%s%s' % ( funlabel,
