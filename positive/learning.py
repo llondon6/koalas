@@ -1211,7 +1211,7 @@ class mvpolyfit:
 
         # Import useful things
         from positive import alert,error,warning
-        from numpy import array,mean,unwrap,angle,std,isfinite
+        from numpy import array,mean,unwrap,angle,std,isfinite,sqrt
         from scipy.stats import norm
 
         #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
@@ -1240,11 +1240,13 @@ class mvpolyfit:
         ar_mu,ar_std = norm.fit( ampres )
         pr_mu,pr_std = norm.fit( phares )
         # Also do this for the real values, in case the data is only real
-        rr_mu,rr_std = norm.fit( residuals.real / this.range.real )
+        rr_mu,rr_std = norm.fit( residuals.real )
+        cc_mu,cc_std = norm.fit( residuals.imag )
 
         # Store bulk information about fit
         this.residual = residuals
         this.frmse = frmse
+        this.netstd = sqrt( cc_std**2 + rr_std**2  )
         this.maxres = maxres
         this.prompt_string = str(this)
         this.python_string = this.__str_python__()
@@ -1278,20 +1280,13 @@ class mvpolyfit:
         # Extract the forward domain map to apply before least-squares
         U = this.range_map['forward']
 
+        # NOTE that data centering will be left entirely to the user's discretion
+
         # Center and adjust range values
         mapped_range = U(this.domain,this.range)
-        u = mean( mapped_range )
-        v =  std( mapped_range )
-        centered_adjusted_range = ( mapped_range - u ) / v
 
         # Estimate the coefficients of the basis symbols
-        a = dot( Q, centered_adjusted_range )
-
-        # Un-center and un-scale, thus return to original (mapped by U) feature space
-        a *= v
-        a[0] += u
-
-        # NOTE that a[0] corresponds to a constant term; see this.__validate_inputs__ for handling of 'K' in this.basis_symbols
+        a = dot( Q, mapped_range )
 
         # Store the fit coefficients
         this.coeffs = a
@@ -1316,29 +1311,6 @@ class mvpolyfit:
 
         if dom is None:
             dom = this.domain
-
-        # if sym.upper() == 'K':
-        #     # Handle symbolic representation of constant term
-        #     from numpy import ones
-        #     ans = ones( dom[:,0].shape, dtype=dom.dtype ) if len(dom.shape)>1 else ones( dom.shape, dtype=dom.dtype )
-        # elif sym.isdigit():
-        #     # Handle non-constant symbols
-        #     map_ = [ int(k) for k in sym ]
-        #     ans = 1.0 # NOTE that the final answer will be of the shape of the domain vectors
-        #     for k in map_:
-        #         # IF the domain has dimension greater than 1
-        #         if len(dom.shape)>1:
-        #             # Allow referencing of each dimnesion
-        #             ans *= dom[:,k]
-        #         else:
-        #             # ELSE, simply use the domain
-        #             ans *= dom
-        #             # NOTE that this IF-ELSE structure results from 1D domains not being able to be refernced in a matrix like manner
-        # else:
-        #     raise TypeError('"%s" is an invalid symbol. Multivariate symbols must be "K" for constant term, or string of integers corresponding to domain dimensions, such as "0001" which, if the domain is [x,y,...], corresponds to x*x*x*y.'%sym)
-        #
-        # #
-        # return ans
 
         # Use the class external function
         return symeval( sym, dom )
@@ -1394,13 +1366,12 @@ class mvpolyfit:
         return model_str
 
     # Create model string for latex output
-    def __str_latex__(this,labels=None,precision=8):
+    def __str_latex__(this,labels=None,precision=8,term_split=2):
 
         # Import useful things
         from numpy import mod
 
         #
-        term_split = 3
         split_state = False
 
         # Handle the labels input
