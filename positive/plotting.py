@@ -126,7 +126,15 @@ def rgb( N,                     #
 
 
 # Plot 2d surface and related scatter points
-def splot(domain,scalar_range,domain2=None,scalar_range2=None,kind=None,ms=60,cbfs=12):
+def splot( domain,
+           scalar_range,
+           domain2=None,
+           scalar_range2=None,
+           kind=None,
+           ms=60,
+           cbfs=16,
+           color_scatter=True,
+           verbose=True):
     '''Plot 2d surface and related scatter points '''
 
     # Import usefult things
@@ -156,15 +164,21 @@ def splot(domain,scalar_range,domain2=None,scalar_range2=None,kind=None,ms=60,cb
 
     # Plot scatter of second dataset
     if plot_scatter:
+        #
+        if color_scatter:
+            mkr = 'o'
+        else:
+            mkr = 's'
         # Set marker size
         mkr_size = ms
         # Scatter the outline of domain points
-        scatter( domain2[:,0], domain2[:,1], mkr_size+5, color='k', alpha=0.6, marker='o', facecolors='none' )
+        scatter( domain2[:,0], domain2[:,1], mkr_size + 5, color='k', alpha=0.6 if color_scatter else 0.333, marker=mkr, facecolors='none' if color_scatter else 'none' )
         # Scatter the location of domain points and color by value
-        Z_ = abs(scalar_range2) if kind=='amp' else sunwrap(angle(scalar_range2))
-        scatter( domain2[:,0],domain2[:,1], mkr_size, c=Z_,
-                 marker='o',
-                 cmap=clrmap, norm=norm, edgecolors='none' )
+        if color_scatter:
+            Z_ = abs(scalar_range2) if kind=='amp' else sunwrap(angle(scalar_range2))
+            scatter( domain2[:,0],domain2[:,1], mkr_size, c=Z_,
+                     marker='o',
+                     cmap=clrmap, norm=norm, edgecolors='none' )
 
     #
     extent = (domain[:,0].min(),domain[:,0].max(),domain[:,1].min(),domain[:,1].max())

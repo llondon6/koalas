@@ -8,11 +8,12 @@ def copyfile(src,dst,verbose=True,overwrite=False):
     from shutil import copyfile as cp
     from os.path import exists,realpath
     file_already_exists = exists(dst)
-    if file_already_exists and overwrite:
+    overwrite = True if not file_already_exists else overwrite
+    if (file_already_exists and overwrite) or ( not file_already_exists ):
         if verbose: alert('Copying: %s --> %s'%(magenta(src),magenta(dst)))
         if file_already_exists: alert(yellow('The file already exists and will be overwritten.'))
         cp( src,dst )
-    if file_already_exists and not overwrite:
+    elif file_already_exists and (not overwrite):
         warning( 'File at %s already exists. Since you have not set the overwrite keyword to be True, nothing will be copied.'%red(dst) )
 
 # Function for untaring datafiles
