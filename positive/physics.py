@@ -1,34 +1,6 @@
 #
 from positive import *
 
-#
-def pnw0(m1,m2,D=10.0):
-    # https://arxiv.org/pdf/1310.1528v4.pdf
-    # Equation 228
-    # 2nd Reference: arxiv:0710.0614v1
-    # NOTE: this outputs orbital frequency
-    from numpy import sqrt,zeros,pi,array,sum
-    #
-    G = 1.0
-    c = 1.0
-    r = float(D)
-    M = float( m1+m2 )
-    v = m1*m2/( M**2 )
-    gamma = G*M/(r*c*c)     # Eqn. 225
-    #
-    trm = zeros((4,))
-    #
-    trm[0] = 1.0
-    trm[1] = v - 3.0
-    trm[2] = 6 + v*41.0/4.0 + v*v
-    trm[3] = -10.0 + v*( -75707.0/840.0 + pi*pi*41.0/64.0 ) + 19.0*0.5*v*v + v*v*v
-    #
-    w0 = sqrt( (G*M/(r*r*r)) * sum( array([ term*(gamma**k) for k,term in enumerate(trm) ]) ) )
-
-    #
-    return w0
-
-
 #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
 # Here are some phenomenological fits used in PhenomD                               #
 #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
@@ -281,11 +253,138 @@ def jf14067295(m1, m2, chi1, chi2):
 
     return chif
 
+# Energy Radiated
+# https://arxiv.org/abs/1611.00332
+# Xisco Jimenez-Forteza, David Keitel, Sascha Husa, Mark Hannam, Sebastian Khan, Michael Purrer
+def Erad161100332(m1,m2,chi1,chi2):
+    '''
+    Final mass fit from: https://arxiv.org/abs/1611.00332
+    By Xisco Jimenez-Forteza, David Keitel, Sascha Husa, Mark Hannam, Sebastian Khan, Michael Purrer
+    '''
+    # Import usefuls
+    from numpy import sqrt
+    # Test for m2>m2 convention
+    if m1<m2:
+        # Swap everything
+        m1_,m2_ = m2 ,m1 ;  chi1_,chi2_ =  chi2,chi1
+        m1,m2   = m1_,m2_;  chi1,chi2   = chi1_,chi2_
+    #
+    M = m1+m2
+    eta = m1*m2/(M*M)
+    # Caclulate effective spin
+    S = (chi1*m1 + chi2*m2) / M
+    # Calculate fitting formula
+    E = -0.12282038851475935*(chi1 - chi2)*(1 - 4*eta)**0.5*(1 - 3.499874117528558*eta)*eta**2 +\
+        0.014200036099065607*(chi1 - chi2)**2*eta**3 - 0.018737203870440332*(chi1 - chi2)*(1 -\
+        5.1830734412467425*eta)*(1 - 4*eta)**0.5*eta*S + (((1 - (2*sqrt(2))/3.)*eta +\
+        0.5635376058169301*eta**2 - 0.8661680065959905*eta**3 + 3.181941595301784*eta**4)*(1 +\
+        (-0.13084395473958504 - 1.1075070900466686*eta + 5.292389861792881*eta**2)*S + \
+        (-0.17762804636455634 + 2.095538044244076*eta**2)*S**2 + (-0.6320190570187046 + \
+        5.645908914996172*eta - 12.860272122009997*eta**2)*S**3))/(1 + (-0.9919475320287884 +\
+        0.5383449788171806*eta + 3.497637161730149*eta**2)*S)
+    # Return answer
+    return E
 
+# Remnant mass
+# https://arxiv.org/abs/1611.00332
+# Xisco Jimenez-Forteza, David Keitel, Sascha Husa, Mark Hannam, Sebastian Khan, Michael Purrer
+def Mf161100332(m1,m2,chi1,chi2):
+    return m1+m2-Erad161100332(m1,m2,chi1,chi2)
+
+# Remnant Spin
+# https://arxiv.org/abs/1611.00332
+# Xisco Jimenez-Forteza, David Keitel, Sascha Husa, Mark Hannam, Sebastian Khan, Michael Purrer
+def jf161100332(m1,m2,chi1,chi2):
+    '''
+    Final mass fit from: https://arxiv.org/abs/1611.00332
+    By Xisco Jimenez-Forteza, David Keitel, Sascha Husa, Mark Hannam, Sebastian Khan, Michael Purrer
+    '''
+    # Import usefuls
+    from numpy import sqrt
+    # Test for m2>m2 convention
+    if m1<m2:
+        # Swap everything
+        m1_,m2_ = m2 ,m1 ;  chi1_,chi2_ =  chi2,chi1
+        m1,m2   = m1_,m2_;  chi1,chi2   = chi1_,chi2_
+    #
+    M = m1+m2
+    eta = m1*m2/(M*M)
+    # Caclulate effective spin
+    S = (chi1*m1 + chi2*m2) / M
+    # Calculate fitting formula
+    jf = -0.05975750218477118*(chi1 - chi2)**2*eta**3 + 0.2762804043166152*(chi1 - chi2)*(1 -\
+         4*eta)**0.5*eta**2*(1 + 11.56198469592321*eta) + (2*sqrt(3)*eta + 19.918074038061683*eta**2 -\
+         12.22732181584642*eta**3)/(1 + 7.18860345017744*eta) + chi1*m1**2 + chi2*m2**2 +\
+         2.7296903488918436*(chi1 - chi2)*(1 - 4*eta)**0.5*(1 - 3.388285154747212*eta)*eta**3*S + ((0. -\
+         0.8561951311936387*eta - 0.07069570626523915*eta**2 + 1.5593312504283474*eta**3)*S + (0. +\
+         0.5881660365859452*eta - 2.670431392084654*eta**2 + 5.506319841591054*eta**3)*S**2 + (0. +\
+         0.14244324510486703*eta - 1.0643244353754102*eta**2 + 2.3592117077532433*eta**3)*S**3)/(1 +\
+         (-0.9142232696116447 + 2.6764257152659883*eta - 15.137168414785732*eta**3)*S)
+    # Return answer
+    return jf
+
+# High level function for calculating remant mass and spin
+def remnant(m1,m2,chi1,chi2,arxiv=None,verbose=False):
+    '''
+    High level function for calculating remant mass and spin for nonprecessing BBH systems.
+
+    Available arxiv ids are:
+    * 1611.00332 by Jimenez et. al.
+    * 1406.7295 by Healy et. al.
+
+    This function automatically imposes m1,m2 conventions.
+
+    spxll'17
+    '''
+
+    #
+    if arxiv in ('1611.00332',161100332,None):
+        if verbose: alert('Using method from arxiv:1611.00332 by Jimenez et. al.')
+        Mf = Mf161100332(m1,m2,chi1,chi2)
+        jf = jf161100332(m1,m2,chi1,chi2)
+    else:
+        if verbose:
+            alert('Using method from arxiv:1406.7295 by Healy et. al.')
+            warning('This method is slow [af]. Please consider using another one.')
+        Mf = Mf14067295(m1,m2,chi1,chi2)
+        jf = jf14067295(m1,m2,chi1,chi2)
+
+    # Return answer
+    ans = (Mf,jf)
+    return ans
 
 #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
 # Post-Newtonian methods
 #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+
+
+# PN estimate for orbital frequency
+def pnw0(m1,m2,D=10.0):
+    # https://arxiv.org/pdf/1310.1528v4.pdf
+    # Equation 228
+    # 2nd Reference: arxiv:0710.0614v1
+    # NOTE: this outputs orbital frequency
+    from numpy import sqrt,zeros,pi,array,sum
+    #
+    G = 1.0
+    c = 1.0
+    r = float(D)
+    M = float( m1+m2 )
+    v = m1*m2/( M**2 )
+    gamma = G*M/(r*c*c)     # Eqn. 225
+    #
+    trm = zeros((4,))
+    #
+    trm[0] = 1.0
+    trm[1] = v - 3.0
+    trm[2] = 6 + v*41.0/4.0 + v*v
+    trm[3] = -10.0 + v*( -75707.0/840.0 + pi*pi*41.0/64.0 ) + 19.0*0.5*v*v + v*v*v
+    #
+    w0 = sqrt( (G*M/(r*r*r)) * sum( array([ term*(gamma**k) for k,term in enumerate(trm) ]) ) )
+
+    #
+    return w0
+
 
 #
 def mishra( f, m1,m2, X1,X2, lm,    # Intrensic parameters and l,m
@@ -423,3 +522,143 @@ def lamp_spa(f,eta,lm=(2,2)):
     hf[6,6] = 3.6
     #
     return hf[lm]
+
+
+# Calculate the Center of Mass Energy for a Binary Source
+def pn_com_energy(f,m1,m2,X1,X2,L=None):
+    '''
+    Calculate the Center of Mass Energy for a Binary Source
+
+    Primary Refernce: https://arxiv.org/pdf/0810.5336.pdf
+        * Eq. 6.18, C1-C6
+    '''
+
+    # Import usefuls
+    from numpy import pi,pow,array,dot,ndarray
+
+    #~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
+    # Validate inputs
+    #~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
+    if L is None: L = array([0,0,1.0])
+    # Handle Spin 1
+    if not isinstance(X1,ndarray):
+        error('X1 input must be array')
+    elif len(X1)<3:
+        error('X1 must be array of length 3; the length is %i'%len(X1))
+    else:
+        X1 = array(X1)
+    # Handle Xpin 2
+    if not isinstance(X2,ndarray):
+        error('X2 input must be array')
+    elif len(X2)<3:
+        error('X2 must be array of length 3; the length is %i'%len(X2))
+    else:
+        X2 = array(X2)
+
+    #~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
+    # Define low level parameters
+    #~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
+
+    # Total mass
+    M = m1+m2
+    # Symmetric Mass ratio
+    eta = m1*m2 / (M**2)
+    delta = sqrt(1-4*min(eta,0.249999999999))
+    #
+    Xs = 0.5 * ( X1+X2 )
+    Xa = 0.5 * ( X1-X2 )
+    #
+    xs = dot(Xs,L)
+    xa = dot(Xa,L)
+    # PN frequency parameter
+    v = ( 2*pi*M*f ) ** (0.333333333333)
+    #
+    Enewt = - 0.5 * M * eta
+
+    # List term coefficients
+    e2 = - 0.75 - 0.0833333333333*eta
+    e3 = (8.0/3 - 4.0/3*eta) * xs + (8.0/3)*delta*xa
+    e4 = -27.0/8 + 19.0/8*eta - eta*eta/24 \
+         + eta* ( (dot(Xs,Xs)-dot(Xa,Xa))-3*(xs*xs-xa*xa) ) \
+         + (0.5-eta)*( dot(Xs,Xs)+dot(Xa,Xa)-3*(xs*xs+xa*xa) ) \
+         + delta*( dot(Xs,Xa)-3*( xs*xa ) )
+    e5 = xs*(8-eta*121.0/9 ) eta*eta*2.0/9) + delta*xa*(8-eta*31.0/9)
+    e6 = -675.0/64 + (34445.0/576 - pi*pi*205.0/96)*eta - eta*eta*155/96 - 35.0*eta*eta*eta/5184
+    e = [e2,e3,e4,e5,e6]
+
+    #
+    E = Enewt * v * v * ( 1.0 + sum( [ ek*(v**(k+2)) for k,ek in enumerate(e) ] ) )
+
+    #
+    ans = E
+    return ans
+
+
+# Calculate the Center of Mass Energy for a Binary Source
+def pn_com_energy_flux(f,m1,m2,X1,X2,L=None):
+    '''
+    Calculate the Center of Mass Energy for a Binary Source
+
+    Primary Refernce: https://arxiv.org/pdf/0810.5336.pdf
+        * Eq. 6.19, C7-C13
+    '''
+
+    # Import usefuls
+    from numpy import pi,pow,array,dot,ndarray
+
+    #~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
+    # Validate inputs
+    #~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
+    if L is None: L = array([0,0,1.0])
+    # Handle Spin 1
+    if not isinstance(X1,ndarray):
+        error('X1 input must be array')
+    elif len(X1)<3:
+        error('X1 must be array of length 3; the length is %i'%len(X1))
+    else:
+        X1 = array(X1)
+    # Handle Xpin 2
+    if not isinstance(X2,ndarray):
+        error('X2 input must be array')
+    elif len(X2)<3:
+        error('X2 must be array of length 3; the length is %i'%len(X2))
+    else:
+        X2 = array(X2)
+
+    #~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
+    # Define low level parameters
+    #~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
+
+    # Total mass
+    M = m1+m2
+    # Symmetric Mass ratio
+    eta = m1*m2 / (M**2)
+    delta = sqrt(1-4*min(eta,0.249999999999))
+    #
+    Xs = 0.5 * ( X1+X2 )
+    Xa = 0.5 * ( X1-X2 )
+    #
+    xs = dot(Xs,L)
+    xa = dot(Xa,L)
+    # PN frequency parameter
+    v = ( 2*pi*M*f ) ** (0.333333333333)
+    #
+    Fnewt = (32.0/5)*eta*eta
+
+    # List term coefficients
+    f2 = -(1247.0/336)-eta*35/12
+    f3 = 4*pi - ( (11.0/4-3*eta)*xs + 11.0*delta*xa/4 )
+    f4 = -44711.0/9072 + eta*9271.0/504 + eta*eta*65.0/18 + (287.0/96 + eta/24)*xs*xs \
+         - dot(Xs,Xs)*(89.0/96 + eta*7/24) + xa*xa*(287.0/96-12*eta) + (4*eta-89.0/96)*dot(Xa,Xa) \
+         + delta*287.0*xs*xa/48 - delta*dot(Xs,Xa)*89.0/48
+    f5 = -pi*( eta*583.0/24 + 8191.0/672 ) + ( xs*(-59.0/16 + eta*227.0/9 - eta*eta*157.0/9) + delta*xa*(eta*701.0/36 - 59.0/16) )
+    f6 = 6643739519.0/69854400 + pi*pi*16.0/3 - 1712.0*GammaE/105 - log(16*v*v)*856.0/105 + ( -134543.0/7776 + 41.0*pi*pi/48 )*eta - eta*eta*94403.0/3024 - eta*eta*eta*775.0/324
+    f7 = pi*( -16285/504 + eta*214745.0/1728 + eta*eta*193385.0/3024 )
+    f = [f2,f3,f4,f5,f6,f7]
+
+    #
+    F = Fnewt * (v**10) * ( 1.0 + sum( [ ek*(v**(k+2)) for k,fk in enumerate(f) ] ) )
+
+    #
+    ans = F
+    return ans

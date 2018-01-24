@@ -136,7 +136,24 @@ class smooth:
             title('Smoothed with $width = %d$'%this.width)
 
 
-# custome function for setting desirable ylimits
+# Given an array, return a processed array such that, from 0 to k, the value of the array taken on the maximum value on [0,k]. The result is monotomic. NOTE that this function is useful for feature selection.
+def upbow(a):
+    '''
+    Given an array, return a processed array such that, from 0 to k, the value of the array taken on the maximum value on [0,k]. The result is monotomic. NOTE that this function is useful for feature selection.
+    ~llondon
+    '''
+    from numpy import ndarray,array
+    if not isinstance(a,ndarray):
+        error('input must be ndarray, instead it\'s %s'%(type(a).__class__.__name__))
+    b = a.copy()
+    u = a[0]
+    for k,v in enumerate(a):
+        b[k] = max(u,a[k])
+        u = b[k]
+    return b
+
+
+# [Depreciated???] custome function for setting desirable ylimits
 def pylim( x, y, axis='both', domain=None, symmetric=False, pad_y=0.1 ):
     '''Try to automatically determine nice xlim and ylim settings for the current axis'''
     #

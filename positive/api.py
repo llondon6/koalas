@@ -128,21 +128,22 @@ def thisfun():
     return inspect.stack()[2][3]
 
 # Alert wrapper
-def alert(msg,fname=None,say=False,output_string=False,heading=None,header=None,pattern=None):
-    import os
-    if fname is None:
-        fname = thisfun()
-        if fname == "<module>": fname = 'notebook'
-        if fname == "__main__": fname = 'script'
-    if say: os.system( 'say "%s"' % msg )
-    _msg = '('+cyan(fname)+')>> '+msg
-    if heading or header:
-        hl = ('-~' if pattern is None else pattern) * int( len(_msg.replace('033','') )/2 )
-        _msg = '\n# %s #\n%s\n# %s #\n'%(hl,bold(_msg),hl)
-    if not output_string:
-        print _msg
-    else:
-        return _msg
+def alert(msg,fname=None,say=False,output_string=False,heading=None,header=None,pattern=None,verbose=True):
+    if verbose:
+        import os
+        if fname is None:
+            fname = thisfun()
+            if fname == "<module>": fname = 'notebook'
+            if fname == "__main__": fname = 'script'
+        if say: os.system( 'say "%s"' % msg )
+        _msg = '('+cyan(fname)+')>> '+msg
+        if heading or header:
+            hl = ('-~' if pattern is None else pattern) * int( len(_msg.replace('033','') )/2 )
+            _msg = '\n# %s #\n%s\n# %s #\n'%(hl,bold(_msg),hl)
+        if not output_string:
+            print _msg
+        else:
+            return _msg
 
 # Wrapper for OS say
 def say(msg,fname=None):

@@ -49,8 +49,9 @@ mpl.rcParams['axes.titlesize'] = 20
 mpl.rcParams['xtick.labelsize'] = 18
 mpl.rcParams['ytick.labelsize'] = 18
 mpl.rcParams['legend.frameon'] = False
+mpl.rcParams['legend.fontsize'] = 18
 # Use classic MPL lines and dashes by default
-mpl.rcParams['lines.dashed_pattern'] = [6, 6]
+mpl.rcParams['lines.dashed_pattern'] = [5, 2]
 mpl.rcParams['lines.dashdot_pattern'] = [3, 5, 1, 5]
 mpl.rcParams['lines.dotted_pattern'] = [1, 3]
 #
