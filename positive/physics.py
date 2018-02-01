@@ -5,6 +5,7 @@ from positive import *
 # Here are some phenomenological fits used in PhenomD                               #
 #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
 
+
 # Formula to predict the final spin. Equation 3.6 arXiv:1508.07250
 # s is defined around Equation 3.6.
 ''' Copied from LALSimulation Version '''
@@ -23,6 +24,7 @@ def FinalSpin0815_s(eta,s):
     (-1.3546806617824356*eta + 4.108962025369336*eta2)*s3 +\
     (-0.8676969352555539*eta + 2.064046835273906*eta2)*s4
 
+
 #Wrapper function for FinalSpin0815_s.
 ''' Copied from LALSimulation Version '''
 def FinalSpin0815(eta,chi1,chi2):
@@ -39,6 +41,7 @@ def FinalSpin0815(eta,chi1,chi2):
     # s defined around Equation 3.6 arXiv:1508.07250
     s = (m1s * chi1 + m2s * chi2)
     return FinalSpin0815_s(eta, s)
+
 
 # Formula to predict the total radiated energy. Equation 3.7 and 3.8 arXiv:1508.07250
 # Input parameter s defined around Equation 3.7 and 3.8.
@@ -91,6 +94,7 @@ def rISCO_14067295(a):
     z2 = np.sqrt(3.*a**2 + z1**2)
     a_sign = np.sign(a)
     return 3+z2 - np.sqrt((3.-z1)*(3.+z1+2.*z2))*a_sign
+
 
 # https://arxiv.org/pdf/1406.7295.pdf
 def Mf14067295( m1,m2,chi1,chi2,chif=None ):
@@ -582,8 +586,8 @@ def pn_com_energy(f,m1,m2,X1,X2,L=None):
          + eta* ( (dot(Xs,Xs)-dot(Xa,Xa))-3*(xs*xs-xa*xa) ) \
          + (0.5-eta)*( dot(Xs,Xs)+dot(Xa,Xa)-3*(xs*xs+xa*xa) ) \
          + delta*( dot(Xs,Xa)-3*( xs*xa ) )
-    e5 = xs*(8-eta*121.0/9 ) eta*eta*2.0/9) + delta*xa*(8-eta*31.0/9)
-    e6 = -675.0/64 + (34445.0/576 - pi*pi*205.0/96)*eta - eta*eta*155/96 - 35.0*eta*eta*eta/5184
+    e5 = xs*(8-eta*121.0/9 + eta*eta*2.0/9) + delta*xa*(8-eta*31.0/9)
+    e6 = -675.0/64 + (34445.0/576 - pi*pi*205.0/96)*eta - eta*eta*155.0/96 - 35.0*eta*eta*eta/5184
     e = [e2,e3,e4,e5,e6]
 
     #
@@ -597,7 +601,7 @@ def pn_com_energy(f,m1,m2,X1,X2,L=None):
 # Calculate the Center of Mass Energy for a Binary Source
 def pn_com_energy_flux(f,m1,m2,X1,X2,L=None):
     '''
-    Calculate the Center of Mass Energy for a Binary Source
+    Calculate the Energy Flux for a Binary Source
 
     Primary Refernce: https://arxiv.org/pdf/0810.5336.pdf
         * Eq. 6.19, C7-C13
@@ -662,3 +666,170 @@ def pn_com_energy_flux(f,m1,m2,X1,X2,L=None):
     #
     ans = F
     return ans
+
+
+#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+# Class for TalyorT4 + Spin Post-Newtonian
+#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
+
+#
+class pn:
+
+    '''
+
+    High-level class for evaluation of PN waveforms.
+
+    Key references:
+    * https://arxiv.org/pdf/0810.5336.pdf
+
+    '''
+
+    # Class constructor
+    def __init__( this,             # The current object
+                  m1,               # The mass of the larger object
+                  m2,               # The mass of the smaller object
+                  X1,               # The dimensionless spin of the larger object
+                  X2,               # The dimensionless spin of the smaller object
+                  Mwmin = 0.003,
+                  Mwmax = 0.18,
+                  verbose=True):    # Be verbose toggle
+
+        # Apply the validative constructor to the inputs and the current object
+        this.__validative_constructor__(m1,m2,X1,X2,verbose)
+
+        # Calculate the orbital frequency
+        this.__calc_orbital_frequency__()
+
+        #
+        return None
+
+
+    # Calculate the orbital frequency of the binary source
+    def __calc_orbital_frequency__(this):
+
+        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.RK45.html
+        from scipy.integrate import RK45
+
+        #
+        _Mw = this.Mw[-1]
+        t0 = 0
+        while _Mw < this.Mwmax :
+            #
+            state = RK45( this.__taylort4rhs__, t0 )
+
+        #
+        return None
+
+    # Method for calculating the RHS of the TaylorT4 first order ODEs for pn parameter xx and frequency
+    def __taylort4rhs__(this,state,time):
+
+        # Import usefuls
+        from numpy import array, pi
+        from mpmath import euler as gamma_E
+
+        # Unpack the state
+        phi,x = state
+        # * phi, Phase with 2*pi*f = dphi/dt where phi is the GW phase
+        # *   x, PN parameter, function of frequency; v = (2*pi*M*f/m)**1/3 = x**0.5 (see e.g. https://arxiv.org/pdf/1601.05588.pdf)
+
+        #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~#
+        # Calculate useful parameters from current object
+        #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~#
+
+        # Mass ratio
+        eta = this.eta
+        # Mass difference
+        delta = sqrt(1-4*eta)
+        # Total mass
+        M = this.m1+this.m2
+        # Spins
+        X1 = this.X1
+        X2 = this.X2
+        Xs = 0.5 * ( X1+X2 )
+        Xa = 0.5 * ( X1-X2 )
+
+        #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~#
+        # Calculate PN terms for x RHS
+        #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~#
+
+        # Nonspinning terms from 0907.0700 Eqn. 3.6
+        Non_SpinningTerms = 1 - (743.0/336 + 11.0/4*eta)*x + 4*pi*x**1.5 \
+                           + (34103.0/18144 + 13661.0/2016*eta + 59.0/18*eta**2)*x**2 \
+                           + (4159.0/672 + 189.0/8*eta)*pi*x**2.5 + (16447322263.0/139708800 \
+                           - 1712.0/105*gamma_E - 56198689.0/217728*eta +  541.0/896*eta**2 \
+                           - 5605.0/2592*eta**3 + pi*pi/48*(256+451*eta) \
+                           - 856.0/105*log(16*x))*x**3 + (-4415.0/4032 + 358675.0/6048*eta \
+                           + 91495.0/1512*eta**2)*pi*x**3.5
+
+        # Spinning terms from 0810.5336 and 0605140v4 using T4 expansion of dx/dt = -F(v)/E'(v)
+        S3  = 4.0/3*(2-eta)*Xs + 8.0/3*delta*Xa
+        S4  = eta*(2*Xa**2 - 2*Xs**2) + (1.0/2 - eta)*(-2*Xs**2 \
+             - 2*Xa**2) + delta*(-2*Xs*Xa)
+        S5  = (8 -121*eta/9 + 2*eta**2/9)*Xs + (8-31*eta/9)*delta*Xa
+        SF3 = (-11.0/4 + 3*eta)*Xs - 11.0/4*delta*Xa
+        SF4 = (33.0/16 -eta/4)*Xs**2 + (33.0/16 - 8*eta)*Xa**2 + 33*delta*Xs*Xa/8
+        SF5 = (-59.0/16 + 227.0*eta/9 - 157.0*eta**2/9)*Xs + (-59.0/16 + 701.0*eta/36)*delta*Xa
+        SpinningTerms = (-5.0*S3/2 + SF3) *xx**1.5 + (-3*S4+ SF4)*xx**2.0 \
+                        + ( 5.0/672*(239+868*eta)*S3 - 7*S5/2 + (3.0/2 + eta/6)*SF3 \
+                        + SF5 )*xx**2.5	+ ( (239.0/112 + 31*eta/4)*S4 \
+                        + 5*S3.0/4*(-8*pi+5*S3-2*SF3) + (3/2 + eta/6)*SF4) *xx**3.0 \
+                        + ( -3*S4*(4*pi+SF3) - 5*S3/18144*(99226+9*eta*(-4377	\
+                        + 2966*eta)	+ -54432*S4 + 9072*SF4 ) \
+                        + 1.0/288*( 3*(239+868*eta)*S5+4*(891+eta*(-477+11*eta))*SF3\
+                        + 48*(9+eta)*SF5))*xx**3.5
+
+        #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~#
+        # Calculate derivatives
+        #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~#
+
+        # Invert the definition of x( f = dphi_dt )
+        dphi_dt = x**(1.5) / M
+        # e.g. Equation 36 of https://arxiv.org/pdf/0907.0700.pdf
+        # NOTE the differing conventions used here vs the ref above
+        dx_dt   = 64 * eta / ( 5*M * x**5 * (Non_SpinningTerms+SpinningTerms) )
+        # Compile the state's derivative
+        state_derivative = [ dphi_dt, dx_dt ]
+
+        # Return derivatives
+        return state_derivative
+
+
+    # Validate constructor inputs
+    def __validative_constructor__(this,m1,m2,X1,X2,Mwmin,Mwmax,verbose):
+
+        # Import usefuls
+        from numpy import ndarray
+
+        # Masses must be float
+        if not isinstance(m1,float):
+            error('m1 input must be float or double, instead it is %s'%yellow(type(m1).__name__))
+        if not isinstance(m2,float):
+            error('m2 input must be float or double, instead it is %s'%yellow(type(m2).__name__))
+
+        # Spins must be iterable of floats
+        if len(X1) != 3:
+            error( 'Length of X1 must be 3, but it is %i'%len(X1) )
+        if len(X2) != 3:
+            error( 'Length of X2 must be 3, but it is %i'%len(X2) )
+
+        # Spins must be numpy arrays
+        if not isinstance(X1,ndarray):
+            X1 = array(X1)
+        if not isinstance(X2,ndarray):
+            X2 = array(X2)
+
+        # Store core inputs to the current object
+        this.m1 = m1
+        this.m2 = m2
+        this.M = m1+m2
+        this.X1 = X1
+        this.X2 = X2
+
+        # Define initial binary state based on inputs
+        this.t = [0]
+        this.phi = [0]
+        this.x  = [ Mwmin**(2.0/3) ]
+        this.Mw = [ Mwmin ]
+        this.state = [this.phi,this.x
+        this.dtfac = 0.5
+        this.dt = 0.00009*this.dtfac*this.M/(Mwmin**3)
