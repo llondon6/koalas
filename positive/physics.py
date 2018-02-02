@@ -1,5 +1,6 @@
 #
 from positive import *
+from positive.learning import *
 
 #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
 # Here are some phenomenological fits used in PhenomD                               #
@@ -538,7 +539,7 @@ def pn_com_energy(f,m1,m2,X1,X2,L=None):
     '''
 
     # Import usefuls
-    from numpy import pi,pow,array,dot,ndarray
+    from numpy import pi,array,dot,ndarray,sqrt
 
     #~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
     # Validate inputs
@@ -567,7 +568,7 @@ def pn_com_energy(f,m1,m2,X1,X2,L=None):
     M = m1+m2
     # Symmetric Mass ratio
     eta = m1*m2 / (M**2)
-    delta = sqrt(1-4*min(eta,0.249999999999))
+    delta = sqrt(1-4*eta)
     #
     Xs = 0.5 * ( X1+X2 )
     Xa = 0.5 * ( X1-X2 )
@@ -575,12 +576,12 @@ def pn_com_energy(f,m1,m2,X1,X2,L=None):
     xs = dot(Xs,L)
     xa = dot(Xa,L)
     # PN frequency parameter
-    v = ( 2*pi*M*f ) ** (0.333333333333)
+    v = ( 2*pi*M*f ) ** 1.0/3
     #
     Enewt = - 0.5 * M * eta
 
     # List term coefficients
-    e2 = - 0.75 - 0.0833333333333*eta
+    e2 = - 0.75 - (1.0/12)*eta
     e3 = (8.0/3 - 4.0/3*eta) * xs + (8.0/3)*delta*xa
     e4 = -27.0/8 + 19.0/8*eta - eta*eta/24 \
          + eta* ( (dot(Xs,Xs)-dot(Xa,Xa))-3*(xs*xs-xa*xa) ) \
@@ -637,7 +638,7 @@ def pn_com_energy_flux(f,m1,m2,X1,X2,L=None):
     M = m1+m2
     # Symmetric Mass ratio
     eta = m1*m2 / (M**2)
-    delta = sqrt(1-4*min(eta,0.249999999999))
+    delta = sqrt(1-4*eta)
     #
     Xs = 0.5 * ( X1+X2 )
     Xa = 0.5 * ( X1-X2 )
@@ -645,7 +646,7 @@ def pn_com_energy_flux(f,m1,m2,X1,X2,L=None):
     xs = dot(Xs,L)
     xa = dot(Xa,L)
     # PN frequency parameter
-    v = ( 2*pi*M*f ) ** (0.333333333333)
+    v = ( 2*pi*M*f ) ** (1.0/3)
     #
     Fnewt = (32.0/5)*eta*eta
 
@@ -690,15 +691,25 @@ class pn:
                   m2,               # The mass of the smaller object
                   X1,               # The dimensionless spin of the larger object
                   X2,               # The dimensionless spin of the smaller object
-                  Mwmin = 0.003,
-                  Mwmax = 0.18,
+                  wM_min = 0.003,
+                  wM_max = 0.18,
+                  Lhat = None,      # Unit direction of initial orbital angular momentum
                   verbose=True):    # Be verbose toggle
 
+        # Let the people know that we are here
+        if verbose: alert('Now constructing instance of the pn class.','pn')
+
         # Apply the validative constructor to the inputs and the current object
-        this.__validative_constructor__(m1,m2,X1,X2,verbose)
+        this.__validative_constructor__(m1,m2,X1,X2,wM_min,wM_max,Lhat,verbose)
 
         # Calculate the orbital frequency
         this.__calc_orbital_frequency__()
+
+        # Calculate COM energy
+        this.__calc_com_binding_energy__()
+
+        # Let the people know
+        warning('Note that the calculation of waveforms has not been implemented.','pn')
 
         #
         return None
@@ -707,25 +718,55 @@ class pn:
     # Calculate the orbital frequency of the binary source
     def __calc_orbital_frequency__(this):
 
-        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.RK45.html
-        from scipy.integrate import RK45
+        # Import usefuls
+        from numpy import mod, array, pi
+
+        # Let the people know
+        if this.verbose:
+            alert('Calculating evolution of orbital phase using RK4 steps.')
 
         #
-        _Mw = this.Mw[-1]
-        t0 = 0
-        while _Mw < this.Mwmax :
+        _wM = this.wM[-1]  # NOTE that M referes to intial system mass
+        k = 0
+        while _wM < this.wM_max :  # NOTE that M referes to intial system mass
+
+            # NOTE that rk4_step is defined positive.learning
+            this.state = rk4_step( this.state, this.t[-1], this.dt, this.__taylort4rhs__ )
+
             #
-            state = RK45( this.__taylort4rhs__, t0 )
+            this.t.append( this.t[-1]+this.dt )
+            this.phi.append( this.state[0] )
+            this.x.append(   this.state[1] )
+            _wM = this.state[1] ** 1.5  # NOTE that M referes to intial system mass
+            this.dt = 0.00009 * this.dtfac * this.M / ( _wM ** 3 )  # NOTE that M referes to intial system mass
+            this.wM.append( _wM )
+
+        # Convert wM to array
+        this.wM = array( this.wM )
+        # Calculate related quantities
+        this.w = this.wM / this.M
+        this.fM = this.wM / ( 2*pi )
+        this.f = this.w / ( 2*pi )
+        this.v = this.wM ** (1.0/3)
 
         #
         return None
 
-    # Method for calculating the RHS of the TaylorT4 first order ODEs for pn parameter xx and frequency
-    def __taylort4rhs__(this,state,time):
+
+    # Calculate COM binding energy
+    def __calc_com_binding_energy__(this):
+        #
+        alert('Calculating COM binding energy')
+        this.E = pn_com_energy(this.f,this.m1,this.m2,this.X1,this.X2,this.Lhat)
+        this.remnant = {}
+        this.remnant['M'] = this.M+this.E
+
+
+    # Method for calculating the RHS of the TaylorT4 first order ODEs for pn parameter x and frequency
+    def __taylort4rhs__(this,state,time,**kwargs):
 
         # Import usefuls
-        from numpy import array, pi
-        from mpmath import euler as gamma_E
+        from numpy import array, pi, log, array
 
         # Unpack the state
         phi,x = state
@@ -739,12 +780,16 @@ class pn:
         # Mass ratio
         eta = this.eta
         # Mass difference
-        delta = sqrt(1-4*eta)
-        # Total mass
-        M = this.m1+this.m2
+        delta = this.delta
+        # Total INITIAL mass
+        M = this.M
+        # Get Euler Gamma
+        gamma_E = this.__gamma_E__
+
         # Spins
-        X1 = this.X1
-        X2 = this.X2
+        # NOTE that components along angular momentum are used below; see validative constructor
+        X1 = this.x1
+        X2 = this.x2
         Xs = 0.5 * ( X1+X2 )
         Xa = 0.5 * ( X1-X2 )
 
@@ -769,14 +814,14 @@ class pn:
         SF3 = (-11.0/4 + 3*eta)*Xs - 11.0/4*delta*Xa
         SF4 = (33.0/16 -eta/4)*Xs**2 + (33.0/16 - 8*eta)*Xa**2 + 33*delta*Xs*Xa/8
         SF5 = (-59.0/16 + 227.0*eta/9 - 157.0*eta**2/9)*Xs + (-59.0/16 + 701.0*eta/36)*delta*Xa
-        SpinningTerms = (-5.0*S3/2 + SF3) *xx**1.5 + (-3*S4+ SF4)*xx**2.0 \
+        SpinningTerms = (-5.0*S3/2 + SF3) *x**1.5 + (-3*S4+ SF4)*x**2.0 \
                         + ( 5.0/672*(239+868*eta)*S3 - 7*S5/2 + (3.0/2 + eta/6)*SF3 \
-                        + SF5 )*xx**2.5	+ ( (239.0/112 + 31*eta/4)*S4 \
-                        + 5*S3.0/4*(-8*pi+5*S3-2*SF3) + (3/2 + eta/6)*SF4) *xx**3.0 \
+                        + SF5 )*x**2.5	+ ( (239.0/112 + 31*eta/4)*S4 \
+                        + 5*S3/4*(-8*pi+5*S3-2*SF3) + (3/2 + eta/6)*SF4) *x**3.0 \
                         + ( -3*S4*(4*pi+SF3) - 5*S3/18144*(99226+9*eta*(-4377	\
                         + 2966*eta)	+ -54432*S4 + 9072*SF4 ) \
                         + 1.0/288*( 3*(239+868*eta)*S5+4*(891+eta*(-477+11*eta))*SF3\
-                        + 48*(9+eta)*SF5))*xx**3.5
+                        + 48*(9+eta)*SF5))*x**3.5
 
         #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~#
         # Calculate derivatives
@@ -786,19 +831,20 @@ class pn:
         dphi_dt = x**(1.5) / M
         # e.g. Equation 36 of https://arxiv.org/pdf/0907.0700.pdf
         # NOTE the differing conventions used here vs the ref above
-        dx_dt   = 64 * eta / ( 5*M * x**5 * (Non_SpinningTerms+SpinningTerms) )
+        dx_dt   = (64 * eta / 5*M) * (x**5) * (Non_SpinningTerms+SpinningTerms)
         # Compile the state's derivative
-        state_derivative = [ dphi_dt, dx_dt ]
+        state_derivative = array( [ dphi_dt, dx_dt ] )
 
         # Return derivatives
         return state_derivative
 
 
     # Validate constructor inputs
-    def __validative_constructor__(this,m1,m2,X1,X2,Mwmin,Mwmax,verbose):
+    def __validative_constructor__(this,m1,m2,X1,X2,wM_min,wM_max,Lhat,verbose):
 
         # Import usefuls
-        from numpy import ndarray
+        from numpy import ndarray,dot,array,sqrt
+        from mpmath import euler as gamma_E
 
         # Masses must be float
         if not isinstance(m1,float):
@@ -818,18 +864,42 @@ class pn:
         if not isinstance(X2,ndarray):
             X2 = array(X2)
 
-        # Store core inputs to the current object
+        # By default it will be assumed that Lhat is in the z direction
+        if Lhat is None: Lhat = array([0,0,1.0])
+
+        # Let the people know
+        this.verbose = verbose
+        if this.verbose:
+            alert('Defining the initial binary state based on inputs.')
+
+        # Rescale masses to unit total
+        M = m1+m2; m1 /= M; m2 /= M
+        if this.verbose: alert('Rescaling masses so that %s'%green('m1+m2=1'))
+
+        # Store core inputs as well as simply derived quantities to the current object
         this.m1 = m1
         this.m2 = m2
-        this.M = m1+m2
+        this.M = m1+m2  # Here M referes to intial system mass
+        this.eta = m1*m2 / this.M
+        this.delta = sqrt( 1-4*this.eta )
         this.X1 = X1
         this.X2 = X2
+        this.Lhat = Lhat
+        this.x1 = dot(X1,Lhat)
+        this.x2 = dot(X2,Lhat)
+        this.__gamma_E__ = float(gamma_E)
 
         # Define initial binary state based on inputs
         this.t = [0]
         this.phi = [0]
-        this.x  = [ Mwmin**(2.0/3) ]
-        this.Mw = [ Mwmin ]
-        this.state = [this.phi,this.x
+        this.x  = [ wM_min**(2.0/3) ]
+        this.wM = [ wM_min ]  # Orbital Frequency; NOTE that M referes to intial system mass
+        this.wM_max = wM_max  # Here M referes to intial system mass
+        this.wM_min = wM_min  # Here M referes to intial system mass
+        this.initial_state = array([this.phi[-1],this.x[-1]])
+        this.state = this.initial_state
         this.dtfac = 0.5
-        this.dt = 0.00009*this.dtfac*this.M/(Mwmin**3)
+        this.dt = 0.00009*this.dtfac*this.M/(wM_min**3)
+
+        # Binding energy
+        this.E = [0]

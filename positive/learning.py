@@ -2490,3 +2490,38 @@ def positive_romline(   domain,           # Domain of Map
     knots = min_space
 
     return knots,rom,min_sigma
+
+
+# rk4 routine for numerical integration
+def rk4_step( state, time, tau, state_derivative_function, **kwargs ):
+    '''
+    Routine for Rungge-Kutta steps.
+    '''
+
+    # Import usefuls
+
+    # Make short-hand for inputs
+    fun = state_derivative_function
+
+    # Calculate Rungge-Kutte parameters k1,k2,k3,k4
+
+    #
+    k1 = tau*fun(state,time,**kwargs)
+
+    #
+    state_ = state + 0.5*k1
+    k2 = tau*fun( state_, time + tau*0.5, **kwargs )
+
+    #
+    state_ = state + 0.5*k2
+    k3 = tau*fun( state_, time + tau*0.5, **kwargs )
+
+    #
+    state_ = state + k3
+    k4 = tau*fun( state_, time + tau, **kwargs )
+
+    # Take the RK step
+    ans = state + k1/6 + k2/3 + k3/3 + k4/6
+
+    # Return the answer
+    return ans
