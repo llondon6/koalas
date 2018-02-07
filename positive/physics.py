@@ -693,6 +693,7 @@ class pn:
                   X2,               # The dimensionless spin of the smaller object
                   wM_min = 0.003,
                   wM_max = 0.18,
+                  sceo = None,        # scentry object for gwylm conversion
                   Lhat = None,      # Unit direction of initial orbital angular momentum
                   verbose=True):    # Be verbose toggle
 
@@ -714,12 +715,68 @@ class pn:
         # Calculate time domain waveforms
         this.__calc_h_of_t__()
 
+        # Make gwylm representation
+        if sceo: this.__to_gwylmo__(sceo)
+
         # Let the people know
         # warning('Note that the calculation of waveforms has not been implemented.','pn')
 
         #
         return None
 
+
+    # Convert waveform information into gwylmo
+    def __to_gwylmo__(this,
+                      sceo): # instance of scentry class from nrutils
+
+        '''
+        This function takes in an instance of nrutils' scentry class
+        '''
+
+        # Let the people know
+        if this.verbose: alert('Making gwylm represenation.')
+
+        # Import useful things
+        from nrutils import gwylm,gwf
+        from scipy.interpolate import InterpolatedUnivariateSpline as spline
+        from copy import deepcopy as copy
+        from numpy import arange,linspace,exp,array,angle,unwrap
+
+        # Initial gwylm object
+        sceo = copy(sceo)
+        sceo.config = False
+        y = gwylm(sceo,load=False,calcnews=False,calcstrain=False)
+        y.__lmlist__ = this.lmlist
+        y.__input_lmlist__ = this.lmlist
+        y.remnant = this.remnant
+
+        # Make equispace strain pn td and store to y
+        alert('Interpolating time domain waveforms for equispacing.')
+        dt = 0.33
+        t = arange( min(this.t), max(this.t), dt )
+        y.t = t
+        for l,m in this.lmlist:
+            #
+            t_ = this.t
+            hlm_ = this.h[l,m]
+
+            amp_ = abs(hlm_); phi_ = unwrap(angle(hlm_))
+            amp = spline(t_,amp_)(t)
+            phi = spline(t_,phi_)(t)
+            hlm = amp * exp( -1j*phi )
+
+            # hp = spline( this.t, hlm.real )(t)
+            # hc = spline( this.t, hlm.imag )(t)
+            # hlm = hp + 1j*hc
+
+            wfarr = array([ t, hlm.real, hlm.imag ]).T
+            y.hlm.append(  gwf( wfarr,l=l,m=m,kind='$rh_{%i%i}/M$'%(l,m) )  )
+
+        #
+        y.__curate__()
+
+        # Store the gwylmo represenation
+        this.pn_gwylmo = y
 
     # Calculate all implemented strain time domain waveforms
     def __calc_h_of_t__(this):
@@ -986,7 +1043,7 @@ class pn:
         # Let the people know
         this.verbose = verbose
         if this.verbose:
-            alert('Defining the initial binary state based on inputs.')
+            alert('Defining the initial binary state based on inputs.','pn')
 
         # Rescale masses to unit total
         M = float(m1+m2); m1 = float(m1)/M; m2 = float(m2)/M
