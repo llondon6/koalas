@@ -92,7 +92,7 @@ def rISCO_14067295(a):
 
     # Ref. Eq. (2.5) of Ori, Thorne Phys Rev D 62 124022 (2000)
     z1 = 1.+(1.-a**2.)**(1./3)*((1.+a)**(1./3) + (1.-a)**(1./3))
-    z2 = np.sqrt(3.*a**2 + z1**2)
+    z2 = np.sqrt(3 * a**2 + z1**2)
     a_sign = np.sign(a)
     return 3+z2 - np.sqrt((3.-z1)*(3.+z1+2.*z2))*a_sign
 
@@ -708,11 +708,85 @@ class pn:
         # Calculate COM energy
         this.__calc_com_binding_energy__()
 
+        # Calculate system total angular momentum
+        this.__calc_total_angular_momentum__()
+
+        # Calculate time domain waveforms
+        this.__calc_h_of_t__()
+
         # Let the people know
-        warning('Note that the calculation of waveforms has not been implemented.','pn')
+        # warning('Note that the calculation of waveforms has not been implemented.','pn')
 
         #
         return None
+
+
+    # Calculate all implemented strain time domain waveforms
+    def __calc_h_of_t__(this):
+
+        #
+        this.h = {}
+        #
+        for l,m in this.lmlist:
+            this.h[l,m] = this.__calc_hlm_of_t__(l,m)
+
+    # Calcilate a single implmented time domain waveform
+    def __calc_hlm_of_t__(this,l,m):
+
+        #
+        from numpy import pi,log,sqrt,exp
+
+        # Short-hand
+        x = this.x
+        eta = this.eta
+
+        # l,m  = 2,2
+        if (l,m) == (2,2):
+
+            #
+            if this.verbose:
+                alert('Calculating the (l,m)=(%i,%i) spherical multipole.'%(l,m))
+
+            #
+            part2 = 1                                                                + \
+                    x     *(-107.0/42 + 55.0/42*eta)                                   + \
+                    x**1.5*(2*pi)		                                         + \
+                    x**2  *(-2173.0/1512 - 1069.0/216*eta + 2047.0/1512*eta**2)           + \
+                    x**2.5*((-107.0/21+34.0/21*eta)*pi - 24*1j*eta)       		 + \
+                    x**3  *(27027409.0/646800 + 2.0/3*pi**2                             + \
+                              -856.0/105*this.__gamma_E__ - 1712.0/105*log(2) - 428.0/105*log(x)   + \
+                              -(278185.0/33264-41.0/96*pi**2)*eta - 20261.0/2772*eta**2      + \
+                              114635.0/99792*eta**3 + 428.0*1j*pi/105)
+            #
+            spin   = x**(1.5) * (-4*this.delta*this.xa/3 + 4/3*(eta-1)*this.xs - 2*eta*x**(0.5)*(this.xa**2 - this.xs**2))
+            #
+            part1 = sqrt(16.0*pi/5) * 2*eta*this.M*x
+            #
+            h = part1 * exp(-1j*m*this.phi)*(part2 + spin)
+
+        elif (l,m) == (3,2):
+
+            #
+            if this.verbose:
+                alert('Calculating the (l,m)=(%i,%i) spherical multipole.'%(l,m))
+
+            #
+            part2 =  x     *(1- 3*eta) + \
+            x**2.0*(-193.0/90 + 145.0*eta/18 - (73.0*eta**2)/18) + \
+            x**2.5*(2*pi*(1-3*eta) - 3*1j + 66*1j*eta/5) + \
+            x**3.0*(-1451.0/3960 - 17387.0*eta/3960 + (5557.0*eta**2)/220 - (5341.0*eta**3)/1320)
+
+            part1 = sqrt(16*pi/5) * 2*eta*this.M*x * 1.0/3*sqrt(5.0/7)
+
+            #
+            h = exp(-1j*m*this.phi)* ( part1*part2 + 32.0/3*sqrt(pi/7)*(eta**2)*this.xs*(x**2.5) )
+
+        else:
+            #
+            error( '(l,m) = (%i,%i) not implemented'%(l,m) )
+
+        #
+        return h
 
 
     # Calculate the orbital frequency of the binary source
@@ -741,8 +815,11 @@ class pn:
             this.dt = 0.00009 * this.dtfac * this.M / ( _wM ** 3 )  # NOTE that M referes to intial system mass
             this.wM.append( _wM )
 
-        # Convert wM to array
+        # Convert quantities to array
         this.wM = array( this.wM )
+        this.x = array( this.x )
+        this.phi = array( this.phi )
+        this.t = array( this.t )
         # Calculate related quantities
         this.w = this.wM / this.M
         this.fM = this.wM / ( 2*pi )
@@ -758,8 +835,47 @@ class pn:
         #
         alert('Calculating COM binding energy')
         this.E = pn_com_energy(this.f,this.m1,this.m2,this.X1,this.X2,this.Lhat)
-        this.remnant = {}
         this.remnant['M'] = this.M+this.E
+
+
+    # Calculate system angular momentum
+    def __calc_total_angular_momentum__(this):
+        '''
+        Non-precessing
+        '''
+
+        # Import usefuls
+        from numpy import sqrt,pi,log
+
+        #
+        if abs(this.x1)+abs(this.x2) > 0:
+            warning('This function currently only works with non-spinning systems. See 1310.1528.')
+
+        # Short-hand
+        x = this.x
+        eta = this.eta
+
+        # Equation 234 of https://arxiv.org/pdf/1310.1528.pdf
+        mu = this.eta * this.M
+        e4 = -123671.0/5760 + pi*pi*9037.0/1536 + 1792*log(2)/15 + 896*this.__gamma_E__/15 \
+             + eta*( pi*pi*3157.0/576 - 498449.0/3456 ) \
+             + eta**2 * 301.0/1728 \
+             + eta**3 * 77.0/31104
+        j4 = -e4*5.0/7 + 64.9/35
+        L = ( mu   * this.M / sqrt(x) ) * ( 1 \
+            + x    * (1.5 + eta/6)
+            + x*x  * ( 27.0/8 - eta*19.0/8 + eta*eta/24 ) \
+            + x**3 * ( 135.0/16 + eta*( 41*pi*pi/24 - 6889.0/144 ) + eta*eta*31.0/24 + eta**3 * 7.0/1296 ) \
+            + x**4 * ( 2835.0/128 + eta*j4 - 64.0*eta*log(x)/3 ) \
+            )
+
+        #
+        S1 = this.x1*(this.m1**2)
+        S2 = this.x2*(this.m2**2)
+        Jz = L + S1 + S2
+
+        # Store the information to the current object
+        this.remnant['J'] = Jz
 
 
     # Method for calculating the RHS of the TaylorT4 first order ODEs for pn parameter x and frequency
@@ -847,9 +963,9 @@ class pn:
         from mpmath import euler as gamma_E
 
         # Masses must be float
-        if not isinstance(m1,float):
+        if not isinstance(m1,(float,int)):
             error('m1 input must be float or double, instead it is %s'%yellow(type(m1).__name__))
-        if not isinstance(m2,float):
+        if not isinstance(m2,(float,int)):
             error('m2 input must be float or double, instead it is %s'%yellow(type(m2).__name__))
 
         # Spins must be iterable of floats
@@ -873,7 +989,7 @@ class pn:
             alert('Defining the initial binary state based on inputs.')
 
         # Rescale masses to unit total
-        M = m1+m2; m1 /= M; m2 /= M
+        M = float(m1+m2); m1 = float(m1)/M; m2 = float(m2)/M
         if this.verbose: alert('Rescaling masses so that %s'%green('m1+m2=1'))
 
         # Store core inputs as well as simply derived quantities to the current object
@@ -887,7 +1003,11 @@ class pn:
         this.Lhat = Lhat
         this.x1 = dot(X1,Lhat)
         this.x2 = dot(X2,Lhat)
+        this.xs = (this.x1+this.x2)*0.5
+        this.xa = (this.x1-this.x2)*0.5
         this.__gamma_E__ = float(gamma_E)
+        # Bag for internal system quantities (remnant after radiated, not final)
+        this.remnant = {}
 
         # Define initial binary state based on inputs
         this.t = [0]
@@ -903,3 +1023,6 @@ class pn:
 
         # Binding energy
         this.E = [0]
+
+        # Store a list of implemented l,m cases for waveform generation
+        this.lmlist = [ (2,2), (3,2) ]
