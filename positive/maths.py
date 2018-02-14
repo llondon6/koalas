@@ -842,34 +842,62 @@ def sDlm(s,l,m,theta):
 # Time shift array data, h, using a frequency diomain method
 def tshift( t,      # time sries of data
             h,      # data that will be shifted
-            t0 ):   # amount to shift data
+            t0,     # time by which to shift the data
+            verbose=False,  # Toggle to let the people know
+            method=None ):   # amount to shift data
 
 
-    #
+    # Import usefuls
     from scipy.fftpack import fft, fftfreq, fftshift, ifft
     from numpy import diff,mean,exp,pi
 
-    #
+    # Determine if the data is all real
     is_real = sum( h.imag ) == 0
 
-    # take fft of input
-    H = fft(h)
-
-    # get frequency domain of H in hertz (non-monotonic,
-    # i.e. not the same as the "getfrequencyhz" function)
-    dt = mean(diff(t))
-    f = fftfreq( len(t), dt )
-
-    # shift, and calculate ifft
-    H_ = H * exp( -2*pi*1j*t0*f )
+    #
+    if verbose: alert( 'The data are real valued.' )
 
     #
-    if is_real:
-        h_ = ifft( H_ ).real
-    else:
-        h_ = ifft( H_ ) # ** here, errors in ifft process are ignored **
+    if method is None:
+        method = 'fft'
+        if verbose: alert('Using the default time shifting method.')
 
     #
+    if verbose: alert('The method is "%s"'%yellow(method))
+
+
+    # Apply the time shift
+    if method.lower() in ('fft'):
+
+        # take fft of input
+        H = fft(h)
+
+        # get frequency domain of H in hertz (non-monotonic,
+        # i.e. not the same as the "getfrequencyhz" function)
+        dt = mean(diff(t))
+        f = fftfreq( len(t), dt )
+
+        # shift, and calculate ifft
+        H_ = H * exp( -2*pi*1j*t0*f )
+
+        #
+        if is_real:
+            h_ = ifft( H_ ).real
+        else:
+            h_ = ifft( H_ ) # ** here, errors in ifft process are ignored **
+
+    elif method.lower() in ('td','index','ind'):
+
+        # Use index shifting
+        if verbose:
+            alert('Note that this method assumes the data are equally spaced in time.')
+
+        #
+        di = int( t0/mean(diff(t)) )
+        h_ = ishift(h, di)
+
+
+    # Return the answer
     return h_
 
 # Time shift array data, h, using a index shifting method

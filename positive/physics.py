@@ -740,7 +740,7 @@ class pn:
         from nrutils import gwylm,gwf
         from scipy.interpolate import InterpolatedUnivariateSpline as spline
         from copy import deepcopy as copy
-        from numpy import arange,linspace,exp,array,angle,unwrap
+        from numpy import arange,linspace,exp,array,angle,unwrap,ones_like,zeros_like
 
         # Initial gwylm object
         sceo = copy(sceo)
@@ -748,7 +748,15 @@ class pn:
         y = gwylm(sceo,load=False,calcnews=False,calcstrain=False)
         y.__lmlist__ = this.lmlist
         y.__input_lmlist__ = this.lmlist
+
+        # Store useful remnant stuff
         y.remnant = this.remnant
+        y.remnant['Mw'] = this.wM
+        y.radiated = {}
+        y.radiated['time_used'] = this.t
+        y.radiated['mask'] = ones_like(this.t,dtype=bool)
+        y.remnant['mask'] = y.radiated['mask']
+        y.remnant['X'] = array( [zeros_like(this.t),zeros_like(this.t),this.remnant['J']/(this.remnant['M']**2)] ).T
 
         # Make equispace strain pn td and store to y
         alert('Interpolating time domain waveforms for equispacing.')
