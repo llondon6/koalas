@@ -124,6 +124,7 @@ class smart_object:
         if isinstance(attrfile,(tuple,list)):
             for k in attrfile:
                 __isfile__ = __isfile__ and isfile(k)
+                # print isfile(k)
 
         # If the input file(s) exist, learn its contents
         if __isfile__:
