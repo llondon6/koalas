@@ -113,12 +113,20 @@ class smart_object:
         this.valid = False
         this.source_file_path = []
         this.source_dir  = []
-        attrfile = attrfile if attrfile is not None else ''
+        if attrfile is None: attrfile = ''
         this.unstring = unstring
 
         #
         this.overwrite = overwrite
-        if (attrfile is not None) and (isfile(attrfile)):
+
+        # Check for list input and determine if both files exist; if so, proceed
+        __isfile__ = attrfile != ''
+        if isinstance(attrfile,(tuple,list)):
+            for k in attrfile:
+                __isfile__ = __isfile__ and isfile(k)
+
+        # If the input file(s) exist, learn its contents
+        if __isfile__:
 
             if isinstance( attrfile, list ):
 

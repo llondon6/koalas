@@ -1193,14 +1193,21 @@ def spline_diff(t,y,k=3):
     return spline(t,y,k=k).derivative()(t)
 
 #
-def spline_antidiff(t,y,k=3):
+def spline_antidiff(t,y,k=3,n=1):
     '''
     Wrapper for InterpolatedUnivariateSpline antiderivative function
     '''
 
     #
     from scipy.interpolate import InterpolatedUnivariateSpline as spline
-    return spline(t,y,k=k).antiderivative()(t)
+
+    # Calculate the desired number of integrals
+    ans = y.copy()
+    for _ in range(n):
+        ans = spline(t,ans,k=k).antiderivative()(t)
+
+    # Return the answer
+    return ans
 
 # Sinc Intepolation
 # from -- https://gist.github.com/endolith/1297227
