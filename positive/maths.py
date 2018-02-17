@@ -1183,14 +1183,20 @@ def expsin_window( N ):
     return ans
 
 #
-def spline_diff(t,y,k=3):
+def spline_diff(t,y,k=3,n=1):
     '''
     Wrapper for InterpolatedUnivariateSpline derivative function
     '''
 
     #
     from scipy.interpolate import InterpolatedUnivariateSpline as spline
-    return spline(t,y,k=k).derivative()(t)
+
+    # Calculate the desired number of derivatives
+    ans = y.copy()
+    for _ in range(n):
+        ans = spline(t,ans,k=k).derivative()(t)
+
+    return ans
 
 #
 def spline_antidiff(t,y,k=3,n=1):

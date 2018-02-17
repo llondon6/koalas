@@ -140,10 +140,11 @@ def alert(msg,fname=None,say=False,output_string=False,heading=None,header=None,
         if heading or header:
             hl = ('-~' if pattern is None else pattern) * int( len(_msg.replace('033','') )/2 )
             _msg = '\n# %s #\n%s\n# %s #\n'%(hl,bold(_msg),hl)
-        if not output_string:
-            print _msg
-        else:
-            return _msg
+        if verbose:
+            if not output_string:
+                print _msg
+            else:
+                return _msg
 
 # Wrapper for OS say
 def say(msg,fname=None):

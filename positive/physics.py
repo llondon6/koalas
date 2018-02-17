@@ -91,10 +91,10 @@ def rISCO_14067295(a):
     a = np.array(a)
 
     # Ref. Eq. (2.5) of Ori, Thorne Phys Rev D 62 124022 (2000)
-    z1 = 1.+(1.-a**2.)**(1./3)*((1.+a)**(1./3) + (1.-a)**(1./3))
+    z1 = 1.0+(1.0-a**2.0)**(1.0/3)*((1.0+a)**(1.0/3) + (1.0-a)**(1.0/3))
     z2 = np.sqrt(3 * a**2 + z1**2)
     a_sign = np.sign(a)
-    return 3+z2 - np.sqrt((3.-z1)*(3.+z1+2.*z2))*a_sign
+    return 3+z2 - np.sqrt((3.0-z1)*(3.0+z1+2.0*z2))*a_sign
 
 
 # https://arxiv.org/pdf/1406.7295.pdf
@@ -715,6 +715,9 @@ class pn:
         # Calculate time domain waveforms
         this.__calc_h_of_t__()
 
+        # Use strain waveforms to calculate psi4 waveforms
+        this.__calc_psi4_if_t__()
+
         # Make gwylm representation
         if sceo: this.__to_gwylmo__(sceo)
 
@@ -794,6 +797,24 @@ class pn:
         #
         for l,m in this.lmlist:
             this.h[l,m] = this.__calc_hlm_of_t__(l,m)
+        # Calculte m<0 multipoles using symmetry relationship
+        alert('Calculating m<0 multipoles using symmetry relation.')
+        for l,m in this.lmlist:
+            this.h[l,-m] = (-1)**l * this.h[l,m].conj()
+        #
+        alert('Updatng lmlist to inlcude m<0 multipoles.')
+        this.lmlist = this.h.keys()
+
+
+    # Use previously calculated strain waveforms to calculate psi4
+    def __calc_psi4_if_t__(this):
+
+        #
+        this.psi4 = {}
+        for l,m in this.h:
+            h = this.h[l,m]
+            this.psi4[l,m] = spline_diff( this.t, h, n=2 )
+
 
     # Calcilate a single implmented time domain waveform
     def __calc_hlm_of_t__(this,l,m):
@@ -805,22 +826,26 @@ class pn:
         x = this.x
         eta = this.eta
 
-        # l,m  = 2,2
+        # Let the people know
+        if this.verbose:
+            alert('Calculating the (l,m)=(%i,%i) spherical multipole.'%(l,m))
+
+        #
         if (l,m) == (2,2):
 
-            #
-            if this.verbose:
-                alert('Calculating the (l,m)=(%i,%i) spherical multipole.'%(l,m))
+            #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
+            # (l,m) = (2,2)
+            #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
 
             #
-            part2 = 1                                                                + \
-                    x     *(-107.0/42 + 55.0/42*eta)                                   + \
-                    x**1.5*(2*pi)		                                         + \
-                    x**2  *(-2173.0/1512 - 1069.0/216*eta + 2047.0/1512*eta**2)           + \
-                    x**2.5*((-107.0/21+34.0/21*eta)*pi - 24*1j*eta)       		 + \
-                    x**3  *(27027409.0/646800 + 2.0/3*pi**2                             + \
-                              -856.0/105*this.__gamma_E__ - 1712.0/105*log(2) - 428.0/105*log(x)   + \
-                              -(278185.0/33264-41.0/96*pi**2)*eta - 20261.0/2772*eta**2      + \
+            part2 = 1 + \
+                    x      * (-107.0/42 + 55.0/42*eta) + \
+                    x**1.5 * (2*pi) + \
+                    x**2   * (-2173.0/1512 - 1069.0/216*eta + 2047.0/1512*eta**2) + \
+                    x**2.5 * ((-107.0/21+34.0/21*eta)*pi - 24*1j*eta) + \
+                    x**3   * (27027409.0/646800 + 2.0/3*pi**2 + \
+                              -856.0/105*this.__gamma_E__ - 1712.0/105*log(2) - 428.0/105*log(x) + \
+                              -(278185.0/33264-41.0/96*pi**2)*eta - 20261.0/2772*eta**2 + \
                               114635.0/99792*eta**3 + 428.0*1j*pi/105)
             #
             spin   = x**(1.5) * (-4*this.delta*this.xa/3 + 4/3*(eta-1)*this.xs - 2*eta*x**(0.5)*(this.xa**2 - this.xs**2))
@@ -829,11 +854,55 @@ class pn:
             #
             h = part1 * exp(-1j*m*this.phi)*(part2 + spin)
 
-        elif (l,m) == (3,2):
+        elif (l,m) == (2,1):
 
             #
-            if this.verbose:
-                alert('Calculating the (l,m)=(%i,%i) spherical multipole.'%(l,m))
+            part2 = (x**0.5 + \
+        	       + x**1.5 * (-17.0/28+5*eta/7) + \
+        	       + x**2.0 * (pi - 1.0j/2 - 2*1j*log(2)) + \
+        	       + x**2.5 * (-43.0/126 - 509*eta/126 + 79.0*eta**2 / 168)) + \
+        	       + x**3.0 * (-17.0*pi/28 + 3.0*pi*eta/14 + 1j*(17.0/56 + \
+        			eta*(-995.0/84 - 3.0*log(2)/7) + 17.0*log(2)/14))
+            #
+            part1 = sqrt(16.0*pi/5) * 2*eta*this.M*x * 1j/3*this.delta
+            #
+            h = part1 * exp(-1j*m*this.phi) * part2 + 4*1j*sqrt(pi/5)*exp(-1j*m*this.phi) * x**2 * eta*(this.xa+this.delta*this.xs)
+
+        elif (l,m) == (2,0):
+
+            #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
+            # (l,m) = (2,0)
+            #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
+
+            #
+            part2 = 1.0
+            part1 = sqrt(16.0*pi/5) * 2*eta*this.M*x * (-5.0/(14*sqrt(6)))
+            #
+            h = part1*part2
+
+        elif (l,m) == (3,3):
+
+            #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
+            # (l,m) = (3,3)
+            #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
+
+            #
+            part2 =  x**0.5	 					+ \
+                	+x**1.5 * (-4 + 2*eta)					+ \
+                	+x**2.0 * (3*pi - 21*1j/5 + 6*1j*log(1.5))		+ \
+                	+x**2.5 * (123.0/110 - 1838.0*eta/165 + (887.0*eta**2)/330)	+ \
+                	+x**3.0 * (-12*pi + 9.0*pi*eta/2 + 1j*(84.0/5 -24*log(1.5)   + \
+                	eta*(-48103.0/1215+9*log(1.5))))
+            #
+            part1 = sqrt(16.0*pi/5) * 2*eta*this.M*x * (-3.0/4*1j*this.delta*sqrt(15.0/14))
+            #
+            h = part1 * exp(-1j*m*this.phi) * part2
+
+        elif (l,m) == (3,2):
+
+            #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
+            # (l,m) = (3,2)
+            #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
 
             #
             part2 =  x     *(1- 3*eta) + \
@@ -845,6 +914,33 @@ class pn:
 
             #
             h = exp(-1j*m*this.phi)* ( part1*part2 + 32.0/3*sqrt(pi/7)*(eta**2)*this.xs*(x**2.5) )
+
+        elif (l,m) == (3,1):
+
+            #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
+            # (l,m) = (3,1)
+            #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
+
+            #
+            part2 =  x**0.5 + \
+            	     x**1.5 * (-8.0/3 - 2*eta/3) + \
+            	     x**2.0 * (pi - 7.0*1j/5 - 2.0*1j*log(2)) + \
+            	     x**2.5 * (607.0/198 - 136.0*eta/99 + 247.0*eta**2/198) + \
+            	     x**3.0 * ( -8.0*pi/3 - 7.0*pi*eta/6 + 1j*(56.0/15 + 16*log(2)/3 + \
+            		 eta*(-1.0/15 + 7.0*log(2)/3)))
+            #
+            part1 =  sqrt(16.0*pi/5) * 2*eta*this.M*x * 1j*this.delta/(12*sqrt(14))
+            #
+            h = part1 * exp(-1j*m*this.phi) * part2
+
+        elif (l,m) == (3,0):
+
+            #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
+            # (l,m) = (3,0)
+            #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-#
+            part2 = 1
+            part1 = sqrt(16.0*pi/5) * 2*eta*this.M * x * (-2.0/5*1j*sqrt(6.0/7)*x**2.5*eta)
+            h = part1*part2
 
         else:
             #
@@ -1090,7 +1186,7 @@ class pn:
         this.E = [0]
 
         # Store a list of implemented l,m cases for waveform generation
-        this.lmlist = [ (2,2), (3,2) ]
+        this.lmlist = [ (2,2), (2,1), (2,0), (3,3), (3,2), (3,1), (3,0) ]
 
 
 
