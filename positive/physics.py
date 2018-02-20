@@ -716,7 +716,8 @@ class pn:
         this.__calc_h_of_t__()
 
         # Use strain waveforms to calculate psi4 waveforms
-        this.__calc_psi4_if_t__()
+        alert('Calculating psi4 and news from strain.')
+        this.__calc_psi4_and_news_of_t__()
 
         # Make gwylm representation
         if sceo: this.__to_gwylmo__(sceo)
@@ -763,7 +764,7 @@ class pn:
 
         # Make equispace strain pn td and store to y
         alert('Interpolating time domain waveforms for equispacing.')
-        dt = 0.33
+        dt = 1.0/3
         t = arange( min(this.t), max(this.t), dt )
         y.t = t
         for l,m in this.lmlist:
@@ -802,17 +803,19 @@ class pn:
         for l,m in this.lmlist:
             this.h[l,-m] = (-1)**l * this.h[l,m].conj()
         #
-        alert('Updatng lmlist to inlcude m<0 multipoles.')
+        alert('Updating lmlist to inlcude m<0 multipoles.')
         this.lmlist = this.h.keys()
 
 
     # Use previously calculated strain waveforms to calculate psi4
-    def __calc_psi4_if_t__(this):
+    def __calc_psi4_and_news_of_t__(this):
 
         #
+        this.news = {}
         this.psi4 = {}
         for l,m in this.h:
             h = this.h[l,m]
+            this.news[l,m] = spline_diff( this.t, h, n=1 )
             this.psi4[l,m] = spline_diff( this.t, h, n=2 )
 
 
@@ -1284,7 +1287,7 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     ringdown_pad = 600              # Time units not index; TD padding for ringdown
     td_window_width = 3.0/fstart    # Used for determining the TD window function
     fmax = 0.5                      # Used for tapering the FD ampliutde
-    fstart_eff = fstart/(pi-2)      # Effective starting frequency for taper generation
+    fstart_eff = fstart#/(pi-2)      # Effective starting frequency for taper generation
 
 
     #-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-#

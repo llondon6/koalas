@@ -723,7 +723,6 @@ def gmvrfit( domain,
             print '&& '+ ('Degree tempering will continue.' if not done else 'Degree tempering has completed becuase %s. The results of the last iteration will be kept.'%exit_msg)
 
         #
-        print done
         if (not done) or not ('A' in locals()):
             A = A_
             boundary,est_list = A.boundary, A.estimator_list

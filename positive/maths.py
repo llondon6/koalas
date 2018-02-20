@@ -520,8 +520,23 @@ def intrp_diff( t,        # domain values
 # Find peaks adaptation from Matlab. Yet another example recursion's power!
 def findpeaks( y, min_distance = None ):
 
-    # Algorithm copied from Matlab's findLocalMaxima within findpeaks.m
-    # lionel.london@ligo.org
+    '''
+    Given fing the indeces and values of the input vector's local maxima.
+
+    INTPUT
+    --
+    y                       numpy 1D array of reals
+    min_distance = None     minimum allowed distance between consecutive peaks
+
+    OUTPUT
+    --
+    pks                     peak values
+    locs                    indeces of peaks
+
+
+    Algorithm copied from Matlab's findLocalMaxima within findpeaks.m
+    lionel.london@ligo.org
+    '''
 
     #
     from numpy import array,ones,append,arange,inf,isfinite,diff,sign,ndarray,hstack,where,abs
@@ -621,9 +636,6 @@ def findroots( y ):
 
     #
     root_mask = array( w )
-
-    # #
-    # _,root_mask = findpeaks( root_mask, min_distance=10 )
 
     #
     return root_mask
@@ -1192,9 +1204,8 @@ def spline_diff(t,y,k=3,n=1):
     from scipy.interpolate import InterpolatedUnivariateSpline as spline
 
     # Calculate the desired number of derivatives
-    ans = y.copy()
-    for _ in range(n):
-        ans = spline(t,ans,k=k).derivative()(t)
+    ans = spline(t,y.real,k=k).derivative(n=n)(t) \
+          + ( 1j*spline(t,y.imag,k=k).derivative(n=n)(t) if isinstance(y[0],complex) else 0 )
 
     return ans
 
@@ -1208,9 +1219,7 @@ def spline_antidiff(t,y,k=3,n=1):
     from scipy.interpolate import InterpolatedUnivariateSpline as spline
 
     # Calculate the desired number of integrals
-    ans = y.copy()
-    for _ in range(n):
-        ans = spline(t,ans,k=k).antiderivative()(t)
+    ans = spline(t,y.real,k=k).antiderivative(n=n)(t) + ( 1j*spline(t,y.imag,k=k).antiderivative(n=n)(t) if isinstance(y[0],complex) else 0 )
 
     # Return the answer
     return ans
