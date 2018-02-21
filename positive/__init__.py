@@ -51,8 +51,8 @@ mpl.rcParams['ytick.labelsize'] = 18
 mpl.rcParams['legend.frameon'] = False
 mpl.rcParams['legend.fontsize'] = 18
 # Use classic MPL lines and dashes by default
-mpl.rcParams['lines.dashed_pattern'] = [5, 2]
-mpl.rcParams['lines.dashdot_pattern'] = [3, 5, 1, 5]
-mpl.rcParams['lines.dotted_pattern'] = [1, 3]
+if 'lines.dashed_pattern' in mpl.rcParams: mpl.rcParams['lines.dashed_pattern'] = [5, 2]
+if 'lines.dashdot_pattern' in mpl.rcParams: mpl.rcParams['lines.dashdot_pattern'] = [3, 5, 1, 5]
+if 'lines.dotted_pattern' in mpl.rcParams: mpl.rcParams['lines.dotted_pattern'] = [1, 3]
 #
 del mpl,rc

@@ -1197,7 +1197,7 @@ class pn:
 #####
 
 # Convert phenom frequency domain waveform to time domain
-def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=False ):
+def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=False, time_shift=None ):
     '''
     INPUTS
     ---
@@ -1270,8 +1270,9 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     # time_shift = dmodel_pha[ mask ][ argmax_shift ]
     #%% Use mode // histogram better than mode funcion for continuus sets
     # This method is likely the most robust
-    hist,edges = histogram( dmodel_pha[mask],50 )
-    time_shift = edges[ 1+argmax( hist ) ]
+    if time_shift is None:
+        hist,edges = histogram( dmodel_pha[mask],50 )
+        time_shift = edges[ 1+argmax( hist ) ]
     # #%% Use peak of phase derivative
     # argmax_shift = argmax( dmodel_pha[ mask ] )
     # time_shift = dmodel_pha[ mask ][ argmax_shift ]
@@ -1439,7 +1440,7 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
         plot( t, ht.imag, color=0.4*white )
         plot( t,abs(ht), color=clr[0] )
         plot( t,-abs(ht), color=clr[0] )
-        print '..> %g'%t[k_start]
+        # print '..> %g'%t[k_start]
         axvline( t[k_start], color='k', alpha=0.5, linestyle=':' )
         plot( t, window*0.9*max(ylim()),':k',alpha=0.5 )
         xlim(lim(t))
