@@ -1649,8 +1649,8 @@ def corr_align( domain_A,range_A,domain_B,range_B,plot=False ):
 
     '''
     # Imoprt usefuls
-    from numpy import array, pad, argmax, mod
     from numpy import correlate as xcorr
+    from numpy import array,pad,argmax,mod,arange,angle,exp,roll,std,diff
     from scipy.interpolate import InterpolatedUnivariateSpline as spline
 
     # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
@@ -1672,7 +1672,6 @@ def corr_align( domain_A,range_A,domain_B,range_B,plot=False ):
     elif dt_A<dt_B:
         dt = dt_B
         # Reset identifiers
-        domain_A,range_A = _domain_A,_range_A
         domain_A,range_A = __interpolate_to_dt__(domain_A,range_A,dt)
     else:
         dt = dt_A
@@ -1727,7 +1726,9 @@ def corr_align( domain_A,range_A,domain_B,range_B,plot=False ):
     # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
     # Plot
     # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
-    if __plot__:
+    if plot:
+        #
+        from matplotlib.pyplot import plot,xlim,figure,figaspect
         ref_d = domain[argmax( abs(range_A) )]
         #
         fig = figure( figsize=1*figaspect(1.0/7) )
@@ -1735,16 +1736,19 @@ def corr_align( domain_A,range_A,domain_B,range_B,plot=False ):
         plot( domain, abs(_range_B) )
         #
         plot( domain, range_A.imag, lw=1, color='r', alpha=0.8 )
-        plot( domain+dom0, range_B.imag, 'k', alpha=0.9, ls = '--' )
+        #plot( domain+dom0, range_B.imag, 'k', alpha=0.9, ls = '--' )
         plot( domain,_range_B.imag, 'k', alpha=0.9 )
         #
-        xlim( ref_d+0.5*array([-1,1]) )
+        dd = 0.25*diff(lim(domain))
+        xlim(lim(domain))
+        #xlim( ref_d-dd, min(ref_d+dd,max(domain)) )
 
     #
     foo = {}
     foo['phase_shift'] = phi0
     foo['domain_shift'] = dom0
     foo['index_shift'] = k0
+    foo['frmse'] = abs( std( range_A-_range_B )/std(range_A) )
 
     # Return in same order as input with addition
     return domain,range_A,domain,_range_B,foo
