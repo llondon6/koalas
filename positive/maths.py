@@ -914,19 +914,9 @@ def tshift( t,      # time sries of data
 
 # Time shift array data, h, using a index shifting method
 def ishift( h, di ):
-
     #
-    from numpy import mod,arange
-
-    #
-    di = int( mod(di,len(h)) )
-
-    #
-    space = arange( len(h) )
-    new_space = space - di
-    ans = h[ new_space ]
-
-    return ans
+    from numpy import roll
+    return roll(h,di)
 
 
 # Find the interpolated global max location of a data series
@@ -946,7 +936,7 @@ def intrp_max( y, domain=None, verbose=False, return_argmax=False, plot = False,
     # Determine if y is flat
     c = (y - mean(y))/std(y)
     # the centered version of y, c, is determined to be flat if the largest difference is small
-    y_is_flat = allclose( y, y[::-1], rtol=1e-3 )
+    y_is_flat = allclose( y, y[::-1], rtol=1e-3 ) and (std(diff(y)/diff(lim(y))))<1e-3
 
     '''
     If the input vector is flat, simply take its numerical max.
@@ -1634,8 +1624,131 @@ class OrderedSet(MutableSet):
 
 
 
+#-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-#
 
-'''
-Maths functions for implementation of matrix method for corotating frame.
-Reference: https://arxiv.org/pdf/1110.2965.pdf
-'''
+# Given two datasets, use numpy's xcorr to align the domains and ranges.
+def corr_align( domain_A,range_A,domain_B,range_B,plot=False,domain_align=True ):
+    '''
+    Given two datasets, use numpy's xcorr to align the domains and ranges.
+
+    INPUTS
+    ---
+    domain_A,   Domain values for first dataset
+    range_A,    Range values for first dataset
+    domain_B,   Domain values for second dataset
+    range_B,    Range values for second dataset
+    plot=False  Optional plotting
+
+    OUTPUTS
+    ---
+    domain_A,   Aligned Domain values for first dataset
+    range_A,    Aligned Range values for first dataset
+    domain_B,   Aligned Domain values for second dataset
+    range_B,    = range_A
+    foo         Dictionary containing information about the aignment
+
+    '''
+    # Imoprt usefuls
+    from numpy import correlate as xcorr
+    from numpy import array,pad,argmax,mod,arange,angle,exp,roll,std,diff
+    from scipy.interpolate import InterpolatedUnivariateSpline as spline
+
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    # Determine time spacing of each array, and choose the larger spacing as the common one
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    dt_A = domain_A[1]-domain_A[0]
+    dt_B = domain_B[1]-domain_B[0]
+    # Define single method for interpolating data
+    def __interpolate_to_dt__(dom,ran,dd):
+        _dom = arange( min(dom), max(dom)+dd, dd )
+        _ran = spline( dom, ran.real )(_dom) + 1j*spline( dom, ran.imag )(_dom)
+        # Return answer
+        return _dom,_ran
+    # Dermine the common spacing and interpolate
+    if dt_A>dt_B:
+        dt = dt_A
+        # Reset identifiers
+        domain_B,range_B = __interpolate_to_dt__(domain_B,range_B,dt)
+    elif dt_A<dt_B:
+        dt = dt_B
+        # Reset identifiers
+        domain_A,range_A = __interpolate_to_dt__(domain_A,range_A,dt)
+    else:
+        dt = dt_A
+
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    # Pad inputs to the same length
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    L_A, L_B = len(domain_A), len(domain_B)
+    L = max(L_A,L_B)
+    # Define single method for padding data
+    def __pad_to_length__(dom,ran,ll):
+        # Pad with zeros
+        _ran = pad( ran, [0,ll-len(ran)], 'constant', constant_values=0 )
+        _dom = dt*arange( 0, ll )
+        # Preserve time values
+        _dom += -_dom[argmax(abs(_ran))] + dom[ argmax(abs(ran)) ]
+        # Check output
+        if (len(_dom)!=ll):
+            error('There\'s a bug here: output domain length is %i but it should be %i.'%(len(_dom),ll))
+        if (len(_ran)!=ll):
+            error('There\'s a bug here: output range length is %i but it should be %i.'%(len(_ran),ll))
+        # Return answer
+        return _dom,_ran
+    if L_A<L:
+        # pad to length
+        domain_A,range_A = __pad_to_length__(domain_A,range_A,L)
+    elif L_B<L:
+        # pad to length
+        domain_B,range_B = __pad_to_length__(domain_B,range_B,L)
+
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    # Choose common domain based on input order
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    domain = domain_A
+
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    # Use cross-correlation to determine optimal time and phase shift
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    x = xcorr(range_A,range_B,mode='full')
+    k = argmax( abs(x) )
+    x0 = x[k]
+    k0 = mod(k+1,L) # note that the +1 here ensures k0=dom0=phi0=0 when trying to align data with itself
+    dom0 = domain[k0]
+    phi0 = angle(x0)
+
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    # Apply the alignment parameters to input B
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    _range_B = range_B * exp( 1j*phi0 )
+    if domain_align: _range_B = roll( _range_B, k0 )
+
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    # Plot
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    if plot:
+        #
+        from matplotlib.pyplot import plot,xlim,figure,figaspect
+        ref_d = domain[argmax( abs(range_A) )]
+        #
+        fig = figure( figsize=1*figaspect(1.0/7) )
+        plot( domain, abs(range_A) )
+        plot( domain, abs(_range_B) )
+        #
+        plot( domain, range_A.imag, lw=1, color='r', alpha=0.8 )
+        #plot( domain+dom0, range_B.imag, 'k', alpha=0.9, ls = '--' )
+        plot( domain,_range_B.imag, 'k', alpha=0.9 )
+        #
+        dd = 0.25*diff(lim(domain))
+        xlim(lim(domain))
+        #xlim( ref_d-dd, min(ref_d+dd,max(domain)) )
+
+    #
+    foo = {}
+    foo['phase_shift'] = phi0
+    foo['domain_shift'] = dom0
+    foo['index_shift'] = k0
+    foo['frmse'] = abs( std( range_A-_range_B )/std(range_A) )
+
+    # Return in same order as input with addition
+    return domain,range_A,domain,_range_B,foo
