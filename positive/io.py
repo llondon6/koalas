@@ -303,13 +303,14 @@ def smart_load( file_location,        # absolute path location of file
                 raw = f.read()
         else:
             # Load from ascii file
-            try:
-                raw = numpy.loadtxt( file_location, comments='#')
-            except:
-                alert('Could not load: %s'%red(file_location),thisfun)
-                alert(red('None')+' will be output',thisfun)
-                raw = None
-                status = False
+            raw = numpy.loadtxt( file_location, comments='#')
+        #    try:
+        #        raw = numpy.loadtxt( file_location, comments='#')
+        #    except:
+        #        alert('Could not load: %s'%red(file_location),thisfun)
+        #        alert(red('None')+' will be output',thisfun)
+        #        raw = None
+        #        status = False
 
     else:
 
