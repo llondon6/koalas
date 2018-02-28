@@ -936,7 +936,7 @@ def intrp_max( y, domain=None, verbose=False, return_argmax=False, plot = False,
     # Determine if y is flat
     c = (y - mean(y))/std(y)
     # the centered version of y, c, is determined to be flat if the largest difference is small
-    y_is_flat = allclose( y, y[::-1], rtol=1e-3 )
+    y_is_flat = allclose( y, y[::-1], rtol=1e-3 ) and (std(diff(y)/diff(lim(y))))<1e-3
 
     '''
     If the input vector is flat, simply take its numerical max.
@@ -1627,7 +1627,7 @@ class OrderedSet(MutableSet):
 #-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-#
 
 # Given two datasets, use numpy's xcorr to align the domains and ranges.
-def corr_align( domain_A,range_A,domain_B,range_B,plot=False ):
+def corr_align( domain_A,range_A,domain_B,range_B,plot=False,domain_align=True ):
     '''
     Given two datasets, use numpy's xcorr to align the domains and ranges.
 
@@ -1721,7 +1721,7 @@ def corr_align( domain_A,range_A,domain_B,range_B,plot=False ):
     # Apply the alignment parameters to input B
     # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
     _range_B = range_B * exp( 1j*phi0 )
-    _range_B = roll( _range_B, k0 )
+    if domain_align: _range_B = roll( _range_B, k0 )
 
     # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
     # Plot

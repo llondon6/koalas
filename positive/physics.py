@@ -768,21 +768,27 @@ class pn:
         t = arange( min(this.t), max(this.t), dt )
         y.t = t
         for l,m in this.lmlist:
+
             #
             t_ = this.t
-            hlm_ = this.h[l,m]
 
+            # Store Strain
+            hlm_ = this.h[l,m]
             amp_ = abs(hlm_); phi_ = unwrap(angle(hlm_))
             amp = spline(t_,amp_)(t)
             phi = spline(t_,phi_)(t)
             hlm = amp * exp( -1j*phi )
-
-            # hp = spline( this.t, hlm.real )(t)
-            # hc = spline( this.t, hlm.imag )(t)
-            # hlm = hp + 1j*hc
-
             wfarr = array([ t, hlm.real, hlm.imag ]).T
             y.hlm.append(  gwf( wfarr,l=l,m=m,kind='$rh_{%i%i}/M$'%(l,m) )  )
+
+            # Store Psi4
+            ylm_ = this.psi4[l,m]
+            amp_ = abs(ylm_); phi_ = unwrap(angle(ylm_))
+            amp = spline(t_,amp_)(t)
+            phi = spline(t_,phi_)(t)
+            ylm = amp * exp( -1j*phi )
+            wfarr = array([ t, ylm.real, ylm.imag ]).T
+            y.ylm.append(  gwf( wfarr,l=l,m=m,kind='$rM\psi_{%i%i}$'%(l,m) )  )
 
         #
         y.__curate__()
@@ -1197,7 +1203,7 @@ class pn:
 #####
 
 # Convert phenom frequency domain waveform to time domain
-def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=False, time_shift=None ):
+def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=False, time_shift=None, fmax=0.5, ringdown_pad=600 ):
     '''
     INPUTS
     ---
@@ -1236,7 +1242,7 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     #
     from scipy.fftpack import fft,fftshift,ifft,fftfreq,ifftshift
     from scipy.stats import mode
-    from numpy import array,arange,zeros,ones,unwrap,histogram
+    from numpy import array,arange,zeros,ones,unwrap,histogram,zeros_like
     from numpy import argmax,angle,linspace,exp,diff,pi,floor,convolve
     from scipy.interpolate import CubicSpline as spline
 
@@ -1285,10 +1291,10 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     # # axvline( model_f[kstart], linestyle=':' )
 
     #
-    ringdown_pad = 600              # Time units not index; TD padding for ringdown
+    ringdown_pad = ringdown_pad     # Time units not index; TD padding for ringdown
     td_window_width = 3.0/fstart    # Used for determining the TD window function
-    fmax = 0.5                      # Used for tapering the FD ampliutde
-    fstart_eff = fstart#/(pi-2)      # Effective starting frequency for taper generation
+    fmax = fmax                     # Used for tapering the FD ampliutde
+    fstart_eff = fstart#/(pi-2)     # Effective starting frequency for taper generation
 
 
     #-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-#
@@ -1353,8 +1359,10 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     f_ = _f_[ _f_ > 0 ]
 
     # Interpolate model over this subdomain
-    amp_ = spline( model_f,model_amp )(f_)
-    pha_ = spline( model_f,model_pha )(f_)
+    amp_,pha_ = zeros_like(f_),zeros_like(f_)
+    mask = (f_>=min(model_f)) & (f_<=max(model_f))
+    amp_[mask] = spline( model_f,model_amp )(f_[mask])
+    pha_[mask] = spline( model_f,model_pha )(f_[mask])
 
     # figure( figsize=2*array([6,2]) )
     # subplot(1,2,1)
@@ -1386,8 +1394,7 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     hf_raw = amp * exp( -1j*pha )
 
     hf_raw *= maketaper(f,[ find(f>0)[0], find(f>fstart_eff)[0] ],window_type='exp')
-    # hf_raw *= maketaper(f,[ find(f>0)[0], find(f>fstart/1.2)[0] ],window_type='nr')**2
-    hf_raw *= maketaper(f,[ find(f>fmax)[0], find(f>(fmax-0.1))[0] ],window_type='parzen')
+    # hf_raw *= maketaper(f,[ find(f>fmax)[0], find(f>(fmax-0.1))[0] ],window_type='parzen')
 
     #
     fd_window = fft( window )
