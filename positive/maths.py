@@ -1653,6 +1653,35 @@ def corr_align( domain_A,range_A,domain_B,range_B,plot=False,domain_align=True )
     from numpy import array,pad,argmax,mod,arange,angle,exp,roll,std,diff
     from scipy.interpolate import InterpolatedUnivariateSpline as spline
 
+    # Validate domains
+    if not isunispaced(domain_A):
+        error('First domain must be unispaced.')
+    if not isunispaced(domain_B):
+        error('Second domain must be unispaced.')
+
+    # Define single method for padding data. This will be used a few times below.
+    def __pad_to_length__(dom,ran,ll):
+        # Pad with zeros
+        _ran = pad( ran, [0,int(ll-len(ran))], 'constant', constant_values=0 )
+        _dom = (dom[1]-dom[0])*arange( 0, ll )
+        # Preserve time values
+        _dom += -_dom[argmax(abs(_ran))] + dom[ argmax(abs(ran)) ]
+        # Check output
+        if (len(_dom)!=ll):
+            error('There\'s a bug here: output domain length is %i but it should be %i.'%(len(_dom),ll))
+        if (len(_ran)!=ll):
+            error('There\'s a bug here: output range length is %i but it should be %i.'%(len(_ran),ll))
+        # Return answer
+        return _dom,_ran
+
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    # Pad inputs with zeros to a common length
+    # NOTE that this step must be performed first to make results independent of input order
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    N = max(len(domain_A),len(domain_B))
+    domain_A,range_A = __pad_to_length__(domain_A,range_A,N)
+    domain_B,range_B = __pad_to_length__(domain_B,range_B,N)
+
     # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
     # Determine time spacing of each array, and choose the larger spacing as the common one
     # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
@@ -1681,20 +1710,6 @@ def corr_align( domain_A,range_A,domain_B,range_B,plot=False,domain_align=True )
     # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
     L_A, L_B = len(domain_A), len(domain_B)
     L = max(L_A,L_B)
-    # Define single method for padding data
-    def __pad_to_length__(dom,ran,ll):
-        # Pad with zeros
-        _ran = pad( ran, [0,ll-len(ran)], 'constant', constant_values=0 )
-        _dom = dt*arange( 0, ll )
-        # Preserve time values
-        _dom += -_dom[argmax(abs(_ran))] + dom[ argmax(abs(ran)) ]
-        # Check output
-        if (len(_dom)!=ll):
-            error('There\'s a bug here: output domain length is %i but it should be %i.'%(len(_dom),ll))
-        if (len(_ran)!=ll):
-            error('There\'s a bug here: output range length is %i but it should be %i.'%(len(_ran),ll))
-        # Return answer
-        return _dom,_ran
     if L_A<L:
         # pad to length
         domain_A,range_A = __pad_to_length__(domain_A,range_A,L)
@@ -1736,12 +1751,14 @@ def corr_align( domain_A,range_A,domain_B,range_B,plot=False,domain_align=True )
         plot( domain, abs(_range_B) )
         #
         plot( domain, range_A.imag, lw=1, color='r', alpha=0.8 )
-        #plot( domain+dom0, range_B.imag, 'k', alpha=0.9, ls = '--' )
         plot( domain,_range_B.imag, 'k', alpha=0.9 )
         #
         dd = 0.25*diff(lim(domain))
         xlim(lim(domain))
-        #xlim( ref_d-dd, min(ref_d+dd,max(domain)) )
+        #
+        figure(figsize=1*figaspect(1.0/7))
+        plot( arange(len(x))*dt,abs(x) )
+        xlim(lim(arange(len(x))*dt))
 
     #
     foo = {}
@@ -1750,5 +1767,5 @@ def corr_align( domain_A,range_A,domain_B,range_B,plot=False,domain_align=True )
     foo['index_shift'] = k0
     foo['frmse'] = abs( std( range_A-_range_B )/std(range_A) )
 
-    # Return in same order as input with addition
+    # Return in same order as input with additional info
     return domain,range_A,domain,_range_B,foo
