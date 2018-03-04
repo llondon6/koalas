@@ -764,7 +764,7 @@ class pn:
 
         # Make equispace strain pn td and store to y
         alert('Interpolating time domain waveforms for equispacing.')
-        dt = 1.0/3
+        dt = 0.5
         t = arange( min(this.t), max(this.t), dt )
         y.t = t
         for l,m in this.lmlist:
@@ -792,6 +792,7 @@ class pn:
 
         #
         y.__curate__()
+        y.pad( len(y.t)+500 )
 
         # Store the gwylmo represenation
         this.pn_gwylmo = y

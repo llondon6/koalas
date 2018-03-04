@@ -1033,12 +1033,16 @@ def intrp_max( y, domain=None, verbose=False, return_argmax=False, plot = False,
         try:
             intrp_suby = spline( kspace, suby, k=4, s=0 )
         except:
-            from matplotlib import pyplot as pp
-            pp.figure()
-            pp.plot( kspace, suby, '-o' )
-            pp.title( diff(lim(c)) )
-            pp.show()
-            raise
+            warning('Interpolative max failed. Using index.')
+            #
+            arg_max = argmax(y)
+            max_val = y[arg_max]
+            if return_argmax:
+                ans = (max_val,float(arg_max))
+            else:
+                ans = max_val
+            return ans
+
         # Location of the max is determined analytically, given the local spline model
         kspace_maxes = intrp_suby.derivative().roots()
         try:
@@ -1626,6 +1630,70 @@ class OrderedSet(MutableSet):
 
 #-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-#
 
+# Return data with common sample rates and lengths
+def format_align( domain_A,range_A,         # Domain and range of first 1d dataset
+                  domain_B,range_B,         # Domain and range of second 1d dataset
+                  center_domains=False,     # Toggle for setting domains to 0 at start
+                  verbose=True):
+
+    '''
+    Determine time spacing of each array, and choose the larger spacing as the common one
+    '''
+
+    # Imoprt usefuls
+    from numpy import array,pad,argmax,mod,arange,angle,exp,roll,std,diff
+    from scipy.interpolate import InterpolatedUnivariateSpline as spline
+
+    # Validate domains
+    if not isunispaced(domain_A):
+        error('First domain must be unispaced.')
+    if not isunispaced(domain_B):
+        error('Second domain must be unispaced.')
+
+    # Let the people know
+    alert('Verbose mode ON.',verbose=verbose)
+
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    # Determine bounaries of common domain
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    if center_domains:
+        # Center domains at start
+        alert('Setting domains to start at zero.',verbose=verbose)
+        domain_min = 0
+        domain_max = max( (domain_A-domain_A[0])[-1], (domain_B-domain_B[0])[-1] )
+    else:
+        # Be agnostic about whether shifts in domain may apply
+        domain_min = min( min(domain_A), min(domain_B) )
+        domain_max = max( max(domain_A), max(domain_B) )
+
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    # Generate a common domain
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    alert('Choosing the smallest domain spacing for calculation of common domain.',verbose=verbose)
+    d_A = domain_A[1]-domain_A[0]
+    d_B = domain_B[1]-domain_B[0]
+    d = min( [d_A,d_B] )
+    domain = arange( domain_min, domain_max+d, d )
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    # Interpolate to common domain
+    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
+    def __interpolate_domain__(dom,ran):
+        dom_ = dom - dom[0]
+        _ran = spline( dom, ran.real )(domain) + 1j*spline( dom, ran.imag )(domain)
+        mask = (domain<min(dom)) | (domain>max(dom))
+        _ran[mask] = 0
+        # Return answer
+        return _ran
+    #
+    alert('Interpolating data to common domain.',verbose=verbose)
+    range_A = __interpolate_domain__(domain_A,range_A)
+    range_B = __interpolate_domain__(domain_B,range_B)
+
+    #
+    alert('Done.',verbose=verbose)
+    return domain,range_A,range_B
+
+
 # Given two datasets, use numpy's xcorr to align the domains and ranges.
 def corr_align( domain_A,range_A,domain_B,range_B,plot=False,domain_align=True ):
     '''
@@ -1649,7 +1717,7 @@ def corr_align( domain_A,range_A,domain_B,range_B,plot=False,domain_align=True )
 
     '''
     # Imoprt usefuls
-    from numpy import correlate as xcorr
+    from numpy import correlate
     from numpy import array,pad,argmax,mod,arange,angle,exp,roll,std,diff
     from scipy.interpolate import InterpolatedUnivariateSpline as spline
 
@@ -1659,76 +1727,20 @@ def corr_align( domain_A,range_A,domain_B,range_B,plot=False,domain_align=True )
     if not isunispaced(domain_B):
         error('Second domain must be unispaced.')
 
-    # Define single method for padding data. This will be used a few times below.
-    def __pad_to_length__(dom,ran,ll):
-        # Pad with zeros
-        _ran = pad( ran, [0,int(ll-len(ran))], 'constant', constant_values=0 )
-        _dom = (dom[1]-dom[0])*arange( 0, ll )
-        # Preserve time values
-        _dom += -_dom[argmax(abs(_ran))] + dom[ argmax(abs(ran)) ]
-        # Check output
-        if (len(_dom)!=ll):
-            error('There\'s a bug here: output domain length is %i but it should be %i.'%(len(_dom),ll))
-        if (len(_ran)!=ll):
-            error('There\'s a bug here: output range length is %i but it should be %i.'%(len(_ran),ll))
-        # Return answer
-        return _dom,_ran
-
     # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
-    # Pad inputs with zeros to a common length
-    # NOTE that this step must be performed first to make results independent of input order
+    # Pad inputs to the same length (again)
     # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
-    N = max(len(domain_A),len(domain_B))
-    domain_A,range_A = __pad_to_length__(domain_A,range_A,N)
-    domain_B,range_B = __pad_to_length__(domain_B,range_B,N)
-
-    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
-    # Determine time spacing of each array, and choose the larger spacing as the common one
-    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
-    dt_A = domain_A[1]-domain_A[0]
-    dt_B = domain_B[1]-domain_B[0]
-    # Define single method for interpolating data
-    def __interpolate_to_dt__(dom,ran,dd):
-        _dom = arange( min(dom), max(dom)+dd, dd )
-        _ran = spline( dom, ran.real )(_dom) + 1j*spline( dom, ran.imag )(_dom)
-        # Return answer
-        return _dom,_ran
-    # Dermine the common spacing and interpolate
-    if dt_A>dt_B:
-        dt = dt_A
-        # Reset identifiers
-        domain_B,range_B = __interpolate_to_dt__(domain_B,range_B,dt)
-    elif dt_A<dt_B:
-        dt = dt_B
-        # Reset identifiers
-        domain_A,range_A = __interpolate_to_dt__(domain_A,range_A,dt)
-    else:
-        dt = dt_A
-
-    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
-    # Pad inputs to the same length
-    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
-    L_A, L_B = len(domain_A), len(domain_B)
-    L = max(L_A,L_B)
-    if L_A<L:
-        # pad to length
-        domain_A,range_A = __pad_to_length__(domain_A,range_A,L)
-    elif L_B<L:
-        # pad to length
-        domain_B,range_B = __pad_to_length__(domain_B,range_B,L)
-
-    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
-    # Choose common domain based on input order
-    # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
-    domain = domain_A
+    domain,range_A,range_B = format_align(domain_A,range_A,domain_B,range_B,center_domains=True,verbose=False)
 
     # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
     # Use cross-correlation to determine optimal time and phase shift
     # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
-    x = xcorr(range_A,range_B,mode='full')
+    x = correlate(range_A,range_B,mode='full')
+    print x.shape
     k = argmax( abs(x) )
     x0 = x[k]
-    k0 = mod(k+1,L) # note that the +1 here ensures k0=dom0=phi0=0 when trying to align data with itself
+    k0 = mod( k+1, len(domain) ) # NOTE that the +1 here ensures
+                                 # k0=dom0=phi0=0 when trying to align data with itself
     dom0 = domain[k0]
     phi0 = angle(x0)
 
@@ -1743,7 +1755,7 @@ def corr_align( domain_A,range_A,domain_B,range_B,plot=False,domain_align=True )
     # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
     if plot:
         #
-        from matplotlib.pyplot import plot,xlim,figure,figaspect
+        from matplotlib.pyplot import plot,xlim,figure,figaspect,ylim
         ref_d = domain[argmax( abs(range_A) )]
         #
         fig = figure( figsize=1*figaspect(1.0/7) )
@@ -1756,6 +1768,7 @@ def corr_align( domain_A,range_A,domain_B,range_B,plot=False,domain_align=True )
         dd = 0.25*diff(lim(domain))
         xlim(lim(domain))
         #
+        dt = domain[1]-domain[0]
         figure(figsize=1*figaspect(1.0/7))
         plot( arange(len(x))*dt,abs(x) )
         xlim(lim(arange(len(x))*dt))

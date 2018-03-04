@@ -127,6 +127,12 @@ def thisfun():
     import inspect
     return inspect.stack()[2][3]
 
+# Return the current line number
+def thisline():
+    import inspect
+    """Returns the current line number in our program."""
+    return inspect.currentframe().f_back.f_lineno
+
 # Alert wrapper
 def alert(msg,fname=None,say=False,output_string=False,heading=None,header=None,pattern=None,verbose=True):
     if verbose:
@@ -156,9 +162,15 @@ def say(msg,fname=None):
 
 # Warning wrapper
 def warning(msg,fname=None,output_string=False,heading=None,header=None,pattern=None):
+    #
+    import sys,os
+    # Get line number
+    exc_type, exc_obj, exc_tb = sys.exc_info()
+    flname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+    #
     if fname is None:
         fname = thisfun()
-    _msg = bold('('+yellow(fname+'!')+')>> ')+msg
+    _msg = bold('('+yellow(fname+'!,%s,@%i'%(flname,exc_tb.tb_lineno))+')>> ')+msg
     if heading or header:
         hl = ('-~' if pattern is None else pattern) * int( len(_msg.replace('033','') )/2 )
         _msg = '\n# %s #\n%s\n# %s #\n'%(hl,bold(_msg),hl)
@@ -169,6 +181,12 @@ def warning(msg,fname=None,output_string=False,heading=None,header=None,pattern=
 
 # Error wrapper
 def error(msg,fname=None):
+    #
     if fname is None:
         fname = thisfun()
-    raise ValueError( bold('('+red(fname+'!!')+') ')+msg )
+    #
+    import sys,os
+    # Get line number
+    exc_type, exc_obj, exc_tb = sys.exc_info()
+    flname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+    raise NotImplementedError( bold('('+red(fname+'!!,%s,@%i'%(flname,exc_tb.tb_lineno))+') ')+msg )
