@@ -905,8 +905,9 @@ def tshift( t,      # time sries of data
             alert('Note that this method assumes the data are equally spaced in time.')
 
         #
+        from numpy import roll
         di = int( t0/mean(diff(t)) )
-        h_ = ishift(h, di)
+        h_ = roll(h, di)
 
 
     # Return the answer
@@ -1641,7 +1642,7 @@ def format_align( domain_A,range_A,         # Domain and range of first 1d datas
     '''
 
     # Imoprt usefuls
-    from numpy import array,pad,argmax,mod,arange,angle,exp,roll,std,diff
+    from numpy import array,pad,argmax,mod,arange,angle,exp,roll,std,diff,unwrap,allclose
     from scipy.interpolate import InterpolatedUnivariateSpline as spline
 
     # Validate domains
@@ -1652,6 +1653,13 @@ def format_align( domain_A,range_A,         # Domain and range of first 1d datas
 
     # Let the people know
     alert('Verbose mode ON.',verbose=verbose)
+
+    # Do nothing if the data are already in the same format
+    if len(domain_A)==len(domain_B):
+        if allclose(domain_A,domain_B):
+            warning('Inputs already in the same format. You may wish to apply domain transformations (e.g. time shifts) outside of this function.')
+            return domain_A,range_A,range_B
+
 
     # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
     # Determine bounaries of common domain
@@ -1679,7 +1687,9 @@ def format_align( domain_A,range_A,         # Domain and range of first 1d datas
     # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
     def __interpolate_domain__(dom,ran):
         dom_ = dom - dom[0]
-        _ran = spline( dom, ran.real )(domain) + 1j*spline( dom, ran.imag )(domain)
+        _amp = abs(ran)
+        _phi = unwrap(angle(ran))
+        _ran = spline(dom,_amp)(domain) * exp(1j*spline(dom,_phi)(domain)) # spline( dom, ran.real )(domain) + 1j*spline( dom, ran.imag )(domain)
         mask = (domain<min(dom)) | (domain>max(dom))
         _ran[mask] = 0
         # Return answer
@@ -1695,7 +1705,11 @@ def format_align( domain_A,range_A,         # Domain and range of first 1d datas
 
 
 # Given two datasets, use numpy's xcorr to align the domains and ranges.
-def corr_align( domain_A,range_A,domain_B,range_B,plot=False,domain_align=True ):
+def corr_align( domain_A,range_A,
+                domain_B,range_B,
+                plot=False,
+                center_domains=True,
+                domain_align=True ):
     '''
     Given two datasets, use numpy's xcorr to align the domains and ranges.
 
@@ -1717,7 +1731,7 @@ def corr_align( domain_A,range_A,domain_B,range_B,plot=False,domain_align=True )
 
     '''
     # Imoprt usefuls
-    from numpy import correlate
+    from numpy import correlate, allclose
     from numpy import array,pad,argmax,mod,arange,angle,exp,roll,std,diff
     from scipy.interpolate import InterpolatedUnivariateSpline as spline
 
@@ -1736,7 +1750,6 @@ def corr_align( domain_A,range_A,domain_B,range_B,plot=False,domain_align=True )
     # Use cross-correlation to determine optimal time and phase shift
     # ~-~-~-~-~-~-~-~--~-~-~--~-~-~-~ #
     x = correlate(range_A,range_B,mode='full')
-    print x.shape
     k = argmax( abs(x) )
     x0 = x[k]
     k0 = mod( k+1, len(domain) ) # NOTE that the +1 here ensures

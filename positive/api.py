@@ -166,11 +166,16 @@ def warning(msg,fname=None,output_string=False,heading=None,header=None,pattern=
     import sys,os
     # Get line number
     exc_type, exc_obj, exc_tb = sys.exc_info()
-    flname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+    flname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1] if exc_tb is not None else 'unknown'
     #
     if fname is None:
         fname = thisfun()
-    _msg = bold('('+yellow(fname+'!,%s,@%i'%(flname,exc_tb.tb_lineno))+')>> ')+msg
+
+    if exc_type is not None:
+        _msg = bold('('+yellow(fname+'!,%s,@%i'%(flname,exc_tb.tb_lineno))+')>> ')+msg
+    else:
+        _msg = bold('('+yellow(fname+'!')+')')+'>> '+msg
+
     if heading or header:
         hl = ('-~' if pattern is None else pattern) * int( len(_msg.replace('033','') )/2 )
         _msg = '\n# %s #\n%s\n# %s #\n'%(hl,bold(_msg),hl)
@@ -186,7 +191,12 @@ def error(msg,fname=None):
         fname = thisfun()
     #
     import sys,os
-    # Get line number
     exc_type, exc_obj, exc_tb = sys.exc_info()
-    flname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-    raise NotImplementedError( bold('('+red(fname+'!!,%s,@%i'%(flname,exc_tb.tb_lineno))+') ')+msg )
+    #
+    if exc_type is not None:
+        flname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+        _msg = bold('('+red(fname+'!!,%s,@%i'%(flname,exc_tb.tb_lineno))+')>> ')+msg
+    else:
+        _msg = bold('('+red(fname+'!!')+')')+'>> '+msg
+    #
+    raise NotImplementedError( _msg )
