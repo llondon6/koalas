@@ -1635,7 +1635,7 @@ class OrderedSet(MutableSet):
 def format_align( domain_A,range_A,         # Domain and range of first 1d dataset
                   domain_B,range_B,         # Domain and range of second 1d dataset
                   center_domains=False,     # Toggle for setting domains to 0 at start
-                  verbose=True):
+                  verbose=False):
 
     '''
     Determine time spacing of each array, and choose the larger spacing as the common one
@@ -1657,7 +1657,7 @@ def format_align( domain_A,range_A,         # Domain and range of first 1d datas
     # Do nothing if the data are already in the same format
     if len(domain_A)==len(domain_B):
         if allclose(domain_A,domain_B):
-            warning('Inputs already in the same format. You may wish to apply domain transformations (e.g. time shifts) outside of this function.')
+            alert('Inputs already in the same format. You may wish to apply domain transformations (e.g. time shifts) outside of this function.',verbose=verbose)
             return domain_A,range_A,range_B
 
 
