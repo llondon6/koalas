@@ -898,7 +898,7 @@ def tshift( t,      # time sries of data
         else:
             h_ = ifft( H_ ) # ** here, errors in ifft process are ignored **
 
-    elif method.lower() in ('td','index','ind'):
+    elif method.lower() in ('td','index','ind','roll'):
 
         # Use index shifting
         if verbose:
@@ -1795,3 +1795,50 @@ def corr_align( domain_A,range_A,
 
     # Return in same order as input with additional info
     return domain,range_A,domain,_range_B,foo
+
+
+
+# A fucntion that calculates a smoothness measure on the input 1D data. 
+def smoothness(t,y,r=4):
+
+    '''
+    This fucntion calculates a smoothness measure on the input 1D data.
+    The concept is similar to that decribed here: http://www.goldensoftware.com/variogramTutorial.pdf
+
+    USAGE
+    ---
+    u,x = smoothness(t,y,r=4)
+
+    INPUTS
+    ---
+    t,       Domain points of data set
+    y,       Range of data set
+    r=4,     Radius of which to consider variations (derivates)
+
+    OUTPUTS
+    ---
+    u,       Sub-domain which is one-to-one with smoothness measure
+    x,       Smoothness measure -- the data, y, is smooth when x is approx. 1
+
+    '''
+
+    from numpy import arange,var,std,polyfit,poly1d,mean
+
+    x = []
+    u = []
+    for k in arange( 0, len(y), r ):
+
+        a = k
+        b = min( k+r, len(y)-1 )
+
+        # Caluate the difference of boundary points
+        D = y[b]-y[a]
+        # Calculate the abs mean derivative on region bounded by a and b
+        d = abs( mean(diff(y[a:(b+1)])) )
+        # Calculate and store the smoothness measure
+        x.append( ( D / d ) / r )
+
+        u.append( (t[b]+t[a])/2 )
+
+    # Return the domain subseries and the smoothness measure
+    return u,x
