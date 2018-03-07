@@ -1849,3 +1849,53 @@ def smoothness(y,r=20,stepsize=1,domain=None):
 
     # Return the domain subseries and the smoothness measure
     return x
+
+
+# Given a 1D vec of values, clump together adjacent identical values
+def clump( data ):
+    '''
+    Given a 1D vec of values, clump together adjacent identical values.
+
+    EXAMPLE
+    ---
+    clump([0,0,0,1,0,0,1,1,1,1,0,0,1,0,1])
+
+    ... [[0, 0, 0], [1], [0, 0], [1, 1, 1, 1], [0, 0], [1], [0], [1]]
+
+    spxll ~2018
+    '''
+
+    # Import usefuls
+    from numpy import array,diff,arange
+
+    # Find constant regions and their boundaries
+    d = array( [0]+list(diff(data)), dtype=bool )
+    e = find(d)
+
+    # For all boundaries
+    clump = []
+    for j,k in enumerate(e):
+
+        # The space between bounaries are to be clumped together
+
+        if j==0:
+            a = 0
+        else:
+            a = e[j-1]
+
+        b = e[j]
+        clump.append( data[a:b] )
+
+    # Add the trailing clump manually
+    clump.append(data[e[-1]:])
+
+    # Create a pullback map
+    M = []
+    k = 0
+    for c in clump:
+        M.append( list(arange(len(c))+k) )
+        k += len(c)
+
+    # Return the ans
+    ans = (clump,M)
+    return ans
