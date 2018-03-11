@@ -1822,7 +1822,8 @@ def smoothness(y,r=20,stepsize=1,domain=None):
     OUTPUTS
     ---
     u,       Sub-domain which is one-to-one with smoothness measure
-    x,       Smoothness measure -- the data, y, is smooth when x is approx. 1
+    x,       Smoothness measure -- the data, y, is smooth when |x| is approx. 1
+             NOTE that x=-1 is smooth and decreasing while x=1 is smooth and increasing
 
     '''
 
@@ -1837,9 +1838,9 @@ def smoothness(y,r=20,stepsize=1,domain=None):
     for k in arange( 0, len(y), stepsize ):
         a = max(0,k-r)
         b = min(len(y),k+r)-1
-        D = y[b]-y[a]
+        D = ( y[b]-y[a] ) / (b-a)
         d = abs( mean(diff(y[a:b])) )
-        x.append( ( D / d ) / (b-a) if d!=0 else 0 )
+        x.append( ( D / d ) if d!=0 else 0 )
         u.append( (domain[a]+domain[b])/2 )
 
     # Preserve length
@@ -1856,11 +1857,23 @@ def clump( data ):
     '''
     Given a 1D vec of values, clump together adjacent identical values.
 
+    INTPUTS
+    ---
+    data,       1D iterable
+
+    OUTPUTS
+    ---
+    clumps,     list of lists; each sublist is of like adjacent values
+    maps        a list of index mask corresponding to the clumps (i.e. the sublists mentioned above)
+
     EXAMPLE
     ---
-    clump([0,0,0,1,0,0,1,1,1,1,0,0,1,0,1])
+    clump([0,0,0,1,0,0,1,1,1,1,0,0,1,0,1])[0]
 
-    ... [[0, 0, 0], [1], [0, 0], [1, 1, 1, 1], [0, 0], [1], [0], [1]]
+    ... ([[0, 0, 0], [1], [0, 0], [1, 1, 1, 1], [0, 0],   [1],  [0],  [1]],
+         [[0, 1, 2], [3], [4, 5], [6, 7, 8, 9], [10, 11], [12], [13], [14]])
+
+    --> the largest clump is at indeces [6, 7, 8, 9]
 
     spxll ~2018
     '''
@@ -1898,4 +1911,59 @@ def clump( data ):
 
     # Return the ans
     ans = (clump,M)
+    return ans
+
+
+# Given a 1d data vector, determine a mask for the largest smooth region
+def smoothest_part( data,
+                    smoothness_radius=100,
+                    smoothness_stepsize=10,
+                    smooth_length=80,
+                    smoothness_tolerance=1,
+                    verbose=False ):
+
+    '''
+    Given a 1d data vector, determine a mask for the largest smooth region.
+
+    smoothest_part( data,                       # 1D data of interest -- real
+                    smoothness_radius=100,
+                    smoothness_stepsize=20,
+                    smooth_length=80
+                    smoothness_tolerance=2,
+                    verbose=False
+
+
+    ~ spxll 2018
+    '''
+
+    # Import usefuls
+    from numpy import isreal,argmax
+
+    # Validate input(s)
+    if not isreal(data).all():
+        warning('Input array not real. The real part will be taken.')
+        data = data.real
+
+    # Calculate the smoothness of the input dataset
+    x = smooth( smoothness( smooth(data,smooth_length).answer ,r=smoothness_radius,stepsize=smoothness_stepsize), smooth_length ).answer
+    # x = smooth( smoothness( data ,r=smoothness_radius,stepsize=smoothness_stepsize), smooth_length ).answer
+
+    # Create a boolean represenation of smoothness
+    k = abs(x-1) < smoothness_tolerance
+
+    # Clump the boolean represenation and then determine the largest clump
+    if k.all():
+        #
+        warning('the data appears to be smooth everywhere; please consider using this function\'s optional inputs to set your smoothing criteria')
+        mask = range(len(data))
+    elif k.any():
+        print sum(k), len(k)
+        clumps,clump_masks = clump(k)
+        mask = clump_masks[ argmax( [ len(_) for _ in clump_masks ] ) ]
+    else:
+        warning('the data appears to not be smooth anywhere; please consider using this function\'s optional inputs to set your smoothing criteria')
+        mask = range(len(data))
+
+    # Return answer
+    ans = mask
     return ans
