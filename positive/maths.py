@@ -1957,7 +1957,6 @@ def smoothest_part( data,
         warning('the data appears to be smooth everywhere; please consider using this function\'s optional inputs to set your smoothing criteria')
         mask = range(len(data))
     elif k.any():
-        print sum(k), len(k)
         clumps,clump_masks = clump(k)
         mask = clump_masks[ argmax( [ len(_) for _ in clump_masks ] ) ]
     else:
