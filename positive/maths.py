@@ -1689,7 +1689,7 @@ def format_align( domain_A,range_A,         # Domain and range of first 1d datas
         dom_ = dom - dom[0]
         _amp = abs(ran)
         _phi = unwrap(angle(ran))
-        _ran = spline(dom,_amp)(domain) * exp(1j*spline(dom,_phi)(domain)) # spline( dom, ran.real )(domain) + 1j*spline( dom, ran.imag )(domain)
+        _ran = spline(dom,_amp)(domain) * exp(1j*spline(dom,_phi)(domain))
         mask = (domain<min(dom)) | (domain>max(dom))
         _ran[mask] = 0
         # Return answer

@@ -161,7 +161,7 @@ def say(msg,fname=None):
         os.system( 'say "%s says: %s"' % (fname,msg) )
 
 # Warning wrapper
-def warning(msg,fname=None,output_string=False,heading=None,header=None,pattern=None):
+def warning(msg,fname=None,output_string=False,heading=None,header=None,pattern=None,verbose=True):
     #
     import sys,os
     # Get line number
@@ -180,7 +180,7 @@ def warning(msg,fname=None,output_string=False,heading=None,header=None,pattern=
         hl = ('-~' if pattern is None else pattern) * int( len(_msg.replace('033','') )/2 )
         _msg = '\n# %s #\n%s\n# %s #\n'%(hl,bold(_msg),hl)
     if not output_string:
-        print _msg
+        if verbose: print _msg
     else:
         return _msg
 
