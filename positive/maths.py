@@ -663,6 +663,11 @@ def maketaper(arr,state,window_type='hann',ramp=True):
     from numpy import hanning as hann
     from scipy.signal import get_window
 
+    # Vlaidate inputs
+    for k in state:
+        if k+1 > len(arr):
+            error('state incompatible with array dimensions: the array shape is %s, but the state is %s'%(yellow(str(arr.shape)),yellow(str(state))) )
+
     # Parse taper state
     a = state[0]
     b = state[-1]
@@ -710,6 +715,7 @@ def maketaper(arr,state,window_type='hann',ramp=True):
         # Make the taper
         if b>a:
             taper[ :min(state) ] = 0*taper[ :min(state) ]
+            # print state, state[1]-state[0], taper.shape, true_ramp.shape, taper[ min(state) : max(state) ].shape
             taper[ min(state) : max(state) ] = true_ramp
         else:
             taper[ max(state): ] = 0*taper[ max(state): ]
@@ -1319,160 +1325,160 @@ def newtonpoly(xx,yy):
 
 #-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-%%-#
 
-"""
-An OrderedSet is a custom MutableSet that remembers its order, so that every
-entry has an index that can be looked up.
-
-Based on a recipe originally posted to ActiveState Recipes by Raymond Hettiger,
-and released under the MIT license.
-
-Rob Speer's changes are as follows:
-
-    - changed the content from a doubly-linked list to a regular Python list.
-      Seriously, who wants O(1) deletes but O(N) lookups by index?
-    - add() returns the index of the added item
-    - index() just returns the index of an item
-    - added a __getstate__ and __setstate__ so it can be pickled
-    - added __getitem__
-"""
-import collections
-
-SLICE_ALL = slice(None)
-__version__ = '1.3'
-
-
-def is_iterable(obj):
-    """
-    Are we being asked to look up a list of things, instead of a single thing?
-    We check for the `__iter__` attribute so that this can cover types that
-    don't have to be known by this module, such as NumPy arrays.
-
-    Strings, however, should be considered as atomic values to look up, not
-    iterables.
-
-    We don't need to check for the Python 2 `unicode` type, because it doesn't
-    have an `__iter__` attribute anyway.
-    """
-    return hasattr(obj, '__iter__') and not isinstance(obj, str)
-
-
-class OrderedSet(collections.MutableSet):
-    """
-    An OrderedSet is a custom MutableSet that remembers its order, so that
-    every entry has an index that can be looked up.
-    """
-    def __init__(self, iterable=None):
-        self.items = []
-        self.map = {}
-        if iterable is not None:
-            self |= iterable
-
-    def __len__(self):
-        return len(self.items)
-
-    def __getitem__(self, index):
-        """
-        Get the item at a given index.
-
-        If `index` is a slice, you will get back that slice of items. If it's
-        the slice [:], exactly the same object is returned. (If you want an
-        independent copy of an OrderedSet, use `OrderedSet.copy()`.)
-
-        If `index` is an iterable, you'll get the OrderedSet of items
-        corresponding to those indices. This is similar to NumPy's
-        "fancy indexing".
-        """
-        if index == SLICE_ALL:
-            return self
-        elif hasattr(index, '__index__') or isinstance(index, slice):
-            result = self.items[index]
-            if isinstance(result, list):
-                return OrderedSet(result)
-            else:
-                return result
-        elif is_iterable(index):
-            return OrderedSet([self.items[i] for i in index])
-        else:
-            raise TypeError("Don't know how to index an OrderedSet by %r" %
-                    index)
-
-    def copy(self):
-        return OrderedSet(self)
-
-    def __getstate__(self):
-        if len(self) == 0:
-            # The state can't be an empty list.
-            # We need to return a truthy value, or else __setstate__ won't be run.
-            #
-            # This could have been done more gracefully by always putting the state
-            # in a tuple, but this way is backwards- and forwards- compatible with
-            # previous versions of OrderedSet.
-            return (None,)
-        else:
-            return list(self)
-
-    def __setstate__(self, state):
-        if state == (None,):
-            self.__init__([])
-        else:
-            self.__init__(state)
-
-    def __contains__(self, key):
-        return key in self.map
-
-    def add(self, key):
-        """
-        Add `key` as an item to this OrderedSet, then return its index.
-
-        If `key` is already in the OrderedSet, return the index it already
-        had.
-        """
-        if key not in self.map:
-            self.map[key] = len(self.items)
-            self.items.append(key)
-        return self.map[key]
-    append = add
-
-    def index(self, key):
-        """
-        Get the index of a given entry, raising an IndexError if it's not
-        present.
-
-        `key` can be an iterable of entries that is not a string, in which case
-        this returns a list of indices.
-        """
-        if is_iterable(key):
-            return [self.index(subkey) for subkey in key]
-        return self.map[key]
-
-    def discard(self, key):
-        raise NotImplementedError(
-            "Cannot remove items from an existing OrderedSet"
-        )
-
-    def __iter__(self):
-        return iter(self.items)
-
-    def __reversed__(self):
-        return reversed(self.items)
-
-    def __repr__(self):
-        if not self:
-            return '%s()' % (self.__class__.__name__,)
-        return '%s(%r)' % (self.__class__.__name__, list(self))
-
-    def __eq__(self, other):
-        if isinstance(other, OrderedSet):
-            return len(self) == len(other) and self.items == other.items
-        try:
-            other_as_set = set(other)
-        except TypeError:
-            # If `other` can't be converted into a set, it's not equal.
-            return False
-        else:
-            return set(self) == other_as_set
-
-
+# """
+# An OrderedSet is a custom MutableSet that remembers its order, so that every
+# entry has an index that can be looked up.
+#
+# Based on a recipe originally posted to ActiveState Recipes by Raymond Hettiger,
+# and released under the MIT license.
+#
+# Rob Speer's changes are as follows:
+#
+#     - changed the content from a doubly-linked list to a regular Python list.
+#       Seriously, who wants O(1) deletes but O(N) lookups by index?
+#     - add() returns the index of the added item
+#     - index() just returns the index of an item
+#     - added a __getstate__ and __setstate__ so it can be pickled
+#     - added __getitem__
+# """
+# import collections
+#
+# SLICE_ALL = slice(None)
+# __version__ = '1.3'
+#
+#
+# def is_iterable(obj):
+#     """
+#     Are we being asked to look up a list of things, instead of a single thing?
+#     We check for the `__iter__` attribute so that this can cover types that
+#     don't have to be known by this module, such as NumPy arrays.
+#
+#     Strings, however, should be considered as atomic values to look up, not
+#     iterables.
+#
+#     We don't need to check for the Python 2 `unicode` type, because it doesn't
+#     have an `__iter__` attribute anyway.
+#     """
+#     return hasattr(obj, '__iter__') and not isinstance(obj, str)
+#
+#
+# class OrderedSet(collections.MutableSet):
+#     """
+#     An OrderedSet is a custom MutableSet that remembers its order, so that
+#     every entry has an index that can be looked up.
+#     """
+#     def __init__(self, iterable=None):
+#         self.items = []
+#         self.map = {}
+#         if iterable is not None:
+#             self |= iterable
+#
+#     def __len__(self):
+#         return len(self.items)
+#
+#     def __getitem__(self, index):
+#         """
+#         Get the item at a given index.
+#
+#         If `index` is a slice, you will get back that slice of items. If it's
+#         the slice [:], exactly the same object is returned. (If you want an
+#         independent copy of an OrderedSet, use `OrderedSet.copy()`.)
+#
+#         If `index` is an iterable, you'll get the OrderedSet of items
+#         corresponding to those indices. This is similar to NumPy's
+#         "fancy indexing".
+#         """
+#         if index == SLICE_ALL:
+#             return self
+#         elif hasattr(index, '__index__') or isinstance(index, slice):
+#             result = self.items[index]
+#             if isinstance(result, list):
+#                 return OrderedSet(result)
+#             else:
+#                 return result
+#         elif is_iterable(index):
+#             return OrderedSet([self.items[i] for i in index])
+#         else:
+#             raise TypeError("Don't know how to index an OrderedSet by %r" %
+#                     index)
+#
+#     def copy(self):
+#         return OrderedSet(self)
+#
+#     def __getstate__(self):
+#         if len(self) == 0:
+#             # The state can't be an empty list.
+#             # We need to return a truthy value, or else __setstate__ won't be run.
+#             #
+#             # This could have been done more gracefully by always putting the state
+#             # in a tuple, but this way is backwards- and forwards- compatible with
+#             # previous versions of OrderedSet.
+#             return (None,)
+#         else:
+#             return list(self)
+#
+#     def __setstate__(self, state):
+#         if state == (None,):
+#             self.__init__([])
+#         else:
+#             self.__init__(state)
+#
+#     def __contains__(self, key):
+#         return key in self.map
+#
+#     def add(self, key):
+#         """
+#         Add `key` as an item to this OrderedSet, then return its index.
+#
+#         If `key` is already in the OrderedSet, return the index it already
+#         had.
+#         """
+#         if key not in self.map:
+#             self.map[key] = len(self.items)
+#             self.items.append(key)
+#         return self.map[key]
+#     append = add
+#
+#     def index(self, key):
+#         """
+#         Get the index of a given entry, raising an IndexError if it's not
+#         present.
+#
+#         `key` can be an iterable of entries that is not a string, in which case
+#         this returns a list of indices.
+#         """
+#         if is_iterable(key):
+#             return [self.index(subkey) for subkey in key]
+#         return self.map[key]
+#
+#     def discard(self, key):
+#         raise NotImplementedError(
+#             "Cannot remove items from an existing OrderedSet"
+#         )
+#
+#     def __iter__(self):
+#         return iter(self.items)
+#
+#     def __reversed__(self):
+#         return reversed(self.items)
+#
+#     def __repr__(self):
+#         if not self:
+#             return '%s()' % (self.__class__.__name__,)
+#         return '%s(%r)' % (self.__class__.__name__, list(self))
+#
+#     def __eq__(self, other):
+#         if isinstance(other, OrderedSet):
+#             return len(self) == len(other) and self.items == other.items
+#         try:
+#             other_as_set = set(other)
+#         except TypeError:
+#             # If `other` can't be converted into a set, it's not equal.
+#             return False
+#         else:
+#             return set(self) == other_as_set
+#
+#
 
 """
 An OrderedSet is a custom MutableSet that remembers its order, so that every
@@ -1966,3 +1972,71 @@ def smoothest_part( data,
     # Return answer
     ans = mask
     return ans
+
+
+# Given a 1d list of lenth base^degree, partition the list holographically
+# NOTE that this could equivalently be written as a recursive function
+def holoparty( state,               # The 1D list of symbols to condier
+               base,                # The integer base, definining the smallest sublist length
+               verbose = False ):   # Toggel to let the people know
+
+    '''
+    # EXAMPLE
+
+    # Define a state
+    base = 2
+    degree = 3
+    order = base ** degree
+    state = 1+arange( order )
+
+    # Print what holoparty does
+    print state ---> [1 2 3 4 5 6 7 8]
+    print holoparty(state,base) ---> [((1, 2), (3, 4)), ((5, 6), (7, 8))]
+    '''
+
+    # Import usefuls
+    from numpy import array,arange
+
+    # Define the recursive variable
+    a_ = tuple(state)
+
+    #
+    if len(state)==base: return list(a_)
+
+    done = False
+    while not done:
+
+        #
+        a = []
+        for j in base*arange(len(a_)/base):
+
+            #
+            chunk = tuple([ a_[k] for k in range(j,j+base) ])
+            a.append(chunk)
+
+        #
+        done = len(a)==base
+        a_ = list(a)
+
+    #
+    return list(a)
+
+
+# Generate adjacency matrix for base 2 holographic expansions for a given degree
+def holoadj2(degree):
+
+    # Import usefuls
+    from numpy import eye,zeros_like,vstack,hstack
+
+    #
+    a = eye(1,dtype=int)
+
+    #
+    for k in range(degree):
+        b = eye( a.shape[0],dtype=int )
+        c = zeros_like(a)
+        d = a.copy()
+        a = vstack( [hstack([a,b]),hstack([c,d])] )
+
+    #
+    return a
