@@ -2023,15 +2023,50 @@ def holoparty( state,               # The 1D list of symbols to condier
 
 
 # Generate adjacency matrix for base 2 holographic expansions for a given degree
-def holoadj2(degree):
+def holomat2(degree):
+    '''
+    Compute the adjacency matrix for a base-2 holographic expansion of given degree,
+    where degree = int( log(order)/log(2) ), and order is the number of fundamenal elements within the state.
+
+    EXAMPLE:
+
+    # Adjacency matrix for a tesseract with unidirectional edges
+    print holomat2(4)
+    ...
+
+    [[1 1 1 0 1 0 0 0 1 0 0 0 0 0 0 0]
+     [0 1 0 1 0 1 0 0 0 1 0 0 0 0 0 0]
+     [0 0 1 1 0 0 1 0 0 0 1 0 0 0 0 0]
+     [0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 0]
+     [0 0 0 0 1 1 1 0 0 0 0 0 1 0 0 0]
+     [0 0 0 0 0 1 0 1 0 0 0 0 0 1 0 0]
+     [0 0 0 0 0 0 1 1 0 0 0 0 0 0 1 0]
+     [0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 1]
+     [0 0 0 0 0 0 0 0 1 1 1 0 1 0 0 0]
+     [0 0 0 0 0 0 0 0 0 1 0 1 0 1 0 0]
+     [0 0 0 0 0 0 0 0 0 0 1 1 0 0 1 0]
+     [0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 1]
+     [0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 0]
+     [0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1]
+     [0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1]
+     [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1]]
+
+     # NOTE: rows link towards colums
+
+    '''
 
     # Import usefuls
     from numpy import eye,zeros_like,vstack,hstack
 
-    #
+    # Validate intput
+    if not isinstance(degree,int):
+        error('first input must be integer')
+
+    # The initial adjacency matric is a self-reference: A-->A
     a = eye(1,dtype=int)
 
-    #
+    # The subsequent matricies result from simple tiling.
+    # It's neat that this tiling is recursive and fractal.
     for k in range(degree):
         b = eye( a.shape[0],dtype=int )
         c = zeros_like(a)
