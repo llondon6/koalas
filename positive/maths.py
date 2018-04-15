@@ -1978,6 +1978,7 @@ def smoothest_part( data,
 # NOTE that this could equivalently be written as a recursive function
 def holoparty( state,               # The 1D list of symbols to condier
                base,                # The integer base, definining the smallest sublist length
+               coarseness = None,
                verbose = False ):   # Toggel to let the people know
 
     '''
@@ -2003,7 +2004,8 @@ def holoparty( state,               # The 1D list of symbols to condier
     #
     if len(state)==base: return list(a_)
 
-    done = False
+    _degree = 1; a = list(state)
+    done = (_degree==coarseness)
     while not done:
 
         #
@@ -2015,11 +2017,12 @@ def holoparty( state,               # The 1D list of symbols to condier
             a.append(chunk)
 
         #
-        done = len(a)==base
+        _degree += 1
+        done = (len(a)==base) or (_degree==coarseness)
         a_ = list(a)
 
-    #
-    return list(a)
+    # NOTE that having tuple types throughout helps with determining the fundamental level (unless this is also populated by tuples)
+    return tuple(a)
 
 
 # Generate adjacency matrix for base 2 holographic expansions for a given degree
@@ -2075,3 +2078,56 @@ def holomat2(degree):
 
     #
     return a
+
+
+# Given a 1D serialized holographic state, find the relevant test states
+def holoscore(state,base=2):
+    '''
+    Given a 1D serialized holographic state, find the relevant test states.
+
+    EXAMPLE:
+
+    #
+    base = 2
+    degree = 3
+    order = base ** degree
+
+    #
+    state = 1+arange( order )
+    state = [ '0.'+str(k) for k in state ]
+
+    #
+    print holoscore(state,base)
+
+    ...
+
+    [(True,), (True, True), (True, True, True, True)]
+
+
+    '''
+
+    # Find the state's degree
+    order = len(state)
+    degree = log( order ) / log(base)
+    if int(degree) != degree: error('state incompatible with base')
+    degree = int(degree)
+
+    # For all serialized subsets
+    score = []
+    for k in range(degree):
+
+        # Compare the initial state to the final state. The result of the comparison is the score.
+        # In this step, we essentially "read" the dynamical history of the state.
+        if k==0:
+            a,b = state[:2]
+            this_score = [a != b]
+        else:
+            a,b = holoparty(state,base**k,coarseness=2)[:2]
+            this_score = array(a) != array(b)
+
+        # Add the score at this level to the final output
+        this_score = tuple(this_score)
+        score.append(this_score)
+
+    # Return answer
+    return score
