@@ -2102,9 +2102,10 @@ def holoscore(state,base=2):
     ...
 
     [(True,), (True, True), (True, True, True, True)]
-
-
     '''
+
+    # Import usefuls
+    from numpy import array,log
 
     # Find the state's degree
     order = len(state)
