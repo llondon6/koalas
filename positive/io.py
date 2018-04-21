@@ -110,11 +110,11 @@ class smart_object:
         from os.path import isfile
 
         #
-        this.valid = False
+        this.__valid__ = False
         this.source_file_path = []
         this.source_dir  = []
         if attrfile is None: attrfile = ''
-        this.unstring = unstring
+        this.__unstring__ = unstring
 
         #
         this.overwrite = overwrite
@@ -242,7 +242,7 @@ class smart_object:
                     if  not isnumeric(val):   # IF
                         is_number = False
                         if 'unstring' in this.__dict__:
-                            if this.unstring: val = val.replace("'",'').replace('"','')
+                            if this.__unstring__: val = val.replace("'",'').replace('"','')
                         if VERB: print( '>> Learning character: %s' % val )
                         value.append( val )
                     else:                       # Else

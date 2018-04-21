@@ -1805,7 +1805,7 @@ def corr_align( domain_A,range_A,
 
 
 # A fucntion that calculates a smoothness measure on the input 1D data.
-def smoothness(y,r=20,stepsize=1,domain=None):
+def smoothness(y,r=20,stepsize=1,domain=None,unsigned=False):
 
     '''
     This fucntion calculates a smoothness measure on the input 1D data.
@@ -1845,6 +1845,7 @@ def smoothness(y,r=20,stepsize=1,domain=None):
         a = max(0,k-r)
         b = min(len(y),k+r)-1
         D = ( y[b]-y[a] ) / (b-a)
+        if unsigned: D = abs(D)
         d = abs( mean(diff(y[a:b])) )
         x.append( ( D / d ) if d!=0 else 0 )
         u.append( (domain[a]+domain[b])/2 )
@@ -1926,6 +1927,7 @@ def smoothest_part( data,
                     smoothness_stepsize=10,
                     smooth_length=80,
                     smoothness_tolerance=1,
+                    unsigned=False,
                     verbose=False ):
 
     '''
@@ -1951,7 +1953,7 @@ def smoothest_part( data,
         data = data.real
 
     # Calculate the smoothness of the input dataset
-    x = smooth( smoothness( smooth(data,smooth_length).answer ,r=smoothness_radius,stepsize=smoothness_stepsize), smooth_length ).answer
+    x = smooth( smoothness( smooth(data,smooth_length).answer ,r=smoothness_radius,stepsize=smoothness_stepsize,unsigned=unsigned), smooth_length ).answer
     # x = smooth( smoothness( data ,r=smoothness_radius,stepsize=smoothness_stepsize), smooth_length ).answer
 
     # Create a boolean represenation of smoothness
@@ -1973,8 +1975,67 @@ def smoothest_part( data,
     ans = mask
     return ans
 
+# Rotate a 3 vector using Euler angles
+def rotate3(vector,alpha,beta,gamma,invert=False):
+    '''
+    Rotate a 3 vector using Euler angles under conventions defined at:
+    https://en.wikipedia.org/wiki/Euler_angles
+    https://en.wikipedia.org/wiki/Rotation_matrix
 
-# Given a 1d list of lenth base^degree, partition the list holographically
+    *  alpha represents a rotation around the z axis
+
+    *  beta represents a rotation around the x' axis
+
+    *  gamma represents a rotation around the z'' axis
+
+    NOTE that in order to perform the inverse rotation, it is NOT enough to input different rotation angles. One must use the invert=True keyword. This takes the same angle inputs as the forward rotation, but correctly applies the transposed rotation matricies in the reversed order.
+
+    spxll'18
+    '''
+
+    # Import usefuls
+    from numpy import cos,sin,array,dot,ndarray
+
+    # Validate input(s)
+    if isinstance(vector,(list,tuple,ndarray)):
+        vector = array(vector)
+    else:
+        error('first input must be iterable compatible 3D vector; please check')
+
+
+    # Rotation around x
+    Ra = array( [
+                [1,0,0],
+                [0,cos(alpha),-sin(alpha)],
+                [0,sin(alpha),cos(alpha)]
+    ] )
+
+    # Rotation around y
+    Rb = array( [
+                    [cos(beta),0,sin(beta)],
+                    [0,1,0],
+                    [-sin(beta),0,cos(beta)]
+        ] )
+
+    # Rotation around z
+    Rg = array( [
+                    [cos(gamma),-sin(gamma),0],
+                    [sin(gamma),cos(gamma),0],
+                    [0,0,1]
+        ] )
+
+    # Perform the rotation
+    # ans = (  Ra * ( Rb * ( Rg * vector ) )  )
+    R = dot(  Ra, dot(Rb,Rg)  )
+    if invert: R = R.T
+    ans = dot( R, vector )
+
+    #
+    return ans
+
+
+
+# Given a 1d list of length base^degree, partition the list holographically
 # NOTE that this could equivalently be written as a recursive function
 def holoparty( state,               # The 1D list of symbols to condier
                base,                # The integer base, definining the smallest sublist length
