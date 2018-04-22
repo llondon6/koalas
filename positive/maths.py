@@ -1982,13 +1982,15 @@ def rotate3(vector,alpha,beta,gamma,invert=False):
     https://en.wikipedia.org/wiki/Euler_angles
     https://en.wikipedia.org/wiki/Rotation_matrix
 
+    Specifically, the Z1,Y2,Z3 ordering is used: https://wikimedia.org/api/rest_v1/media/math/render/svg/547e522037de6467d948ecf3f7409975fe849d07
+
     *  alpha represents a rotation around the z axis
 
     *  beta represents a rotation around the x' axis
 
     *  gamma represents a rotation around the z'' axis
 
-    NOTE that in order to perform the inverse rotation, it is NOT enough to input different rotation angles. One must use the invert=True keyword. This takes the same angle inputs as the forward rotation, but correctly applies the transposed rotation matricies in the reversed order.
+    NOTE that in order to perform the inverse rotation, it is *not* enough to input different rotation angles. One must use the invert=True keyword. This takes the same angle inputs as the forward rotation, but correctly applies the transposed rotation matricies in the reversed order.
 
     spxll'18
     '''
@@ -2003,12 +2005,12 @@ def rotate3(vector,alpha,beta,gamma,invert=False):
         error('first input must be iterable compatible 3D vector; please check')
 
 
-    # Rotation around x
+    # Rotation around z''
     Ra = array( [
-                [1,0,0],
-                [0,cos(alpha),-sin(alpha)],
-                [0,sin(alpha),cos(alpha)]
-    ] )
+                    [cos(alpha),-sin(alpha),0],
+                    [sin(alpha),cos(alpha),0],
+                    [0,0,1]
+        ] )
 
     # Rotation around y
     Rb = array( [
