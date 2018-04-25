@@ -1996,11 +1996,15 @@ def rotate3(vector,alpha,beta,gamma,invert=False):
     '''
 
     # Import usefuls
-    from numpy import cos,sin,array,dot,ndarray
+    from numpy import cos,sin,array,dot,ndarray,vstack
 
-    #
-    if not isinstance(alpha,float):
-        error('this function currently assumes that alpha is float')
+    # Hangle angles as arrays
+    angles_are_arrays = isinstance(alpha,ndarray) and isinstance(beta,ndarray) and isinstance(gamma,ndarray)
+    if angles_are_arrays:
+        # Check for consistent array shapes
+        if not ( alpha.shape == beta.shape == gamma.shape ):
+            # Let the people know and halt
+            error( 'input angles as arrays must have identical array shapes' )
 
     # Validate input(s)
     if isinstance(vector,(list,tuple,ndarray)):
@@ -2035,6 +2039,10 @@ def rotate3(vector,alpha,beta,gamma,invert=False):
     R = dot(  Ra, dot(Rb,Rg)  )
     if invert: R = R.T
     ans = dot( R, vector )
+
+    # If angles are arrays, then format the input such that rows in ans correspond to rows in alpha, beta and gamma
+    if angles_are_arrays:
+        ans = vstack( ans ).T
 
     #
     return ans
