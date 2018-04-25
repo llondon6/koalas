@@ -1998,6 +1998,10 @@ def rotate3(vector,alpha,beta,gamma,invert=False):
     # Import usefuls
     from numpy import cos,sin,array,dot,ndarray
 
+    #
+    if not isinstance(alpha,float):
+        error('this function currently assumes that alpha is float')
+
     # Validate input(s)
     if isinstance(vector,(list,tuple,ndarray)):
         vector = array(vector)
