@@ -1982,6 +1982,8 @@ def rotate3(vector,alpha,beta,gamma,invert=False):
     https://en.wikipedia.org/wiki/Euler_angles
     https://en.wikipedia.org/wiki/Rotation_matrix
 
+    Science reference: https://arxiv.org/pdf/1110.2965.pdf (Appendix)
+
     Specifically, the Z1,Y2,Z3 ordering is used: https://wikimedia.org/api/rest_v1/media/math/render/svg/547e522037de6467d948ecf3f7409975fe849d07
 
     *  alpha represents a rotation around the z axis
@@ -2036,6 +2038,7 @@ def rotate3(vector,alpha,beta,gamma,invert=False):
 
     # Perform the rotation
     # ans = (  Ra * ( Rb * ( Rg * vector ) )  )
+    # NOTE that this is the same convention of equation A9 of Boyle et al : https://arxiv.org/pdf/1110.2965.pdf
     R = dot(  Ra, dot(Rb,Rg)  )
     if invert: R = R.T
     ans = dot( R, vector )
