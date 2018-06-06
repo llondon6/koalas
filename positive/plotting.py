@@ -256,3 +256,56 @@ def sYlm_mollweide_plot(l,m,ax=None,title=None,N=100,form=None,s=-2,colorbar_shr
     ax.grid()
     colorbar(im, ax=ax, orientation='horizontal',shrink=colorbar_shrink,label=title)
     gcf().canvas.draw_idle()
+
+
+# Plot a 3d meshed sphere
+def plot_3d_mesh_sphere(ax=None,nth=30,nph=30,r=1,color='k',lw=1,alpha=0.1):
+    #
+    from numpy import sin,cos,linspace,ones_like,array,pi
+    from mpl_toolkits.mplot3d import Axes3D
+    from matplotlib.pyplot import figure,plot,figaspect,text
+    #
+    if ax is None:
+        fig = figure( figsize=4*figaspect(1) )
+        ax = fig.add_subplot(111,projection='3d')
+        axis('square')
+        ax.set_xlim([-r,r])
+        ax.set_ylim([-r,r])
+        ax.set_zlim([-r,r])
+        axis('off')
+    #
+    th_ = linspace(0,pi,nth)
+    ph_ = linspace(0,2*pi,nph)
+    #
+    for th in th_:
+        x = r*sin(th)*cos(ph_)
+        y = r*sin(th)*sin(ph_)
+        z = r*cos(th)*ones_like(ph_)
+        plot(x,y,z,color=color,alpha=alpha,lw=lw)
+    #
+    for ph in ph_[:-1]:
+        x = r*sin(th_)*cos(ph)
+        y = r*sin(th_)*sin(ph)
+        z = r*cos(th_)
+        plot(x,y,z,color=color,alpha=alpha,lw=lw)
+    #
+    for ph in [ 0, pi, pi/2, 3*pi/2 ]:
+        x = r*sin(th_)*cos(ph)
+        y = r*sin(th_)*sin(ph)
+        z = r*cos(th_)
+        plot(x,y,z,color='k',alpha=0.35,lw=lw,ls='--')
+    #
+    for th in [ pi/2 ]:
+        x = r*sin(th)*cos(ph_)
+        y = r*sin(th)*sin(ph_)
+        z = r*cos(th)*ones_like(ph_)
+        plot(x,y,z,color='k',alpha=0.35,lw=lw,ls='--')
+
+    # Label axes
+    text_r = r*1.1
+    ax.text( text_r,0,0, '$x$', zdir='x', size=24, color='k', alpha = 0.17 )
+    ax.text( 0,text_r,0, '$y$', zdir='x', size=24, color='k', alpha = 0.17 )
+    ax.text( 0,0,text_r, '$z$', zdir='x', size=24, color='k', alpha = 0.17 )
+
+    # Plot the origin
+    plot([0],[0],[0],'k+',alpha=0.35)
