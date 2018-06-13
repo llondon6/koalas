@@ -1,0 +1,188 @@
+\documentclass[twocolumn,aps,prd,floatfix,preprintnumbers,a4paper,nofootinbib,
+superscriptaddress,10pt]{revtex4-1}
+
+\usepackage{epsfig}
+\usepackage{graphics}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{amsfonts}
+\usepackage{bm,soul}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{amssymb}
+\usepackage{url}
+\usepackage{psfrag}
+\usepackage{times}
+\usepackage[varg]{txfonts}
+\usepackage[colorlinks, pdfborder={0 0 0}]{hyperref}
+\usepackage{lineno}
+\usepackage{verbatim}
+\definecolor{LinkColor}{rgb}{0.75, 0, 0}
+\definecolor{CiteColor}{rgb}{0.75, 0, 0}
+\definecolor{UrlColor}{rgb}{0, 0, 0.75}
+\hypersetup{linkcolor=LinkColor}
+\hypersetup{citecolor=CiteColor}
+\hypersetup{urlcolor=UrlColor}
+\usepackage[utf8]{inputenc}
+\usepackage{ulem}
+\normalem
+\hoffset -0.17in
+\voffset 0.3in
+\textheight 10in
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Useful Definitions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\input{src/definitions}
+\def\check#1{\red{#1}}
+\def\remove#1{\hlred{#1}}
+\newcommand{\cw}{\tilde{\omega}}
+\newcommand{\CW}{\tilde{\Omega}}
+\newcommand{\CWr}{{\Omega}^{\mathrm{r}}}
+\newcommand{\CWc}{{\Omega}^{\mathrm{c}}}
+\newcommand{\SC}{\mathcal{K}}
+\newcommand{\CC}{\mathcal{C}}
+\newcommand{\SCr}{\mathcal{K}^{\mathrm{r}}}
+\newcommand{\SCc}{\mathcal{K}^{\mathrm{c}}}
+\newcommand{\lalapprox}{\texttt{MMRDNS}}
+\def\jf{j_f}
+\def\mf{M_f}
+\newcommand{\LL}{\bar{l}}
+\newcommand{\MM}{\bar{m}}
+\def\lmn{_{\ell m n}}
+\def\LM{_{\bar{\ell} \bar{m}}}
+\def\LMlmn{_{\bar{\ell} \bar{m} \ell m n}}
+
+\newcommand{\lmtitle}[2]{\vspace{-0.80cm} \begin{center} \noindent\rule{0.35\paperwidth}{0.3pt} \end{center} \vspace{-0.3cm}}
+
+% Numbers that may change from time to time
+\def\CwFitCalibrationRegion{\red{0.995} }
+\def\NumCalibrationPointsPlotted{\red{21} }
+\def\NumCalibrationPoints{\red{61} }
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Title page %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\title{Notes on modeling for Kerr black holes: Basis learning, QNM frequencies, and spherical-spheroidal mixing coefficients }
+
+\author{L. T. London}
+\affiliation{School of Physics and Astronomy, Cardiff University, The Parade, Cardiff, CF24 3AA, United Kingdom}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Abstract %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{abstract}
+	%
+	The ongoing direct detection of gravitational wave signals is aided by representative models of theoretical predictions. In particular, the process of model based detection, and subsequent comparison of signals the general relativity's predictions are aided by the modeling of information related to perturbed Kerr black holes. Here, we summarize recent methods and models for the analytically understood gravitational wave spectra (quasi-normal mode frequencies), and harmonic structure of Kerr black holes (mixing coefficients between spherical and spheroidal harmonics).
+	%
+\end{abstract}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Preprint numbers %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\preprint{LIGO-P1500185-v10}
+\date{\today}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\maketitle
+
+% \begin{itemize}
+% 	\item BH detections happen, and use fits at various levels
+% 	\item Fits for Kerr are important for modeling and testing GR, they are fast to eval comapred to formal calculations which has data analysis implications
+% 	\item Many fits have been done for perturbative Kerr parameters: QNM frequencies most prominently.
+% 	\item The problem/motivation:
+% 		\begin{itemize}
+% 			\item 1. There are many fits, and we would like to provide a reference for many of them, including key methods
+% 			\item 2. Methods for fits: basis learning
+% 			\item 3. (results) Summarize "simple fits": QNM frequencies and decay times, enforcing zero damping
+% 			\item 4. (results) Summarize more general fits: mixing coefficients
+% 		\end{itemize}
+% 	\item (discussion) We have presented ...
+% \end{itemize}
+
+\paragraph*{Introduction -- }
+%
+In the coming years, expectations for frequent \gw{} detections of increasing \snr{} are high.
+%
+Concurrent with \virgo{}, the \aligo{} detectors will enter their third observing run in \check{late 2018}.
+%
+At this time, \bbh{} detections are expected at a rate of \check{X} per month.
+%
+In this context, signal detection and subsequent inference of physical parameters hinges upon efficient models for source properties and dynamics.
+%
+Most prominently, there is ongoing interest in signal models for \bbh{} \imr{}.
+%
+As the merger of isolated \bh{s} is expected to result in a perturbed Kerr \bh{}, there is related interest in having computationally efficient models for perturbative parameters, namely those that enable evaluation of the related \rd{} radiation.
+%
+\par In particular, a perturbed Kerr \bh{} (e.g. resulting from \bbh{} merger) will have \gw{} radiation that rings down with characteristic frequencies,
+%
+$%\begin{align}
+	\cw\lmn = \omega\lmn + i/\tau\lmn
+$%\end{align}
+.
+%
+These discrete frequencies have associated radial and spatial functions which are \textit{spheroidal} harmonic in nature.
+%
+These frequencies and harmonic functions are the so-called \qnm{s}.
+%
+They are the eigen-solutions of the source free linearized \ee{} (i.e. \tk{'s} equations) for a \bh{} will fixed (final) mass, $\mf$, and dimensionless spin, $\jf$.
+%
+The well known and effective completeness of these solutions allows \grad{} from generic perturbations to be well approximated by a spectral (multipolar) sum which combines the complex \qnm{} amplitude, $A\lmn$, with the spin weight -2 spheroidal harmonics, $_{-2}S\lmn$.
+%
+\begin{align}
+	%
+	\label{hrd}
+	%
+	h &= h_{+} - i \, h_{\times}
+	  \\ \nonumber
+	  &= \frac{1}{r} \sum\lmn A\lmn \; e^{i\,\cw\lmn t} \; _{-2}S\lmn( \jf \cw\lmn,\theta,\phi)
+		\\ \nonumber
+		&= \frac{1}{r} \sum\LM h\LM(t) \; _{-2}Y\LM(\theta,\phi) \;  .
+	%
+\end{align}
+%
+\par In the first and second lines of \eqn{hrd}, we relate the observable \gw{} polarizations, $h_+$ and $h_\times$, with the analytically understood morphology of the time domain waveform.
+%
+Here, the labels $\ell$ and $m$ are eigenvalues of \tk{'s} angular equations, where units of $M=1$ (e.g. the initial mass of the \bbh{} system), and $c=1$.
+%
+In the third line of \eqn{hrd}, we represent $h$ in terms of \textit{spherical} harmonic multipoles.
+%
+This latter form is ubiquitous for the development and implementation of \imr{} signal models for \bbh{s}.
+%
+%
+\par Towards the development of these models, \eqn{hrd} enters in many incarnations.
+%
+In the \eob{} formalism, $h\LM$ is modeled such that, after its peak (near merger), the effective functional form reduces (asymptotically) to \eqn{hrd}'s second line.
+%
+This view currently comes with the added assumption that ${_{-2}}S_{\ell m n} = {_{-2}}Y_{\ell m}$, where only $n=0$ is explicitly considered.
+%
+The consequences of this choice are discussed in reference \check{[X]}.
+%
+For the so-called \textit{Phenom} models, the frequency domain multipoles, $\tilde{h}\LM(f)$, are constructed such that their high frequency behavior is consistent with \eqn{hrd} in the time domain.
+%
+\par Both Phenom and \eob{} approaches directly use phenomenological models (i.e. fits) for the \qnm{} frequencies, as these fits are more computationally efficient than the underlying analytic calculations, which involve the solving of continued fraction equations.
+%
+In the case of \texttt{PhenomHM} and derivative models, fits for the \qnm{} frequencies are used in the process of mapping $\tilde{h}_{22}(f)$ into other $\tilde{h}\LM(f)$ \check{[X]}.
+%
+In that setting, the \qnm{} frequencies impact the morphology of each $h\LM$ in not only \rd{}, but also merger and late inspiral.
+%
+%
+\par For models that assist tests of the \nht{}, and thereby only include precise \rd{s}, the perspective of \eqn{hrd}'s second and third lines are used to write each spherical harmonic multipole moment as
+%
+\begin{align}
+	\label{hlm}
+	h\LM = \frac{1}{r} \sum\lmn \, A\lmn e^{i \cw\lmn t} \sigma\LMlmn
+\end{align}
+%
+where, the spherical-spheroidal mixing coefficient, $\sigma\LMlmn$, is
+%
+\begin{align}
+		\sigma\LMlmn = \int_{\Omega} {_{-2}S}\lmn \,  {_{-2}}Y\LM \, \mathrm{d} \Omega \; .
+\end{align}
+%
+The view of \eqn{hlm} is computationally preferable:
+%
+The calculation of each ${_{-2}S}\lmn$ involves a series solution which slowly converges for $\jf$ near unity, it is more effective to have accurate models for $\sigma\LMlmn$, which can then be used directly to calculate $h\LM$ via \eqn{hlm}, and thereby the \gw{} polarizations via \eqn{hrd}.
+
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
+\bibliographystyle{ieeetr}
+\bibliography{src/mvf.bib}
+\end{document}
