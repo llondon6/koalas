@@ -50,6 +50,10 @@ superscriptaddress,10pt]{revtex4-1}
 \def\lmn{_{\ell m n}}
 \def\LM{_{\bar{\ell} \bar{m}}}
 \def\LMlmn{_{\bar{\ell} \bar{m} \ell m n}}
+\def\gmvp#1{greedy-multivariate-polynomial#1
+  (\texttt{GMVP}#1)\gdef\gmvp{\texttt{GMVP}}}
+\def\gmvr#1{greedy-multivariate-rational#1
+  (\texttt{GMVR}#1)\gdef\gmvr{\texttt{GMVR}}}
 
 \newcommand{\lmtitle}[2]{\vspace{-0.80cm} \begin{center} \noindent\rule{0.35\paperwidth}{0.3pt} \end{center} \vspace{-0.3cm}}
 
@@ -98,7 +102,7 @@ superscriptaddress,10pt]{revtex4-1}
 % 	\item (discussion) We have presented ...
 % \end{itemize}
 
-\paragraph*{Introduction -- }
+\section{Introduction}
 %
 In the coming years, expectations for frequent \gw{} detections of increasing \snr{} are high.
 %
@@ -123,7 +127,7 @@ These discrete frequencies have associated radial and spatial functions which ar
 %
 These frequencies and harmonic functions are the so-called \qnm{s}.
 %
-They are the eigen-solutions of the source free linearized \ee{} (i.e. \tk{'s} equations) for a \bh{} will fixed (final) mass, $\mf$, and dimensionless spin, $\jf$.
+They are the eigen-solutions of the source free linearized \ee{} (i.e. \tk{'s} equations) for a perturbed \bh{} with final mass, $\mf$, and dimensionless final spin, $\jf$.
 %
 The well known and effective completeness of these solutions allows \grad{} from generic perturbations to be well approximated by a spectral (multipolar) sum which combines the complex \qnm{} amplitude, $A\lmn$, with the spin weight -2 spheroidal harmonics, $_{-2}S\lmn$.
 %
@@ -175,12 +179,66 @@ In that setting, the \qnm{} frequencies impact the morphology of each $h\LM$ in 
 where, the spherical-spheroidal mixing coefficient, $\sigma\LMlmn$, is
 %
 \begin{align}
-		\sigma\LMlmn = \int_{\Omega} {_{-2}S}\lmn \,  {_{-2}}Y\LM \, \mathrm{d} \Omega \; .
+		\label{sigma}
+		\sigma\LMlmn = \int_{\Omega} {_{-2}S}\lmn \,  {_{-2}}Y^*\LM \, \mathrm{d} \Omega \; .
 \end{align}
 %
-The view of \eqn{hlm} is computationally preferable:
+In \eqn{sigma}, $*$ denotes complex conjugation, and $\Omega$ is the standard solid angle in spherical polar coordinates.
 %
-The calculation of each ${_{-2}S}\lmn$ involves a series solution which slowly converges for $\jf$ near unity, it is more effective to have accurate models for $\sigma\LMlmn$, which can then be used directly to calculate $h\LM$ via \eqn{hlm}, and thereby the \gw{} polarizations via \eqn{hrd}.
+\par In practice, \eqn{hlm} is computationally preferable:
+%
+The calculation of each ${_{-2}S}\lmn$ involves a series solution which slowly converges for $\jf$ near unity. Therefore, it is more effective to have accurate models for $\sigma\LMlmn$, which can then be used directly to calculate $h\LM$ via \eqn{hlm}, and thereby the \gw{} polarizations via \eqn{hrd}.
+%
+%
+\par In this combined context, it is clear that the modeling of \qnm{} frequencies, $\cw\lmn$, and spherical-spheroidal mixing coefficients, $\sigma\LMlmn$, underpin a wide range of \gw{} signal models.
+%
+While models for $\cw\lmn$ and $\sigma\LMlmn$ are present in many publications, there exist minor shortcomings which we wish to address here.
+%
+\par For the \qnm{} frequencies, it is well known that for nearly extremal \bh{s} (i.e. $\jf \rightarrow 1$) some of the frequencies have zero-damping (i.e. $\tau\lmn \rightarrow \infty$).
+%
+In the context of \aligo{} \da{}, where source parameters are estimated using routines which sample over the space of possible \bh{} masses and spins, it is useful to have accurate physical behavior in the extremal limit.
+%
+Here, we present the first models for $\cw\lmn$ that explicitly account for zero-damping in the extremal Kerr limit.
+%
+\par For the modeling of $\sigma\LMlmn$, we note that the results presented in \red{[X]} are limited to cases where the azimuthal indices, $\ell$ and $\bar{\ell}$, are less than or equal to 3.
+%
+As the most advanced signal models include at least $\ell$ or $\bar{\ell}$ of 3, there is use in extending prior results.
+%
+In particular, it is well known that $\sigma_{43330}$ can have a significant impact on the $(4,3)$ spherical multipole.
+%
+For consistency with the multipolar content of current ringdown models, here, we extend previous results to include the most significant multipoles with $\ell \leq 5$.
+%
+%
+\par In parallel, the methods for modeling $\cw\lmn$ and $\sigma\LMlmn$ have been dispersed: different phenomenological techniques have been used under no coherent framework.
+%
+Here we will present a series of linear modeling techniques, namely the \gmvp{} and \gmvr{} algorithms, in which model terms are iteratively learned with no initial guess.
+%
+The description of \gmvp{} given here is complementary to similar algorithms used to model \qnm{} excitation amplitudes, $A\lmn$, as present in reference \red{[cite]}.
+%
+As we will discuss, the \gmvr{} algorithm is an iterative approach to the (pseudo) non-linear modeling of multivariate rational functions.
+%
+Both \gmvp{} and \gmvr{} are intended for use with low noise data (e.g. the results of analytic calculations), and each employs a reverse (or negative) greedy algorithm to counter over modeling.
+%
+As the underlying process for \gmvp{} and \gmvr{} is stepwise regression, highly correlated basis vectors (i.e. polynomial terms) are handled via an approach we will call \textit{degree tempering}.
+%
+It will be demonstrated that these approaches are readily capable of modeling the complex valued $\cw\lmn$ and $\sigma\LMlmn$.
+%
+Results suggest that the versions of \gmvp{} and \gmvr{} presented here may have broad application in instances where training data are approximately noiseless, and an initial guess is difficult to obtain.
+%
+%
+\par The plan of the paper is as follows. In section \sec{meth}, blah. In \sec{results}, blah. In \sec{discuss}, blah.
+
+%
+\section{Methods}
+\label{meth}
+
+%
+\section{Results}
+\label{results}
+
+%
+\section{Discussion}
+\label{discuss}
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
 \bibliographystyle{ieeetr}
