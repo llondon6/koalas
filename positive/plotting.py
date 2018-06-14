@@ -303,9 +303,9 @@ def plot_3d_mesh_sphere(ax=None,nth=30,nph=30,r=1,color='k',lw=1,alpha=0.1):
 
     # Label axes
     text_r = r*1.1
-    ax.text( text_r,0,0, '$x$', zdir='x', size=24, color='k', alpha = 0.17 )
-    ax.text( 0,text_r,0, '$y$', zdir='x', size=24, color='k', alpha = 0.17 )
-    ax.text( 0,0,text_r, '$z$', zdir='x', size=24, color='k', alpha = 0.17 )
+    ax.text( text_r,0,0, '$x$', zdir='x', size=24, color='k', alpha = 0.27 )
+    ax.text( 0,text_r,0, '$y$', zdir='x', size=24, color='k', alpha = 0.27 )
+    ax.text( 0,0,text_r, '$z$', zdir='x', size=24, color='k', alpha = 0.27 )
 
     # Plot the origin
     plot([0],[0],[0],'k+',alpha=0.35)
