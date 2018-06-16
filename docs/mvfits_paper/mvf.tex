@@ -29,6 +29,10 @@ superscriptaddress,10pt]{revtex4-1}
 \voffset 0.3in
 \textheight 10in
 
+\usepackage{algorithm}
+\usepackage{algpseudocode} % in place of algorithmic. Conflicts with revtex4 unless [H] option passed
+\usepackage{setspace} % for pleasent spacing in algorithm
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Useful Definitions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \input{src/definitions}
@@ -226,24 +230,81 @@ It will be demonstrated that these approaches are readily capable of modeling th
 Results suggest that the versions of \gmvp{} and \gmvr{} presented here may have broad application in instances where training data are approximately noiseless, and an initial guess is difficult to obtain.
 %
 %
-\par The plan of the paper is as follows. In section \sec{meth}, blah. In \sec{results}, blah. In \sec{discuss}, blah.
+\par The plan of the paper is as follows.
+%
+In section \sec{meth}, we outline the \gmvp{} and \gmvr{} algorithms.
+%
+In \sec{results}, we demonstrate the application of each algorithm.
+%
+We first consider the application of \gmvp{} to the modeling of \qnm{} frequencies.
+%
+We then consider the application of \gmvr{} to the modeling of spherical-spheroidal mixing coefficients.
+%
+In \sec{discuss}, we review the performance of \gmvp{} and \gmvr{}, and we discuss potential applications for these methods.
 
 %
 \section{Methods}
 \label{meth}
+
+We begin by ...
+
+% Generic greedy algo
+\hspace{1cm}
+{\scriptsize
+\begin{algorithm}[H]
+  %
+  \caption{A positive (forward) greedy algorithm, \texttt{PGREEDY}}
+  \label{alg:pgreedy}
+  %
+  \begin{algorithmic}[1]
+    %
+    \State {\bf Input:} $ \{ \mlam_{bulk} = \text{basis symbols}$, $\mathcal{A} = \text{action}$, $tol=\text{greedy tolerance}\}$
+    \vskip 10pt
+    \State Define empty list of kept symbols: $\mlam_{kept} = \{\}$
+    \State Initialize estimator value and loop boolean: $\epsilon_{last} = \mathrm{inf}$, $done = \text{False}$
+    %
+    \While{not $done$}
+      \State $\epsilon_{min} = \epsilon_{last}$
+      %
+      \For { $\mlam$ in $\mlam^{bulk}$ }
+        \State $\mlam_{trial} = \mlam_{kept} \cup \mlam$ {\hskip0.525in} (add $\mlam$ to $\mlam_{kept}$)
+        \State $\epsilon = \mathcal{A}(\mlam_{trial})$ {\hskip0.725in} (apply action)
+        \If { $\epsilon < \epsilon_{min}$ }
+          \State $\epsilon_{min} = \epsilon$  {\hskip0.725in} (store trial min)
+          \State $\mlam_{min} = \mlam_{trial}$
+        \EndIf
+      \EndFor
+      %
+      \State $done = |\epsilon_{min}-\epsilon_{last}|<tol$ {\hskip0.4in} (determine if estimator has changed significantly)
+      \If { not $done$ }
+        \State $\epsilon_{last} = \epsilon_{min}$
+        \State $\mlam_{kept} = \mlam_{kept} \cup \mlam_{min}$ {\hskip0.4in} (update kept symbols)
+      \EndIf
+      %
+    \EndWhile
+    \vskip 10pt
+    \State {\bf Output:} Greedy Basis, $\{ \mlam_{kept} \}$
+    %
+  \end{algorithmic}
+  %
+\end{algorithm}
+}
+
+%
+\section{Results}
+\label{results}
 
 % Equations for QNM frequency fits
 \begin{widetext}
 	\input{src/cwfit_eqns}
 \end{widetext}
 
-% Equations for QNM frequency fits
+% Equations for mixing coefficients
 \begin{widetext}
   \input{src/ysprod_eqns}
 \end{widetext}
 
-%
-% \newcommand*{\figfac}{0.4}
+% Plots of QNM frequencies
 \begin{figure*}
   %
   \begin{tabular}{lcr}
@@ -258,8 +319,7 @@ Results suggest that the versions of \gmvp{} and \gmvr{} presented here may have
   %
 \end{figure*}
 
-%
-% \newcommand*{\figfac}{0.4}
+% Plots of mixing coefficients
 \begin{figure*}
   %
   \begin{tabular}{lcr}
@@ -270,9 +330,7 @@ Results suggest that the versions of \gmvp{} and \gmvr{} presented here may have
   %
 \end{figure*}
 
-%
-\section{Results}
-\label{results}
+
 
 %
 \section{Discussion}
