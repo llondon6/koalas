@@ -50,6 +50,63 @@ def hlblack(string):
     return print_format.hlb + string + print_format.end
 
 
+#
+def poly2latex(basis_symbols,coeffs,latex_labels=None,precision=8,term_split=1000):
+
+    # Import useful things
+    from numpy import mod
+
+    #
+    split_state = False
+
+    # Count the number of unique domain variables
+    domain_dimension = len( set(''.join(basis_symbols).replace('K','')) )
+
+    #
+    if len(basis_symbols)==len(coeffs)==0:
+        basis_symbols=['']
+        coeffs = [0]
+
+    # Extract desired labels and handle defaults
+    funlabel = r'f(\vec{x})' if latex_labels is None else latex_labels[0]
+    varlabel = [ 'x%i'%k for k in range(domain_dimension) ] if latex_labels is None else latex_labels[1]
+    prefix = '' if latex_labels is None else latex_labels[2]
+    if varlabel is None:
+        varlabel = [ r'x_%i'%k for k in range(domain_dimension) ]
+    elif len(varlabel) != domain_dimension:
+        error( 'Number of variable labels, %i, is not equal to the number of domain dimensions found, %i.'%( len(varlabel), domain_dimension )  )
+
+    # Create a simple string representation of the fit
+    latex_str = r'%s  \; &= \; %s %s\,x%s%s' % ( funlabel,
+                                               (prefix+r' \, ( \,') if prefix else '',
+                                               complex2str(coeffs[0],
+                                               latex=True,precision=precision) if isinstance(coeffs[0],complex) else '%1.4e'%coeffs[0], r'\,x'.join( list(basis_symbols[0]) ), '' if len(coeffs)>1 else (r' \; )' if prefix else '') )
+    for k,b in enumerate(coeffs[1:]):
+        latex_str += r' \; + \; (%s)\,x%s%s' % ( complex2str(b,latex=True,precision=precision) if isinstance(b,complex) else '%1.4e'%b ,
+                                                 r'\,x'.join( list(basis_symbols[k+1]) ),
+                                                 (r' \; )' if prefix else '') if (k+1)==len(coeffs[1:]) else '' )
+        #
+        if ( not mod(k+2,term_split) ) and ( (k+1) < len(coeffs[1:]) ):
+            latex_str += '\n  \\\\ \\nonumber\n & \quad '
+            if not split_state:
+                split_state = not split_state
+
+    # Correct for a lingering multiply sign
+    latex_str = latex_str.replace('(\,','(')
+
+    # Correct for the constant term not being an explicit function of a domain variable
+    latex_str = latex_str.replace('\,xK','')
+
+    # Replace variable labels with input
+    for k in range(domain_dimension):
+        latex_str = latex_str.replace( 'x%i'%k, varlabel[k] )
+
+    # Replace repeated variable labels with power notation
+    for pattern in varlabel:
+        latex_str = rep2pwr( latex_str, pattern, r'\,'  )
+
+    return latex_str
+
 # Convert poylnomial (basis symbols and coefficients) to python string
 def poly2pystr(basis_symbols,coeffs,labels=None,precision=8):
 
@@ -147,7 +204,8 @@ def complex2str( x, precision=None, latex=False ):
             # Write phase as positive number
             phase = phase+2*pi if phase<0 else phase
             # Create string
-            fmt = '%s1.%if'%(r'%',precision)
+            fmt = '%s.%ig'%(r'%',precision)
+            # fmt = '%s1.%if'%(r'%',precision)
             ans_ = '%s*%s%s%s' % (fmt, 'e^{' if latex else 'exp(' ,fmt, 'i}' if latex else 'j)') % (amp,phase)
             if latex: ans_ = ans_.replace('*',r'\,')
 

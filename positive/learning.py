@@ -2,6 +2,9 @@
 from maths import *
 from positive import *
 
+# Alias for scipy spline
+from scipy.interpolate import InterpolatedUnivariateSpline as spline
+
 #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
 # Low level methods for ration function modeling                                    #
 #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
@@ -192,7 +195,24 @@ class mvrfit:
 
     #
     def __str_latex__(this,labels=None,precision=8):
-        return None
+        #
+        fun,numerator_str = poly2latex( this.numerator_symbols, this.numerator_coeffs, precision=precision, latex_labels=labels ).split('\; &= \;')
+        #
+        fun = fun.replace(' ','')
+        #
+        denominator_str = poly2latex( this.denominator_symbols, this.denominator_coeffs, precision=precision, latex_labels=labels ).split('\; &= \;')[-1]
+        #
+        mu_str = ('%%1.%ie'%precision)%this.__mu__ if not isinstance(this.__mu__,complex) else complex2str(this.__mu__,latex=True,precision=precision)
+        #
+        sstr = ( ('%%.%ig'%precision) )%this.__sigma__
+        if 'e' in sstr:
+            a,b = sstr.split('e')
+            sstr = a+r' \times 10^{%i}'%int(b)
+        sigma_str = sstr if not isinstance(this.__sigma__,complex) else complex2str(this.__mu__,latex=True,precision=precision)
+        #
+        latex_str = r'%s \; &= \; %s \; + %s \; \frac{ %s  }{ 1 \; + \; %s }'%( fun,mu_str,sigma_str,numerator_str,denominator_str )
+        #
+        return latex_str
 
     # High level plotting function
     def plot(this,ax=None,show=False,fit_xmin=None,fit_xmax=None):

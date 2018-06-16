@@ -234,15 +234,19 @@ Results suggest that the versions of \gmvp{} and \gmvr{} presented here may have
 
 % Equations for QNM frequency fits
 \begin{widetext}
-	\red{
-		\input{src/cwfit_eqns}
-	}
+	\input{src/cwfit_eqns}
+\end{widetext}
+
+% Equations for QNM frequency fits
+\begin{widetext}
+  \input{src/ysprod_eqns}
 \end{widetext}
 
 %
+% \newcommand*{\figfac}{0.4}
 \begin{figure*}
   %
-  \begin{tabular}{lr}
+  \begin{tabular}{lcr}
     \includegraphics[width=\figfactor\textwidth]{fig/fits_w.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/fits_tau.pdf}
   \end{tabular}
   %
@@ -251,6 +255,18 @@ Results suggest that the versions of \gmvp{} and \gmvr{} presented here may have
   Before the application of $\kappa(\j{})$, points are spaced between -\CwFitCalibrationRegion and \CwFitCalibrationRegion according to \CwFitCalibrationRegion times the $\sin$ of a fiducial angle which is uniformly spaced between $-\pi/2$ and $\pi/2$. Values of $\j{}$ are shown in the upper axis for $\kappa$ at $l=m$.
   %
   The grey dashed line marks the value of $\kappa$ where $\j{}=0$. Fits of dimensionless \qnm{} decay rates (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. }
+  %
+\end{figure*}
+
+%
+% \newcommand*{\figfac}{0.4}
+\begin{figure*}
+  %
+  \begin{tabular}{lcr}
+    \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_1.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_2.pdf}
+  \end{tabular}
+  %
+	\caption{ Spherical-spheroidal harmonic mixing coefficients. }
   %
 \end{figure*}
 

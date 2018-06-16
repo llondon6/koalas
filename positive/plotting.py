@@ -93,9 +93,10 @@ def rgb( N,                     #
             B = b*t
         # Ensure that all color vectors have a mean that is the golden ratio (less than one)
         V = abs(R+G+B)
-        V /= mean(V)*0.5*(1+sqrt(5))
-        # But make sure that all values are bounded by one
-        V = array([ min(v,1) for v in V ])
+        if not grayscale:
+            V /= mean(V)*0.5*(1+sqrt(5))
+            # But make sure that all values are bounded by one
+            V = array([ min(v,1) for v in V ])
         # Add color vector to output
         clr.append( V )
 
