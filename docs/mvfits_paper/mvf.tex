@@ -70,13 +70,13 @@ superscriptaddress,10pt]{revtex4-1}
 
 \title{Notes on modeling for Kerr black holes: Basis learning, QNM frequencies, and spherical-spheroidal mixing coefficients }
 
-\author{L. T. London}
+\author{L. London}
 \affiliation{School of Physics and Astronomy, Cardiff University, The Parade, Cardiff, CF24 3AA, United Kingdom}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Abstract %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
 	%
-	The ongoing direct detection of gravitational wave signals is aided by representative models of theoretical predictions. In particular, the process of model based detection, and subsequent comparison of signals the general relativity's predictions are aided by the modeling of information related to perturbed Kerr black holes. Here, we summarize recent methods and models for the analytically understood gravitational wave spectra (quasi-normal mode frequencies), and harmonic structure of Kerr black holes (mixing coefficients between spherical and spheroidal harmonics).
+	The ongoing direct detection of gravitational wave signals is aided by representative models of theoretical predictions. In particular, the process of model based detection, and subsequent comparison of signals the general relativity's predictions are aided by the modeling of information related to perturbed Kerr black holes. Here, we summarize recent methods and models for the analytically understood gravitational wave spectra (quasi-normal mode frequencies), and harmonic structure of Kerr black holes (mixing coefficients between spherical and spheroidal harmonics). Towards the construction of these models, two algorithms, GMVP and GMVR, for the automated polynomial and rational modeling of general dimensional complex scalars are presented.
 	%
 \end{abstract}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -211,7 +211,7 @@ For consistency with the multipolar content of current ringdown models, here, we
 %
 \par In parallel, the methods for modeling $\cw\lmn$ and $\sigma\LMlmn$ have been dispersed: different phenomenological techniques have been used under no coherent framework.
 %
-Here we will present a series of linear modeling techniques, namely the \gmvp{} and \gmvr{} algorithms, in which model terms are iteratively learned with no initial guess.
+Here we will present linear modeling techniques, namely the \gmvp{} and \gmvr{} algorithms, in which model terms are iteratively learned with no initial guess.
 %
 The description of \gmvp{} given here is complementary to similar algorithms used to model \qnm{} excitation amplitudes, $A\lmn$, as present in reference \red{[cite]}.
 %
@@ -231,6 +231,28 @@ Results suggest that the versions of \gmvp{} and \gmvr{} presented here may have
 %
 \section{Methods}
 \label{meth}
+
+% Equations for QNM frequency fits
+\begin{widetext}
+	\red{
+		\input{src/cwfit_eqns}
+	}
+\end{widetext}
+
+%
+\begin{figure*}
+  %
+  \begin{tabular}{lr}
+    \includegraphics[width=\figfactor\textwidth]{fig/fits_w.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/fits_tau.pdf}
+  \end{tabular}
+  %
+	\caption{ Fits of dimensionless \qnm{} central frequencies (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}.
+  %
+  Before the application of $\kappa(\j{})$, points are spaced between -\CwFitCalibrationRegion and \CwFitCalibrationRegion according to \CwFitCalibrationRegion times the $\sin$ of a fiducial angle which is uniformly spaced between $-\pi/2$ and $\pi/2$. Values of $\j{}$ are shown in the upper axis for $\kappa$ at $l=m$.
+  %
+  The grey dashed line marks the value of $\kappa$ where $\j{}=0$. Fits of dimensionless \qnm{} decay rates (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. }
+  %
+\end{figure*}
 
 %
 \section{Results}
