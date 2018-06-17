@@ -248,12 +248,12 @@ In \sec{discuss}, we review the performance of \gmvp{} and \gmvr{}, and we discu
 
 We begin by ...
 
-% Generic greedy algo
+% Forward greedy algo
 \hspace{1cm}
 {\scriptsize
 \begin{algorithm}[H]
   %
-  \caption{A positive (forward) greedy algorithm, \texttt{PGREEDY}}
+  \caption{A positive (forward) greedy algorithm, \texttt{PGREEDY}. Note that a required input, $\mathcal{A}$, is a function that takes in a list of basis symbols, and outputs an estimator of fit error. In this setting, $\mathcal{A}$ is assumed to have access to peropheral information, such as the training data.}
   \label{alg:pgreedy}
   %
   \begin{algorithmic}[1]
@@ -268,14 +268,14 @@ We begin by ...
       %
       \For { $\mlam$ in $\mlam^{bulk}$ }
         \State $\mlam_{trial} = \mlam_{kept} \cup \mlam$ {\hskip0.525in} (add $\mlam$ to $\mlam_{kept}$)
-        \State $\epsilon = \mathcal{A}(\mlam_{trial})$ {\hskip0.725in} (apply action)
+        \State $\epsilon = \mathcal{A}(\mlam_{trial})$ {\hskip0.70in} (action returns fit error)
         \If { $\epsilon < \epsilon_{min}$ }
-          \State $\epsilon_{min} = \epsilon$  {\hskip0.725in} (store trial min)
+          \State $\epsilon_{min} = \epsilon$  {\hskip0.825in} (store trial min)
           \State $\mlam_{min} = \mlam_{trial}$
         \EndIf
       \EndFor
       %
-      \State $done = |\epsilon_{min}-\epsilon_{last}|<tol$ {\hskip0.4in} (determine if estimator has changed significantly)
+      \State $done = |\epsilon_{min}-\epsilon_{last}|<tol$ %{\hskip0.4in} (determine if estimator has changed significantly)
       \If { not $done$ }
         \State $\epsilon_{last} = \epsilon_{min}$
         \State $\mlam_{kept} = \mlam_{kept} \cup \mlam_{min}$ {\hskip0.4in} (update kept symbols)
@@ -284,6 +284,72 @@ We begin by ...
     \EndWhile
     \vskip 10pt
     \State {\bf Output:} Greedy Basis, $\{ \mlam_{kept} \}$
+    %
+  \end{algorithmic}
+  %
+\end{algorithm}
+}
+
+% GMVP
+\hspace{1cm}
+{\scriptsize
+\begin{algorithm}[H]
+  %
+  \caption{\gmvp{}, a degree tempered stepwise algorithm for multivariate polynomial modeling of scalar data.}
+  \label{alg:pgreedy}
+  %
+  \begin{algorithmic}[1]
+    %
+    \State {\bf Input:} $ \{ \bf{x}, \bf{y} \}$
+    \vskip 10pt
+    \State Define action using matrix least squares
+    \State Define bulk symbol space using cartesian inner-product
+    \State Define list of allowed polynomial degrees
+    \For { all degrees }
+      \State Select all symbols with degree less than or equal to current
+      \State Apply \texttt{PGREEDY} to get symbol subset and estimator val
+      \If  { estimator has stalled }
+        \State Break
+      \EndIf
+    \EndFor
+    \State Apply negative greedy to get final model
+    \vskip 10pt
+    \State {\bf Output:} Final model
+    %
+  \end{algorithmic}
+  %
+\end{algorithm}
+}
+
+
+
+% GMVR
+\hspace{1cm}
+{\scriptsize
+\begin{algorithm}[H]
+  %
+  \caption{\gmvr{}, a degree tempered stepwise algorithm for multivariate rational modeling of scalar data.}
+  \label{alg:pgreedy}
+  %
+  \begin{algorithmic}[1]
+    %
+    \State {\bf Input:} $ \{ \bf{x}, \bf{y} \}$
+    \vskip 10pt
+    \State Define action using matrix least squares
+    \State Define bulk symbol space using cartesian inner-product
+    \State Define list of allowed polynomial degrees
+    \For { all degrees }
+      \State Select all numerator symbols with degree less than or equal to current
+      \State Select all denominator symbols with degree less than or equal to current, enforcing no constant term
+      \State Construct new symbol space by tagging each polynomial symbol with a boolean denoting whether it is in the numerator or denominator
+      \State Apply \texttt{PGREEDY} to get symbol subset and estimator val
+      \If  { estimator has stalled }
+        \State Break
+      \EndIf
+    \EndFor
+    \State Apply negative greedy to get final model
+    \vskip 10pt
+    \State {\bf Output:} Final model
     %
   \end{algorithmic}
   %
