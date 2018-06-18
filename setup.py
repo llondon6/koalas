@@ -5,7 +5,7 @@ from distutils.core import setup
 from setuptools import find_packages
 
 #
-setup(name='psitive',
+setup(name='positive',
       version='1.0',
       description='Low level python API for NR+LIGO packages.',
       author='Lionel London',
