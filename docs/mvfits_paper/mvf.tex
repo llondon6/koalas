@@ -189,7 +189,7 @@ where, the spherical-spheroidal mixing coefficient, $\sigma\LMlmn$, is
 %
 In \eqn{sigma}, $*$ denotes complex conjugation, and $\Omega$ is the standard solid angle in spherical polar coordinates.
 %
-\par In practice, \eqn{hlm} is computationally preferable:
+\par In practice, \eqn{hlm} is computationally efficient:
 %
 The calculation of each ${_{-2}S}\lmn$ involves a series solution which slowly converges for $\jf$ near unity. Therefore, it is more effective to have accurate models for $\sigma\LMlmn$, which can then be used directly to calculate $h\LM$ via \eqn{hlm}, and thereby the \gw{} polarizations via \eqn{hrd}.
 %
@@ -245,9 +245,91 @@ In \sec{discuss}, we review the performance of \gmvp{} and \gmvr{}, and we discu
 %
 \section{Methods}
 \label{meth}
-
-We begin by ...
-
+%
+Within the topic of regression, linear regression has particular advantages:
+%
+its matrix based formulation can be computationally efficient, and it does not require initial guesses for model parameters.
+%
+Perhaps most intriguingly, the formal series expansions of smooth functions support linear and rational models (e.g. Pade approximants) having application to many datasets.
+%
+Here we will develop algorithms for the linear modeling of scalar functions (real or complex valued) of many variables.
+%
+\par If we consider a scalar function, $f$, of $N$ variables sampled in $j$, $\vec{x}_j = \{x_{\alpha j}\}_{\alpha=0}^{N}$, then $f(\vec{x})_j$ can be represented (possibly inaccurately) as a sum over $K$ linearly independent basis functions, $\phi_k(\vec{x}_j)$:
+%
+\begin{align}
+  \label{lin1}
+  f({\vec{x}})_j \; = \; \sum_{k=0}^{K} \; \mu_{k} \, \phi_{kj}\; .
+\end{align}
+%
+The central player is \eqn{lin1} is the set of basis coefficients $\mu_{k}$.
+%
+Typically, one chooses or derives $\phi_{k}(\vec{x}_j)$ to capture inherent features of $f(\vec{x}_j)$.
+%
+With $\phi_{k}(\vec{x}_j)$ assumed to be known, the linear representation (\ceqn{lin1}) lastly defined by the set of $\mu_k$.
+%
+\def\vecmu{\vec{\mu}}
+\def\vecf{\vec{f}}
+\def\hatU{\hat{U}}
+\def\hatP{\hat{P}}
+%
+\par From here it is useful to note that \eqn{lin1} has a linear homogeneous matrix form. In particular, defining $\hat{U} = \{\phi_{kj}\}$, and $\vec{f} = \{f_j\}$, then $\vec{f} = \hat{U} \; \vec{\mu}$.
+%
+This implies that
+%
+\begin{align}
+  \vecmu = \hatP \; \vecf \; ,
+\end{align}
+%
+where
+%
+\begin{align}
+  %
+  \label{pinv1}
+  \hatP = \left( \left( \hatU^{-1} \right)^T \hatU^{-1} \right)^{-1}
+\end{align}
+%
+is the \textit{pseudo-inverse} of $\hatU$.
+%
+Equations (\ref{lin1}), and related discussion through \eqn{pinv1} illustrate the most rudimentary solution to the linear modeling problem.
+%
+However, there are many ways to expand upon and refine the solution presented thus far.
+%
+In the following subsections we will consider two such approaches.
+%
+First we will consider the general polynomial modeling of multivariate scalar functions.
+%
+This will encompass the \gmvp{} algorithm.
+%
+Second, we will build upon the \gmvp{} approach by considering models of rational functions: polynomials divided by polynomilas.
+%
+To consider these two approaches in a largely automated way (i.e. where the set of possible basis functions is known, but the select basis functions ultimately used are \textit{learned}), we will make use of the \textit{greedy} algorithm approach.
+%
+\subsection{A Generic Greedy Algorithm}
+%
+While we most often want a single model for a given dataset (e.g. some approximation of $\vecf$ from numerical calculation or experiment), there are often many more modeling choices than desired.
+%
+In particular, if we refer to our set of all possible basis functions as our ``\textit{symbol space}'', then the problem of determining how many, and which basis vectors (i.e. symbols) to use is a problem of combinatoric complexity.
+%
+\par A well known method for finding an approximate solution to this problem is the so-called ``greedy'' algorithm.
+%
+The premise is this:
+%
+We will iteratively construct models with increasing number of symbols.
+%
+The process begins by finding the single symbol (basis vector) that yields the most accurate model (in the sense of minimizing least-squares error).
+%
+That encompasses the first iteration of a process in which we will greedily add symbols to our model.
+%
+In each following iteration, an all remaining symbols are added to the model one at a time, and the single additional symbol which yields the greatest increase in model accuracy is kept for the following iteration.
+%
+In this way, a list of optimal model symbols is learned.
+%
+The forward process is to end when the model accuracy (or changes thereof) pass a specified threshold.
+%
+This rough algorithmic picture is spelled out in more Alg. \ref{alg:pgreedy}.
+%
+% \par
+%
 % Forward greedy algo
 \hspace{1cm}
 {\scriptsize
@@ -290,6 +372,10 @@ We begin by ...
 \end{algorithm}
 }
 
+%
+\subsection{Greedy Multivariate Polynomial Fitting}
+%
+The preceeding ...
 % GMVP
 \hspace{1cm}
 {\scriptsize
@@ -302,7 +388,8 @@ We begin by ...
     %
     \State {\bf Input:} $ \{ \bf{x}, \bf{y} \}$
     \vskip 10pt
-    \State Define action using matrix least squares
+    \State \grey{\# Define action using matrix least squares}
+    \State $\mathcal{A}$: $\epsilon = \hat{U}$
     \State Define bulk symbol space using cartesian inner-product
     \State Define list of allowed polynomial degrees
     \For { all degrees }
