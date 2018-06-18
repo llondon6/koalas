@@ -677,30 +677,8 @@ We also wish the impose a domain transformation, $\kappa(\jf)$, such that $0 \le
 %
 appropriately linearizes the sharp behavior of each frequency near $\jf=1$.
 %
-This implies that
-%
-\begin{align}
-  \cw_{\lmn} = m/2 + \kappa \sum_{j=1}^{J} c_j \kappa^k
-\end{align}
-%
-In the case of the non-zero damped \qnm{s}, (e.g. $(\ell,m)=(3,2)$), a more general polynomial form may be adopted, namely,
-%
-\begin{align}
-  \cw_{\lmn} = \sum_{j=0}^{J} c_j \kappa^k
-\end{align}
-%
 \par For the zero-damping constraint, when considering a \qnm{} frequency $\cw_{\lmn}$, zero-damping at $\jf=1$ implies that $\cw_{\lmn}(\kappa \approx 0)-m/2 \propto \kappa$, where $m/2$ is the well known limiting value for each \qnm{} frequencies real part as $\jf\rightarrow 1$.
 %
-% Equations for QNM frequency fits
-\begin{widetext}
-	\input{src/cwfit_eqns}
-\end{widetext}
-
-% Equations for mixing coefficients
-\begin{widetext}
-  \input{src/ysprod_eqns}
-\end{widetext}
-
 % Plots of QNM frequencies
 \begin{figure*}
   %
@@ -714,7 +692,49 @@ In the case of the non-zero damped \qnm{s}, (e.g. $(\ell,m)=(3,2)$), a more gene
   %
   The grey dashed line marks the value of $\kappa$ where $\j{}=0$. Fits of dimensionless \qnm{} decay rates (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. }
   %
+  \label{fig:qnms}
+  %
 \end{figure*}
+%
+This implies that
+%
+\begin{align}
+  \label{eq:zd}
+  \cw_{\lmn} = m/2 + \kappa \sum_{j=1}^{J} c_j \kappa^k \; .
+\end{align}
+%
+In the case of the non-zero damped \qnm{s}, (e.g. $(\ell,m)=(3,2)$), a more general polynomial form may be adopted, namely,
+%
+\begin{align}
+  \label{eq:nzd}
+  \cw_{\lmn} = \sum_{j=0}^{J} c_j \kappa^k \; .
+\end{align}
+%
+\par The polynomial content of \eqn{eq:zd} and \eqn{eq:nzd} is determined by \gmvp{}.
+%
+\eqns{eq:cw_fit_1}{eq:cw_fit_9} display the resulting polynomial models.
+%
+Although each model's fractional error is within 2\%, each is error is dominated by well known nonlinear oscillations which are considered to be outside of the experimental accuracy of current \gw{} efforts.
+%
+\par \fig{fig:qnms} displays select training points, as well as model fits for $\cw_{lmn}$'s real and imaginary parts.
+%
+For the right and left panels, simple polynomial behavior of each curve is a result of the displayed linear domain in $\kappa(\jf)$.
+%
+In the left panel, we have scaled $1/\tau_{\lmn}$ by factors for $m/(n+1/2)$ to place the \qnm{s} with $n=0$ and $n=1$ at approximately the same scale.
+%
+% Equations for QNM frequency fits
+\begin{widetext}
+	\input{src/cwfit_eqns}
+\end{widetext}
+%
+%
+\subsection{Modeling spherical-spheroidal inner-products using \gmvr{}}
+%
+%
+% Equations for mixing coefficients
+\begin{widetext}
+  \input{src/ysprod_eqns}
+\end{widetext}
 
 % Plots of mixing coefficients
 \begin{figure*}
