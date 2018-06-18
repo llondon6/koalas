@@ -272,11 +272,14 @@ With $\phi_{k}(\vec{x}_j)$ assumed to be known, the linear representation (\ceqn
 \def\hatU{\hat{U}}
 \def\hatP{\hat{P}}
 %
-\par From here it is useful to note that \eqn{lin1} has a linear homogeneous matrix form. In particular, defining $\hat{U} = \{\phi_{kj}\}$, and $\vec{f} = \{f_j\}$, then $\vec{f} = \hat{U} \; \vec{\mu}$.
+\par From here it is useful to note that \eqn{lin1} has a linear homogeneous matrix form.
+%
+In particular, defining $\hat{U} = \{\phi_{kj}\}$, and $\vec{f} = \{f_j\}$, then $\vec{f} = \hat{U} \; \vec{\mu}$.
 %
 This implies that
 %
 \begin{align}
+  \label{eq:linsol1}
   \vecmu = \hatP \; \vecf \; ,
 \end{align}
 %
@@ -326,7 +329,9 @@ In this way, a list of optimal model symbols is learned.
 %
 The forward process is to end when the model accuracy (or changes thereof) pass a specified threshold.
 %
-This rough algorithmic picture is spelled out in more Alg. \ref{alg:pgreedy}.
+This rough algorithmic picture encapsulated in Alg. \ref{alg:pgreedy}.
+%
+\par Note that we will use the terms ``basis vector'' and ``model symbol'' interchangeably. However, in practice, it can be useful to represent basis vectors symbolically (e.g. with strings), and have a way of bijectively mapping between symbols and numerical basis vectors.
 %
 % \par
 %
@@ -335,7 +340,7 @@ This rough algorithmic picture is spelled out in more Alg. \ref{alg:pgreedy}.
 {\scriptsize
 \begin{algorithm}[H]
   %
-  \caption{A positive (forward) greedy algorithm, \texttt{PGREEDY}. Note that a required input, $\mathcal{A}$, is a function that takes in a list of basis symbols, and outputs an estimator of fit error. In this setting, $\mathcal{A}$ is assumed to have access to peropheral information, such as the training data.}
+  \caption{A positive (forward) greedy algorithm, \texttt{PGREEDY}. Note that a required input, $\mathcal{A}$, is a function that takes in a list of basis symbols, and outputs an estimator of fit error. In this setting, $\mathcal{A}$ is assumed to have access to peripheral information, such as the training data.}
   \label{alg:pgreedy}
   %
   \begin{algorithmic}[1]
@@ -375,7 +380,64 @@ This rough algorithmic picture is spelled out in more Alg. \ref{alg:pgreedy}.
 %
 \subsection{Greedy Multivariate Polynomial Fitting}
 %
-The preceeding ...
+The study of smooth scalar functions (e.g. $\vecf$) often centers about the Taylor series expansion.
+%
+In that instance, it is clear that any infinitely differentiable scalar function of many variables can be represented in terms of its derivatives by
+%
+\begin{align}
+  \label{eq:mvt}
+  f( \vec{x} + \vec{h} ) &= e^{ \vec{x} \cdot \vec{\nabla}' } \, f(\vec{x}\,') |_{\vec{x}\,'=\vec{h}}
+  \\ \nonumber
+  &\approx \sum_{k=0}^{K} \, \frac{1}{k!} \, (\vec{x} \cdot \vec{\nabla}')^{k} \, f(\vec{x}\,') |_{\vec{x}\,'=\vec{h}}
+\end{align}
+%
+From the first to second line of \eqn{eq:mvt}, we have used the definition of the exponential function (i.e. its series expansion form).
+%
+In the second line, the equality has been replaced by an approximation as we have limited the linear representation to $K$ terms.
+%
+This latter point is key to the perspective of \gmvp{}: given training data thought to be related to a smooth multivariate function, it may be well approximated by a truncated series expansion in the appropriate coordinate basis.
+%
+\par This truncated expansion happens to be a polynomial in at most $N$ variables.
+%
+In this setting, the uncertainty of which and how many basis terms to include makes this a problem ripe for the application of \eqn{eq:linsol1} and Alg. (\ref{alg:pgreedy}) .
+%
+\par In the current setting, the basis symbols required by Alg. (\ref{alg:pgreedy}) are the multinomial terms in \eqn{eq:mvt}.
+%
+Each term is an element of the cartesian inner-product of the power-set of each model dimension. That is $\mlam_{bulk} = \{x_0,x_1 .. x_N, ... x_0^1, x_0^2, x_0^3, ...  , (x_0^K x_1^K ... x_N^K) \}$.
+%
+Note that in practice it may be useful to encode elements of $\mlam_{bulk}$ with strings representing their constituents (e.g. $x_0 x_0 x_1 x_2 x_2 x_4$ could be represented by the string ``001224'').
+%
+\par The action, $\mathcal{A}(\mlam_{trial})$, required by Alg. (\ref{alg:pgreedy}) encompasses the evaluation of \eqn{eq:linsol1} to solve for the basis coefficients, $\mu_k$, and the calculation of the modeling error.
+%
+An explicit sktech of this is given by Alg. (\ref{alg:A_gmvp}).
+%
+\hspace{1cm}
+{\scriptsize
+\begin{algorithm}[H]
+  %
+  \caption{$\mathcal{A}_{\gmvp}$, the action for \gmvp. Model calculation given basis symbols, and output of model error estimate.}
+  %
+  \label{alg:A_gmvp}
+  \begin{algorithmic}[1]
+    %
+    \State {\bf Input:} $\mlam_{trial}$
+    \vskip 10pt
+    \State Calculate $\mu_k$ via \eqn{eq:linsol1}.
+    \State Calculate the model representation error, e.g.: $\epsilon = |var(\hatU \vecmu - \vec{f})|/var(\vec{f})$, where $var$ is the variance of the respective list.
+    \vskip 10pt
+    \State {\bf Output:} $\epsilon$
+  \end{algorithmic}
+\end{algorithm}
+}
+%
+\par The combination of these two ideas alone results in an algorithm prone to a deficit of stepwise methods: there is the very likely possibility that the algorithm would confuse correlated basis vectors (e.g. $x^2$ may be confused for $x^4$).
+%
+To counter this, we may incrementally increase, or \textit{temper}, the maximum allowed multinomial order.
+%
+Recall that a term such as $x_0x_1x_3^2$ has an effective order of 4.
+%
+The combination of degree tempering with the greedy approach results in the \gmvp{} algorithm as presented in Alg. (\ref{alg:gmvp})
+%
 % GMVP
 \hspace{1cm}
 {\scriptsize
@@ -386,11 +448,9 @@ The preceeding ...
   %
   \begin{algorithmic}[1]
     %
-    \State {\bf Input:} $ \{ \bf{x}, \bf{y} \}$
+    \State {\bf Input:} $ \{ \bf{x}, \bf{y}, $max\_order = 6$ \}$
     \vskip 10pt
-    \State \grey{\# Define action using matrix least squares}
-    \State $\mathcal{A}$: $\epsilon = \hat{U}$
-    \State Define bulk symbol space using cartesian inner-product
+    \State Define bulk symbol space using cartesian inner-product of the power set of each basis symbol
     \State Define list of allowed polynomial degrees
     \For { all degrees }
       \State Select all symbols with degree less than or equal to current
