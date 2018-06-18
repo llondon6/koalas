@@ -665,6 +665,31 @@ While each case is an instance of modeling on a 1D domain, we note that higher d
 %
 \subsection{Modeling \qnm{} frequencies using \gmvp{}}
 %
+In seeking to apply \gmvp{} to select \qnm{} frequencies, we wish to impose a zero-damping constraint, namely that some frequencies are real as $\jf \rightarrow 1$.
+%
+We also wish the impose a domain transformation, $\kappa(\jf)$, such that $0 \leq \kappa \leq 1$ and the individual \qnm{} frequencies are morphologically simplified.
+%
+\par For the domain transformation, inspection of \qnm{} frequencies with $\ell \leq 5$ suggest that
+%
+\begin{align}
+  \kappa(\jf) = \left( \ln( 2 - \jf ) / \ln(3) \right)^{1/(2-\ell+|m|)}
+\end{align}
+%
+appropriately linearizes the sharp behavior of each frequency near $\jf=1$.
+%
+This implies that
+%
+\begin{align}
+  \cw_{\lmn} = m/2 + \kappa \sum_{j=1}^{J} c_j \kappa^k
+\end{align}
+%
+In the case of the non-zero damped \qnm{s}, (e.g. $(\ell,m)=(3,2)$), a more general polynomial form may be adopted, namely,
+%
+\begin{align}
+  \cw_{\lmn} = \sum_{j=0}^{J} c_j \kappa^k
+\end{align}
+%
+\par For the zero-damping constraint, when considering a \qnm{} frequency $\cw_{\lmn}$, zero-damping at $\jf=1$ implies that $\cw_{\lmn}(\kappa \approx 0)-m/2 \propto \kappa$, where $m/2$ is the well known limiting value for each \qnm{} frequencies real part as $\jf\rightarrow 1$.
 %
 % Equations for QNM frequency fits
 \begin{widetext}
