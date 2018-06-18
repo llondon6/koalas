@@ -5,15 +5,16 @@ from distutils.core import setup
 from setuptools import find_packages
 
 #
-setup(name='positive',
+setup(name='psitive',
       version='1.0',
-      description='Low Level Algorithms for Data Analysis and Manipulation',
+      description='Low level python API for NR+LIGO packages.',
       author='Lionel London',
       author_email='lionel.london@ligo.org',
       packages=find_packages(),
       include_package_data=True,
       package_dir={'positive': 'positive'},
+      package_data={'./': ['docs/*', 'examples/*', 'factory/*', 'gallery/*', 'issues/*']},
       url='https://github.com/llondon6/positive',
       download_url='https://github.com/llondon6/positive/archive/master.zip',
-      install_requires=['h5py','numpy','scipy','matplotlib'],
+      install_requires=['numpy','scipy','matplotlib'],
      )

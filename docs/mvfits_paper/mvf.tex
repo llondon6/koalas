@@ -449,14 +449,14 @@ The combination of degree tempering with the greedy approach results in the \gmv
   %
   \begin{algorithmic}[1]
     %
-    \State {\bf Input:} $ \{ \bf{x}, \bf{y}, $max\_degree = 6$, tol \}$
+    \State {\bf Input:} $ \{ x, f, $max\_degree = 6$, tol \}$
     \vskip 10pt
     \State Define, $\mlam_{bulk}$, the bulk symbol space using the n-fold cartesian inner-product of the power set of each basis symbol
     \State Define $\mathcal{A}_{\gmvp{}}$ according to Alg. (\ref{alg:A_gmvp}).
     \State Given $max\_order$, define, ${ D}$, a list of allowed polynomial degrees (e.g. $\{0,1,2,3,4,5,6\}$)
     \For {$d$ \textbf{in}  ${ D}$ }
-      \State Select all symbols from $\mlam_{bulk}$ with degree less than or equal to current degree: $\mlam^{(d)}_{bulk}$
-      \State Apply Alg. (\ref{alg:pgreedy}), \pgreedy{}, with $\mathcal{A}_{\gmvp{}}$ to get symbol subset, $\mlam^{(d)}_{opt}$ and estimator val, $\epsilon^{(d)}_{opt}$
+      \State Define $\mlam_{bulk}^{(d)}$ as all symbols from $\mlam_{bulk}$ with degree less than or equal to current degree: $\mlam^{(d)}_{bulk}$
+      \State Using $\mlam_{bulk}^{(d)}$, apply Alg. (\ref{alg:pgreedy}), \pgreedy{}, with $\mathcal{A}_{\gmvp{}}$ to get symbol subset, $\mlam^{(d)}_{opt}$ and estimator val, $\epsilon^{(d)}_{opt}$
       \If { $|\mlam^{(d)}_{opt}-\mlam^{(d-1)}_{opt}|<tol$ }
         \State \textbf{break}
       \EndIf
@@ -571,7 +571,7 @@ In practice, one solves \eqn{eq:pinv3} for $\vec{\alpha}^{(n)}$, and then uses t
   g^{(n+1)} =  \frac{ \sum_{r=0}^{R} a^{(n+1)}_r \, \phi_{r}(\vec{x}) }{ 1\;-\;  \sum_{v=1}^{V} b^{(n+1)}_v \, \phi_{v}(\vec{x}) } \; ,
 \end{align}
 %
-which is then fed back into \eqn{q:pinv3} for further refinement.
+which is then fed back into \eqn{eq:pinv3} for further refinement.
 %
 The refinement process is to terminate when a measure of model error (e.g. $||g^{(0)}-g^{(n)}||$) passes a predetermined threshold.
 %
@@ -585,7 +585,7 @@ However, rather than independent greedy optimizations for the numerator and deno
 %
 Put another way, rather than two greedy optimizations over $R$ and $V-1$ symbols (with $(V-1)R$ iterations), a single greedy process over $V+R$ symbols is performed.
 %
-\par With the conceptual tools in hand, we may proceed to constructing \gmvr{} be first defining its action, $\mathcal{A}_{\gmvr}$.
+\par With the conceptual tools in hand, we may proceed to constructing \gmvr{} by first defining its action, $\mathcal{A}_{\gmvr}$.
 %
 This is done in Alg. (\ref{alg:A_gmvr}).
 %
@@ -598,15 +598,32 @@ This is done in Alg. (\ref{alg:A_gmvr}).
   \label{alg:A_gmvr}
   \begin{algorithmic}[1]
     %
-    \State {\bf Input:} $\mlam_{trial}$
+    \State {\bf Input:} \{ $\mlam_{trial}$, $tol=10^{-3}$ \}
     \vskip 10pt
-    \State Calculate $\mu_k$ via \eqn{eq:linsol1}.
-    \State Calculate the model representation error, e.g.: $\epsilon = |var(\hatU \vecmu - \vec{f})|/var(\vec{f})$, where $var$ is the variance of the respective list.
+    \State Calculate $\alpha^{(1)}_k$ via \eqn{eq:pinv3}. Implicitly, $n=1$.
+    \State Calculate the current model prediction $g^{(1)}$ via \eqn{eq:rat4}.
+    \State Calculate the model representation error, e.g.: $\epsilon^{(1)}  = |var(g^{(n)} - g^{(0)})|/var(g^{(0)})$.
+    \State $done = False$
+    \While { not $done$ }
+      \State Calculate $\alpha^{n+1}_{k}$  via \eqn{eq:pinv3}.
+      \State Calculate the current model prediction $g^{(n)}$ via \eqn{eq:rat4}.
+      \State Calculate the model representation error, e.g. $\epsilon^{(n)} = |var(g^{(n)} - g^{(0)})|/var(g^{(0)})$.
+      \State $done = |\epsilon^{(n)}-\epsilon^{(n-1)}| < tol$
+      \State Implicitly, $n = n+1$
+    \EndWhile
     \vskip 10pt
-    \State {\bf Output:} $\epsilon$
+    \State {\bf Output:} $\epsilon^{(n)}$
   \end{algorithmic}
 \end{algorithm}
 }
+%
+\par The combination of \eqns{eq:pinv3} and \eqn{eq:rat4}, along with \pgreedy{} and degree tempering, results in the \gmvr{} algorithm as presented in Alg. (\ref{alg:gmvr}).
+%
+\par While not treated here, it is noted that Ref. \cite{London:2018gaq} utilizes \gmvp{} with a parameter dimension of 4.
+%
+\par In the following section we apply both \gmvp{} and \gmvr{} to the modeling of noiseless (up to roundoff error) data: the \qnm{} frequencies of Kerr \bh{s}, and the inner-products of the spherical and spheroidal harmonics.
+%
+In each case, the underlying 1D parameter in each case will be the dimensionless \bh{} spin, $\jf{}$.
 %
 % GMVR
 \hspace{1cm}
@@ -618,33 +635,37 @@ This is done in Alg. (\ref{alg:A_gmvr}).
   %
   \begin{algorithmic}[1]
     %
-    \State {\bf Input:} $ \{ \bf{x}, \bf{y} \}$
+    \State {\bf Input:} $ \{ x, f, $max\_degree = 6$, tol \}$
     \vskip 10pt
-    \State Define $\mathcal{A}_{\gmvp}$ as in Alg. (\ref{alg:A})
-    \State Define, $\mlam_{bulk}$, bulk symbol space using the n-fold cartesian inner-product
-    \State Define list of allowed polynomial degrees
-    \For { $d_k$ in  }
-      \State Select all numerator symbols with degree less than or equal to current
-      \State Select all denominator symbols with degree less than or equal to current, enforcing no constant term
-      \State Construct new symbol space by tagging each polynomial symbol with a boolean denoting whether it is in the numerator or denominator
-      \State Apply \pgreedy{} to get the optimal symbol subset, $\mlam_{opt}$, and estimator value, $\epsilon_{opt}$.
-      \If  { estimator has stalled }
-        \State Break
+    \State Define, $\mlam_{bulk}$, the bulk symbol space using the n-fold cartesian inner-product of the power set of each basis symbol. This is the combined bulk for numerator and denominator symbols.
+    \State Define $\mathcal{A}_{\gmvr{}}$ according to Alg. (\ref{alg:A_gmvr}).
+    \State Given $max\_order$, define, ${ D}$, a list of allowed polynomial degrees (e.g. $\{0,1,2,3,4,5,6\}$)
+    \For {$d$ \textbf{in}  ${ D}$ }
+      \State Define $\mlam_{bulk}^{(d)}$ as all symbols from $\mlam_{bulk}$ with degree less than or equal to current degree: $\mlam^{(d)}_{bulk}$
+      \State Using $\mlam_{bulk}^{(d)}$, apply Alg. (\ref{alg:pgreedy}), \pgreedy{}, with $\mathcal{A}_{\gmvp{}}$ to get symbol subset, $\mlam^{(d)}_{opt}$ and estimator val, $\epsilon^{(d)}_{opt}$
+      \If { $|\mlam^{(d)}_{opt}-\mlam^{(d-1)}_{opt}|<tol$ }
+        \State \textbf{break}
       \EndIf
     \EndFor
-    \State Apply negative greedy to get final model
     \vskip 10pt
-    \State {\bf Output:} Final model
+    \State {\bf Output:} $\mlam^{(d)}_{opt}$
     %
   \end{algorithmic}
   %
 \end{algorithm}
 }
-
+%
 %
 \section{Results}
 \label{results}
-
+%
+\par We present the application of \gmvp{} and \gmvr{} to the respective modeling of \qnm{} frequencies, and harmonic mixing coefficients.
+%
+While each case is an instance of modeling on a 1D domain, we note that higher dimensional cases have been treated elsewhere \cite{London:2018gaq}.
+%
+\subsection{Modeling \qnm{} frequencies using \gmvp{}}
+%
+%
 % Equations for QNM frequency fits
 \begin{widetext}
 	\input{src/cwfit_eqns}
