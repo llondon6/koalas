@@ -431,7 +431,7 @@ An explicit sktech of this is given by Alg. (\ref{alg:A_gmvp}).
 \end{algorithm}
 }
 %
-\par The combination of these two ideas alone results in an algorithm prone to a deficit of stepwise methods: there is the very likely possibility that the algorithm would confuse correlated basis vectors (e.g. $x^2$ may be confused for $x^4$).
+\par The combination of these two ideas alone results in an algorithm prone to a deficit of stepwise methods: the algorithm may confuse correlated basis vectors (e.g. $x^2$ may be confused for $x^4$).
 %
 To counter this, we may incrementally increase, or \textit{temper}, the maximum allowed multinomial order.
 %
@@ -481,12 +481,14 @@ Of the simplest examples are the rational functions of the form
 \def\sif{\bar{\sigma}_f}
 \begin{align}
   \label{eq:rat1}
-  f(\vec{x}) = \muf + \sif \; \frac{ \sum_{r=0}^{R} a_r \, \phi_{r}(\vec{x}) }{ 1 - \sum_{v=0}^{V} b_v \, \phi_{v}(\vec{x}) } \;,
+  f(\vec{x}) = \muf + \sif \; \frac{ \sum_{r=0}^{R} a_r \, \phi_{r}(\vec{x}) }{ 1 - \sum_{v=1}^{V} b_v \, \phi_{v}(\vec{x}) } \;,
 \end{align}
 %
-where $\muf$ is the additive mean of $f(\vec{x})$, and $\sif$ is the standard deviation of $f(\vec{x})$ from its mean.
+where $\muf$ is the additive mean of $f(\vec{x})$, and $\sif$ is the standard deviation of $f(\vec{x})$ from its mean, and $\phi_k$ are the multinomials basis functions considered in the previous section.
 %
-\par While it is tempting to embrace \eqn{eq:rat1}'s $f({\vec{x}})$ as a nonlinear function and so resort to nonlinear modeling methods, note that a reformulation reveals an underlying linear structure.
+Note that, in \eqn{eq:rat1}, the sum over $v$ does not include the constant term associated with $\phi_0$.
+%
+\par While it is tempting to embrace \eqn{eq:rat1}'s $f({\vec{x}})$ as a nonlinear function and so resort to nonlinear modeling methods, a reformulation reveals an underlying linear structure.
 %
 Namely, if we let
 %
@@ -498,7 +500,7 @@ then the algebraic manipulation of \eqn{eq:rat1} results in
 %
 \begin{align}
   \label{eq:rat2}
-  g = \sum_{r=0}^{R} a_r \, \phi_{r}(\vec{x}) + g\, \sum_{v=0}^{V} b_v \, \phi_{v}(\vec{x}) \; .
+  g = \sum_{r=0}^{R} a_r \, \phi_{r}(\vec{x}) + g\, \sum_{v=1}^{V} b_v \, \phi_{v}(\vec{x}) \; .
 \end{align}
 %
 We are free to relabel the indices such that \eqn{eq:rat2} is manifestly linear in a single index.
@@ -518,7 +520,7 @@ where
   %
   z_k = \left\{ \begin{array}{cc}
         a_k,      & \text{for }0\leq k\leq R\\
-        b_k, & \quad \;\; \;\text{for }R+1\leq k\leq R+V+1
+        b_k, & \quad \;\; \;\text{for }R+1\leq k\leq R+V
       \end{array} \right\}
 \end{align}
 %
@@ -528,7 +530,7 @@ and
   %
   \psi_k(\vec{x}_j) = \left\{\begin{array}{cc}
         \phi_k(\vec{x}_j),      & \text{for }0\leq k\leq R\\
-        \phi_k(\vec{x}_j) g , & \quad \;\; \;\text{for }R+1\leq k\leq R+V+1
+        \phi_k(\vec{x}_j)\, g , & \quad \;\; \;\text{for }R+1\leq k\leq R+V
         \end{array} \right\}
 \end{align}
 %
@@ -541,31 +543,70 @@ and
 %
 where, here, $\hat{P}$ is the pseudo-inverse of the matrix whose elements are $\psi_k(\vec{x}_j)$.
 %
-\par But note that $\hat{P}$'s depending on $g$ signals that there is more to be done.
+\par However, we note that $\hat{P}$'s depending on $g$ signals that there is more to be done.
 %
-In particular, let us briefly consider the effect of noise on $g$, e.g. $g \rightarrow g+n$.
+In particular, let us briefly consider the effect of zero-mean noise on $g$, e.g. $g \rightarrow g+n$.
 %
 In this contemplation, it may be that shown that $n$ may be entirely regelated to $\hat{P}$.
 %
 It is in this sense that \eqn{eq:pinv2} is insufficient to generally solve for $\vec{\alpha}$.
 %
-\par The key to robustly solving for $\vec{\alpha}$ lies in iterative refinement.
+\par The key to robustly solving for $\vec{\alpha}$ lies in the iterative refinement of $\vec{\alpha}$.
 %
-Specifically, we note that \eqn{eq:rat2} may be modified iteratively minimize the impact of numerical noise on the eventual solution, $\vec{\alpha}$.
+Specifically, we note that \eqn{eq:rat2} may be modified to iteratively minimize the impact of numerical noise on $\hat{P}$.
 %
-To this end, if we define $g^{(0)}$ to be \eqn{eq:rat2} evaluated with $\vec{\alpha}$ as given by \eqn{eq:pinv2}, and note that by construction, $g^{(0)}$ is less effected by (zero mean) noise in $g$, then a further refinement may be obtained by
+That is, to reduce the impact of noise on $\hat{P}$, we are free to calculate it using model evaluations of $g$ rather than the original training data.
 %
-\begin{align}
-  \label{eq:rat2}
-  g^{(1)} = \sum_{r=0}^{R} a_r \, \phi_{r}(\vec{x}) + g^{(0)}\, \sum_{v=0}^{V} b_v \, \phi_{v}(\vec{x}) \; .
-\end{align}
-%
-\eqn{eq:rat2} straightforwardly generalizes to
+To this end, if we define $g^{(0)}=g$ (i.e. the training data) then, with $\hat{P} = \hat{P}( \vec{g}^{\,(n)} )$, \eqn{eq:pinv2} generalizes to
 %
 \begin{align}
-  \label{eq:rat3}
-  g^{(n+1)} = \sum_{r=0}^{R} a_r \, \phi_{r}(\vec{x}) + g^{(n)}\, \sum_{v=0}^{V} b_v \, \phi_{v}(\vec{x}) \; .
+  \label{eq:pinv3}
+  \vec{\alpha}^{(n+1)} = \hat{P}(\vec{g}^{\,(n)}) \, \vec{g}^{(0)}\;.
 \end{align}
+%
+In practice, one solves \eqn{eq:pinv3} for $\vec{\alpha}^{(n)}$, and then uses the related $a_r^{(n)}$ and $b_v^{(n)}$ to calculate $g^{(n+1)}$ via
+%
+\begin{align}
+  \label{eq:rat4}
+  g^{(n+1)} =  \frac{ \sum_{r=0}^{R} a^{(n+1)}_r \, \phi_{r}(\vec{x}) }{ 1\;-\;  \sum_{v=1}^{V} b^{(n+1)}_v \, \phi_{v}(\vec{x}) } \; ,
+\end{align}
+%
+which is then fed back into \eqn{q:pinv3} for further refinement.
+%
+The refinement process is to terminate when a measure of model error (e.g. $||g^{(0)}-g^{(n)}||$) passes a predetermined threshold.
+%
+\par Much as in the case of multivariate polynomial fitting, we are left with an un unknown number and content of basis symbols.
+%
+In principle, the existence of $a_r$ and $b_v$ makes the problem more complicated, as one could imagine optimizing over each symbol space independently.
+%
+To broach these complications, we again use a greedy algorithm with degree tempering.
+%
+However, rather than independent greedy optimizations for the numerator and denominator bases symbols, \eqn{eq:rat3} suggests that the appropriate labeling of symbols (e.g. ``numerator'' or ``denominator'') may yield an effective flattening of the supposed 2D basis selection problem.
+%
+Put another way, rather than two greedy optimizations over $R$ and $V-1$ symbols (with $(V-1)R$ iterations), a single greedy process over $V+R$ symbols is performed.
+%
+\par With the conceptual tools in hand, we may proceed to constructing \gmvr{} be first defining its action, $\mathcal{A}_{\gmvr}$.
+%
+This is done in Alg. (\ref{alg:A_gmvr}).
+%
+\hspace{1cm}
+{\scriptsize
+\begin{algorithm}[H]
+  %
+  \caption{$\mathcal{A}_{\gmvr}$, the action for \gmvr. Model calculation given basis symbols, and output of model error estimate.}
+  %
+  \label{alg:A_gmvr}
+  \begin{algorithmic}[1]
+    %
+    \State {\bf Input:} $\mlam_{trial}$
+    \vskip 10pt
+    \State Calculate $\mu_k$ via \eqn{eq:linsol1}.
+    \State Calculate the model representation error, e.g.: $\epsilon = |var(\hatU \vecmu - \vec{f})|/var(\vec{f})$, where $var$ is the variance of the respective list.
+    \vskip 10pt
+    \State {\bf Output:} $\epsilon$
+  \end{algorithmic}
+\end{algorithm}
+}
 %
 % GMVR
 \hspace{1cm}
