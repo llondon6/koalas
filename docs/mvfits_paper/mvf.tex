@@ -337,10 +337,11 @@ This rough algorithmic picture encapsulated in Alg. \ref{alg:pgreedy}.
 %
 % Forward greedy algo
 \hspace{1cm}
+\def\pgreedy{\texttt{PGREEDY}}
 {\scriptsize
 \begin{algorithm}[H]
   %
-  \caption{A positive (forward) greedy algorithm, \texttt{PGREEDY}. Note that a required input, $\mathcal{A}$, is a function that takes in a list of basis symbols, and outputs an estimator of fit error. In this setting, $\mathcal{A}$ is assumed to have access to peripheral information, such as the training data.}
+  \caption{A positive (forward) greedy algorithm, \pgreedy{}, \texttt{PGREEDY}. Note that a required input, $\mathcal{A}$, is a function that takes in a list of basis symbols, and outputs an estimator of fit error. In this setting, $\mathcal{A}$ is assumed to have access to peripheral information, such as the training data.}
   \label{alg:pgreedy}
   %
   \begin{algorithmic}[1]
@@ -370,7 +371,7 @@ This rough algorithmic picture encapsulated in Alg. \ref{alg:pgreedy}.
       %
     \EndWhile
     \vskip 10pt
-    \State {\bf Output:} Greedy Basis, $\{ \mlam_{kept} \}$
+    \State {\bf Output:} $\{ \mlam_{kept} \}$ (the Greedy Basis)
     %
   \end{algorithmic}
   %
@@ -403,7 +404,7 @@ In this setting, the uncertainty of which and how many basis terms to include ma
 %
 \par In the current setting, the basis symbols required by Alg. (\ref{alg:pgreedy}) are the multinomial terms in \eqn{eq:mvt}.
 %
-Each term is an element of the cartesian inner-product of the power-set of each model dimension. That is $\mlam_{bulk} = \{x_0,x_1 .. x_N, ... x_0^1, x_0^2, x_0^3, ...  , (x_0^K x_1^K ... x_N^K) \}$.
+Each term is an element of the n-fold cartesian inner-product of the power-sets of each model dimension. That is $\mlam_{bulk} = \{x_0,x_1 .. x_N, ... x_0^1, x_0^2, x_0^3, ...  , (x_0^K x_1^K ... x_N^K) \}$.
 %
 Note that in practice it may be useful to encode elements of $\mlam_{bulk}$ with strings representing their constituents (e.g. $x_0 x_0 x_1 x_2 x_2 x_4$ could be represented by the string ``001224'').
 %
@@ -434,9 +435,9 @@ An explicit sktech of this is given by Alg. (\ref{alg:A_gmvp}).
 %
 To counter this, we may incrementally increase, or \textit{temper}, the maximum allowed multinomial order.
 %
-Recall that a term such as $x_0x_1x_3^2$ has an effective order of 4.
+Recall that a term such as $x_0x_1x_3^2$ has an effective degree of 4.
 %
-The combination of degree tempering with the greedy approach results in the \gmvp{} algorithm as presented in Alg. (\ref{alg:gmvp})
+The combination of degree tempering with the greedy approach results in the \gmvp{} algorithm as presented in Alg. (\ref{alg:gmvp}).
 %
 % GMVP
 \hspace{1cm}
@@ -448,28 +449,124 @@ The combination of degree tempering with the greedy approach results in the \gmv
   %
   \begin{algorithmic}[1]
     %
-    \State {\bf Input:} $ \{ \bf{x}, \bf{y}, $max\_order = 6$ \}$
+    \State {\bf Input:} $ \{ \bf{x}, \bf{y}, $max\_degree = 6$, tol \}$
     \vskip 10pt
-    \State Define bulk symbol space using cartesian inner-product of the power set of each basis symbol
-    \State Define list of allowed polynomial degrees
-    \For { all degrees }
-      \State Select all symbols with degree less than or equal to current
-      \State Apply \texttt{PGREEDY} to get symbol subset and estimator val
-      \If  { estimator has stalled }
-        \State Break
+    \State Define, $\mlam_{bulk}$, the bulk symbol space using the n-fold cartesian inner-product of the power set of each basis symbol
+    \State Define $\mathcal{A}_{\gmvp{}}$ according to Alg. (\ref{alg:A_gmvp}).
+    \State Given $max\_order$, define, ${ D}$, a list of allowed polynomial degrees (e.g. $\{0,1,2,3,4,5,6\}$)
+    \For {$d$ \textbf{in}  ${ D}$ }
+      \State Select all symbols from $\mlam_{bulk}$ with degree less than or equal to current degree: $\mlam^{(d)}_{bulk}$
+      \State Apply Alg. (\ref{alg:pgreedy}), \pgreedy{}, with $\mathcal{A}_{\gmvp{}}$ to get symbol subset, $\mlam^{(d)}_{opt}$ and estimator val, $\epsilon^{(d)}_{opt}$
+      \If { $|\mlam^{(d)}_{opt}-\mlam^{(d-1)}_{opt}|<tol$ }
+        \State \textbf{break}
       \EndIf
     \EndFor
-    \State Apply negative greedy to get final model
     \vskip 10pt
-    \State {\bf Output:} Final model
+    \State {\bf Output:} $\mlam^{(d)}_{opt}$
     %
   \end{algorithmic}
   %
 \end{algorithm}
 }
-
-
-
+%
+%
+\subsection{Greedy Multivariate Rational Fitting}
+%
+%
+\par Despite the apparent universality of of \eqn{eq:mvt}, there are many cases where $K$ must be orders of magnitude greater than 1 in order for $\vec{f}$ to be accurately represented by a multinomial (historically, this is equivalent to ``Runge's phenomenon'').
+%
+Of the simplest examples are the rational functions of the form
+%
+\def\muf{\bar{\mu}}
+\def\sif{\bar{\sigma}_f}
+\begin{align}
+  \label{eq:rat1}
+  f(\vec{x}) = \muf + \sif \; \frac{ \sum_{r=0}^{R} a_r \, \phi_{r}(\vec{x}) }{ 1 - \sum_{v=0}^{V} b_v \, \phi_{v}(\vec{x}) } \;,
+\end{align}
+%
+where $\muf$ is the additive mean of $f(\vec{x})$, and $\sif$ is the standard deviation of $f(\vec{x})$ from its mean.
+%
+\par While it is tempting to embrace \eqn{eq:rat1}'s $f({\vec{x}})$ as a nonlinear function and so resort to nonlinear modeling methods, note that a reformulation reveals an underlying linear structure.
+%
+Namely, if we let
+%
+\begin{align}
+  g = (f - \muf)/\sif
+\end{align}
+%
+then the algebraic manipulation of \eqn{eq:rat1} results in
+%
+\begin{align}
+  \label{eq:rat2}
+  g = \sum_{r=0}^{R} a_r \, \phi_{r}(\vec{x}) + g\, \sum_{v=0}^{V} b_v \, \phi_{v}(\vec{x}) \; .
+\end{align}
+%
+We are free to relabel the indices such that \eqn{eq:rat2} is manifestly linear in a single index.
+%
+At this stage, we will also explicitely consider the $j^\mathrm{th}$ samples of the domain, and so refer to $\vec{x}$ as $\vec{x}_j$.
+%
+The adjustments of perspective result in
+%
+\begin{align}
+  \label{eq:rat3}
+  g_j = \sum_{k=0}^{R+V+1} \, z_{k} \, \psi_k(\vec{x}_j) \;,
+\end{align}
+%
+where
+%
+\begin{align}
+  %
+  z_k = \left\{ \begin{array}{cc}
+        a_k,      & \text{for }0\leq k\leq R\\
+        b_k, & \quad \;\; \;\text{for }R+1\leq k\leq R+V+1
+      \end{array} \right\}
+\end{align}
+%
+and
+%
+\begin{align}
+  %
+  \psi_k(\vec{x}_j) = \left\{\begin{array}{cc}
+        \phi_k(\vec{x}_j),      & \text{for }0\leq k\leq R\\
+        \phi_k(\vec{x}_j) g , & \quad \;\; \;\text{for }R+1\leq k\leq R+V+1
+        \end{array} \right\}
+\end{align}
+%
+\par Recalling \eqns{eq:linsol1}{pinv1}, it follows that the coefficients of interest ($a_k$ and $b_k$), may be estimated according to
+%
+\begin{align}
+  \label{eq:pinv2}
+  \vec{\alpha} = \hat{P} \; \vec{g} \;.
+\end{align}
+%
+where, here, $\hat{P}$ is the pseudo-inverse of the matrix whose elements are $\psi_k(\vec{x}_j)$.
+%
+\par But note that $\hat{P}$'s depending on $g$ signals that there is more to be done.
+%
+In particular, let us briefly consider the effect of noise on $g$, e.g. $g \rightarrow g+n$.
+%
+In this contemplation, it may be that shown that $n$ may be entirely regelated to $\hat{P}$.
+%
+It is in this sense that \eqn{eq:pinv2} is insufficient to generally solve for $\vec{\alpha}$.
+%
+\par The key to robustly solving for $\vec{\alpha}$ lies in iterative refinement.
+%
+Specifically, we note that \eqn{eq:rat2} may be modified iteratively minimize the impact of numerical noise on the eventual solution, $\vec{\alpha}$.
+%
+To this end, if we define $g^{(0)}$ to be \eqn{eq:rat2} evaluated with $\vec{\alpha}$ as given by \eqn{eq:pinv2}, and note that by construction, $g^{(0)}$ is less effected by (zero mean) noise in $g$, then a further refinement may be obtained by
+%
+\begin{align}
+  \label{eq:rat2}
+  g^{(1)} = \sum_{r=0}^{R} a_r \, \phi_{r}(\vec{x}) + g^{(0)}\, \sum_{v=0}^{V} b_v \, \phi_{v}(\vec{x}) \; .
+\end{align}
+%
+\eqn{eq:rat2} straightforwardly generalizes to
+%
+\begin{align}
+  \label{eq:rat3}
+  g^{(n+1)} = \sum_{r=0}^{R} a_r \, \phi_{r}(\vec{x}) + g^{(n)}\, \sum_{v=0}^{V} b_v \, \phi_{v}(\vec{x}) \; .
+\end{align}
+%
 % GMVR
 \hspace{1cm}
 {\scriptsize
@@ -482,14 +579,14 @@ The combination of degree tempering with the greedy approach results in the \gmv
     %
     \State {\bf Input:} $ \{ \bf{x}, \bf{y} \}$
     \vskip 10pt
-    \State Define action using matrix least squares
-    \State Define bulk symbol space using cartesian inner-product
+    \State Define $\mathcal{A}_{\gmvp}$ as in Alg. (\ref{alg:A})
+    \State Define, $\mlam_{bulk}$, bulk symbol space using the n-fold cartesian inner-product
     \State Define list of allowed polynomial degrees
-    \For { all degrees }
+    \For { $d_k$ in  }
       \State Select all numerator symbols with degree less than or equal to current
       \State Select all denominator symbols with degree less than or equal to current, enforcing no constant term
       \State Construct new symbol space by tagging each polynomial symbol with a boolean denoting whether it is in the numerator or denominator
-      \State Apply \texttt{PGREEDY} to get symbol subset and estimator val
+      \State Apply \pgreedy{} to get the optimal symbol subset, $\mlam_{opt}$, and estimator value, $\epsilon_{opt}$.
       \If  { estimator has stalled }
         \State Break
       \EndIf
