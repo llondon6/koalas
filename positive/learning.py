@@ -2321,44 +2321,6 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
     return ans
 
 
-# Given a string with repeated symbols, convert the repetitions to power notation
-def rep2pwr( string,        # String to be processed
-             pattern,       # Pattern to look for
-             delimiter,     # Delimeter
-             latex=True,
-             pwrfun=None ): # Operation to apply to repetitios of the pattern, eg pwrfun = lambda pattern,N: '%s^%i'%(pattern,N)
-    '''
-    Given a string with repeated symbols, convert the repetitions to power notation.
-
-    Example:
-
-    >> a = '*x*x*x'
-    >> enpower(a,'*x')
-
-        x^{3}
-
-    '''
-
-    # Handle the power-function input
-    pwrfun = (lambda pattern,N: '{%s}^{%i}'%(pattern,N)) if pwrfun is None else pwrfun
-
-    # Find the maximum number of repetitions by noting it is bound above by the total number of parrtern instances
-    maxdeg = len(string.split(pattern)) # Technically there should be a -1 here, but let's leave it out to simplify things later on, and avoid buggy behavior
-
-    # Copy the input
-    ans = str(string) # .replace(' ','')
-
-    # Look for repetitions
-    for deg in range( maxdeg, 1, -1 ):
-        # Create a repeated pattern
-        reppat = delimiter.join( [ pattern for k in range(deg) ] )
-        # Look for the pattern, and replace it with the power representation
-        ans = ans.replace( reppat, pwrfun(pattern,deg) )
-
-    # Return the answer
-    return ans
-
-
 
 #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
 # Given a 1D array, determine the set of N lines that are optimally representative  #
