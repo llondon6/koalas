@@ -404,7 +404,7 @@ In this setting, the uncertainty of which and how many basis terms to include ma
 %
 \par In the current setting, the basis symbols required by Alg. (\ref{alg:pgreedy}) are the multinomial terms in \eqn{eq:mvt}.
 %
-Each term is an element of the n-fold cartesian inner-product of the power-sets of each model dimension. That is $\mlam_{bulk} = \{x_0,x_1 .. x_N, ... x_0^1, x_0^2, x_0^3, ...  , (x_0^K x_1^K ... x_N^K) \}$.
+Each term is an element of the $n$-fold cartesian inner-product of the power-sets of each model dimension. That is $\mlam_{bulk} = \{x_0,x_1 .. x_N, ... x_0^1, x_0^2, x_0^3, ...  , (x_0^K x_1^K ... x_N^K) \}$.
 %
 Note that in practice it may be useful to encode elements of $\mlam_{bulk}$ with strings representing their constituents (e.g. $x_0 x_0 x_1 x_2 x_2 x_4$ could be represented by the string ``001224'').
 %
@@ -451,9 +451,9 @@ The combination of degree tempering with the greedy approach results in the \gmv
     %
     \State {\bf Input:} $ \{ x, f, $max\_degree = 6$, tol \}$
     \vskip 10pt
-    \State Define, $\mlam_{bulk}$, the bulk symbol space using the n-fold cartesian inner-product of the power set of each basis symbol
+    \State Define, $\mlam_{bulk}$, the bulk symbol space using the $n$-fold cartesian inner-product of the power set of each basis symbol
     \State Define $\mathcal{A}_{\gmvp{}}$ according to Alg. (\ref{alg:A_gmvp}).
-    \State Given $max\_order$, define, ${ D}$, a list of allowed polynomial degrees (e.g. $\{0,1,2,3,4,5,6\}$)
+    \State Given $max\_degree$, define, ${ D}$, a list of allowed polynomial degrees (e.g. $\{0,1,2,3,4,5,6\}$)
     \For {$d$ \textbf{in}  ${ D}$ }
       \State Define $\mlam_{bulk}^{(d)}$ as all symbols from $\mlam_{bulk}$ with degree less than or equal to current degree: $\mlam^{(d)}_{bulk}$
       \State Using $\mlam_{bulk}^{(d)}$, apply Alg. (\ref{alg:pgreedy}), \pgreedy{}, with $\mathcal{A}_{\gmvp{}}$ to get symbol subset, $\mlam^{(d)}_{opt}$ and estimator val, $\epsilon^{(d)}_{opt}$
@@ -637,9 +637,9 @@ In each case, the underlying 1D parameter in each case will be the dimensionless
     %
     \State {\bf Input:} $ \{ x, f, $max\_degree = 6$, tol \}$
     \vskip 10pt
-    \State Define, $\mlam_{bulk}$, the bulk symbol space using the n-fold cartesian inner-product of the power set of each basis symbol. This is the combined bulk for numerator and denominator symbols.
+    \State Define, $\mlam_{bulk}$, the bulk symbol space using the $n$-fold cartesian inner-product of the power set of each basis symbol. This is the combined bulk for numerator and denominator symbols.
     \State Define $\mathcal{A}_{\gmvr{}}$ according to Alg. (\ref{alg:A_gmvr}).
-    \State Given $max\_order$, define, ${ D}$, a list of allowed polynomial degrees (e.g. $\{0,1,2,3,4,5,6\}$)
+    \State Given $max\_degree$, define, ${ D}$, a list of allowed polynomial degrees (e.g. $\{0,1,2,3,4,5,6\}$)
     \For {$d$ \textbf{in}  ${ D}$ }
       \State Define $\mlam_{bulk}^{(d)}$ as all symbols from $\mlam_{bulk}$ with degree less than or equal to current degree: $\mlam^{(d)}_{bulk}$
       \State Using $\mlam_{bulk}^{(d)}$, apply Alg. (\ref{alg:pgreedy}), \pgreedy{}, with $\mathcal{A}_{\gmvp{}}$ to get symbol subset, $\mlam^{(d)}_{opt}$ and estimator val, $\epsilon^{(d)}_{opt}$

@@ -2049,3 +2049,9 @@ def rotate3(vector,alpha,beta,gamma,invert=False):
 
     #
     return ans
+
+#
+def hilbertclean( complex_data ):
+
+    #
+    return None
