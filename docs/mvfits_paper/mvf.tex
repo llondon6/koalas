@@ -424,7 +424,7 @@ An explicit sktech of this is given by Alg. (\ref{alg:A_gmvp}).
     \State {\bf Input:} $\mlam_{trial}$
     \vskip 10pt
     \State Calculate $\mu_k$ via \eqn{eq:linsol1}.
-    \State Calculate the model representation error, e.g.: $\epsilon = |var(\hatU \vecmu - \vec{f})|/var(\vec{f})$, where $var$ is the variance of the respective list.
+    \State Calculate the model representation error, e.g.: $\epsilon = ||\hatU \vecmu - \vec{f}||/||\vec{f}||$, where $var$ is the variance of the respective list.
     \vskip 10pt
     \State {\bf Output:} $\epsilon$
   \end{algorithmic}
@@ -602,14 +602,14 @@ This is done in Alg. (\ref{alg:A_gmvr}).
     \vskip 10pt
     \State Calculate $\alpha^{(1)}_k$ via \eqn{eq:pinv3}. Implicitly, $n=1$.
     \State Calculate the current model prediction $g^{(1)}$ via \eqn{eq:rat4}.
-    \State Calculate the model representation error, e.g.: $\epsilon^{(1)}  = |var(g^{(n)} - g^{(0)})|/var(g^{(0)})$.
+    \State Calculate the model representation error, e.g.: $\epsilon^{(1)}  = ||var(g^{(n)} - g^{(0)})||/||g^{(0)}||$.
     \State $done = False$
     \While { not $done$ }
       \State Calculate $\alpha^{n+1}_{k}$  via \eqn{eq:pinv3}.
       \State Calculate the current model prediction $g^{(n)}$ via \eqn{eq:rat4}.
-      \State Calculate the model representation error, e.g. $\epsilon^{(n)} = |var(g^{(n)} - g^{(0)})|/var(g^{(0)})$.
-      \State $done = |\epsilon^{(n)}-\epsilon^{(n-1)}| < tol$
-      \State Implicitly, $n = n+1$
+      \State Calculate the model representation error, e.g. $\epsilon^{(n)} = ||g^{(n)} - g^{(0)}||/||g^{(0)}||$.
+      \State $done = \epsilon^{(n-1)}-\epsilon^{(n)} < tol$
+      \State (Implicitly, $n = n+1$)
     \EndWhile
     \vskip 10pt
     \State {\bf Output:} $\epsilon^{(n)}$
@@ -659,9 +659,19 @@ In each case, the underlying 1D parameter in each case will be the dimensionless
 \section{Results}
 \label{results}
 %
-\par We present the application of \gmvp{} and \gmvr{} to the respective modeling of \qnm{} frequencies, and harmonic mixing coefficients.
+\par We briefly review the application of \gmvr{} to a toy problem.
+%
+% Cross validation and removal of the last added basis symbol are used to assess model accuracy.
+%
+% \par
+%
+We then present the application of \gmvp{} and \gmvr{} to the respective modeling of \qnm{} frequencies, and harmonic mixing coefficients.
 %
 While each case is an instance of modeling on a 1D domain, we note that higher dimensional cases have been treated elsewhere \cite{London:2018gaq}.
+%
+\subsection{\gmvr{} Toy Problem}
+%
+Here
 %
 \subsection{Modeling \qnm{} frequencies using \gmvp{}}
 %
@@ -693,6 +703,19 @@ appropriately linearizes the sharp behavior of each frequency near $\jf=1$.
   The grey dashed line marks the value of $\kappa$ where $\j{}=0$. Fits of dimensionless \qnm{} decay rates (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. }
   %
   \label{fig:qnms}
+  %
+\end{figure*}
+%
+% Plots of QNM frequencies
+\begin{figure*}
+  %
+  \begin{tabular}{lcr}
+    \includegraphics[width=\figfactor\textwidth]{fig/res_w.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/res_tau.pdf}
+  \end{tabular}
+  %
+	\caption{ Fractional residual errors for fits of dimensionless \qnm{} central frequencies and decay times (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. }
+  %
+  \label{fig:qnm_err}
   %
 \end{figure*}
 %
