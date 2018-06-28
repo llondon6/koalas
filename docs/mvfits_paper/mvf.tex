@@ -170,7 +170,7 @@ For the so-called \textit{Phenom} models, the frequency domain multipoles, $\til
 %
 In the case of \texttt{PhenomHM} and derivative models, fits for the \qnm{} frequencies are used in the process of mapping $\tilde{h}_{22}(f)$ into other $\tilde{h}\LM(f)$ \check{[X]}.
 %
-In that setting, the \qnm{} frequencies impact the morphology of each $h\LM$ in not only \rd{}, but also merger and late inspiral.
+In that setting, it is demonstrated that \qnm{} frequencies correlate with the morphology of each $h\LM$ in not only \rd{}, but also merger and late inspiral, as is implied by the causal connectedness of pre and post merger.
 %
 %
 \par For models that assist tests of the \nht{}, and thereby only include precise \rd{s}, the perspective of \eqn{hrd}'s second and third lines are used to write each spherical harmonic multipole moment as
@@ -381,7 +381,7 @@ This rough algorithmic picture encapsulated in Alg. \ref{alg:pgreedy}.
 %
 \subsection{Greedy Multivariate Polynomial Fitting}
 %
-The study of smooth scalar functions (e.g. $\vecf$) often centers about the Taylor series expansion.
+The study of smooth scalar functions (e.g. $f(\vec{x})$) often centers about the Taylor series expansion.
 %
 In that instance, it is clear that any infinitely differentiable scalar function of many variables can be represented in terms of its derivatives by
 %
@@ -757,7 +757,7 @@ In the left panel, we have scaled $1/\tau_{\lmn}$ by factors for $m/(n+1/2)$ to 
 % Equations for mixing coefficients
 \begin{widetext}
   \input{src/ysprod_eqns}
-\end{widetext}
+\end{widetext} 
 
 % Plots of mixing coefficients
 \begin{figure*}
@@ -767,6 +767,17 @@ In the left panel, we have scaled $1/\tau_{\lmn}$ by factors for $m/(n+1/2)$ to 
   \end{tabular}
   %
 	\caption{ Spherical-spheroidal harmonic mixing coefficients. }
+  %
+\end{figure*}
+
+% Plots of mixing coefficients
+\begin{figure*}
+  %
+  \begin{tabular}{lcr}
+    \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_3.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_4.pdf}
+  \end{tabular}
+  %
+	\caption{ Percentage residual errors for spherical-spheroidal harmonic mixing coefficient models. }
   %
 \end{figure*}
 
