@@ -72,7 +72,7 @@ superscriptaddress,10pt]{revtex4-1}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Title page %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\title{Notes on modeling for Kerr black holes: Basis learning, QNM frequencies, and spherical-spheroidal mixing coefficients }
+\title{On modeling for Kerr black holes: Basis learning, QNM frequencies, and spherical-spheroidal mixing coefficients }
 
 \author{L. London}
 \affiliation{School of Physics and Astronomy, Cardiff University, The Parade, Cardiff, CF24 3AA, United Kingdom}
@@ -80,7 +80,7 @@ superscriptaddress,10pt]{revtex4-1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Abstract %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
 	%
-	The ongoing direct detection of gravitational wave signals is aided by representative models of theoretical predictions. In particular, the process of model based detection, and subsequent comparison of signals the general relativity's predictions are aided by the modeling of information related to perturbed Kerr black holes. Here, we summarize recent methods and models for the analytically understood gravitational wave spectra (quasi-normal mode frequencies), and harmonic structure of Kerr black holes (mixing coefficients between spherical and spheroidal harmonics). Towards the construction of these models, two algorithms, GMVP and GMVR, for the automated polynomial and rational modeling of general dimensional complex scalars are presented.
+	The ongoing direct detection of gravitational wave signals is aided by representative models of theoretical predictions. In particular, the process of model based detection, and subsequent comparison of signals the general relativity's predictions are aided by the modeling of information related to perturbed Kerr black holes. Here, we summarize recent methods and models for the analytically understood gravitational wave spectra (quasi-normal mode frequencies), and harmonic structure of Kerr black holes (mixing coefficients between spherical and spheroidal harmonics). Towards the construction of these models, two algorithms, GMVP and GMVR, for the automated polynomial and rational modeling of general dimensional complex scalars are presented. GMVR is a quasi-linear numerical method for interpolating rational functions. It therefore represents a solution to the problem of Runge's phenomenon.
 	%
 \end{abstract}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -392,7 +392,7 @@ In that instance, it is clear that any infinitely differentiable scalar function
   &\approx \sum_{k=0}^{K} \, \frac{1}{k!} \, (\vec{x} \cdot \vec{\nabla}')^{k} \, f(\vec{x}\,') |_{\vec{x}\,'=\vec{h}}
 \end{align}
 %
-From the first to second line of \eqn{eq:mvt}, we have used the definition of the exponential function (i.e. its series expansion form).
+From the first to second line of \eqn{eq:mvt}, we have used the definition of the exponential function (i.e. its series expansion).
 %
 In the second line, the equality has been replaced by an approximation as we have limited the linear representation to $K$ terms.
 %
@@ -507,7 +507,7 @@ We are free to relabel the indices such that \eqn{eq:rat2} is manifestly linear 
 %
 At this stage, we will also explicitely consider the $j^\mathrm{th}$ samples of the domain, and so refer to $\vec{x}$ as $\vec{x}_j$.
 %
-The adjustments of perspective result in
+These adjustments of perspective result in
 %
 \begin{align}
   \label{eq:rat3}
@@ -551,7 +551,7 @@ In this contemplation, it may be that shown that $n$ may be entirely regelated t
 %
 It is in this sense that \eqn{eq:pinv2} is insufficient to generally solve for $\vec{\alpha}$.
 %
-\par The key to robustly solving for $\vec{\alpha}$ lies in the iterative refinement of $\vec{\alpha}$.
+\par The key to robustly solving for $\vec{\alpha}$ lies in the iterative refinement.
 %
 Specifically, we note that \eqn{eq:rat2} may be modified to iteratively minimize the impact of numerical noise on $\hat{P}$.
 %
@@ -659,19 +659,42 @@ In each case, the underlying 1D parameter in each case will be the dimensionless
 \section{Results}
 \label{results}
 %
-\par We briefly review the application of \gmvr{} to a toy problem.
+\par We briefly review the application of \gmvr{} to a toy problem wherein a scalar rational function of two variables is treated.
 %
 % Cross validation and removal of the last added basis symbol are used to assess model accuracy.
 %
 % \par
 %
-We then present the application of \gmvp{} and \gmvr{} to the respective modeling of \qnm{} frequencies, and harmonic mixing coefficients.
+We then present two applications to \gw{s}.
 %
-While each case is an instance of modeling on a 1D domain, we note that higher dimensional cases have been treated elsewhere \cite{London:2018gaq}.
+First we apply \gmvp{} to the modeling of complex valued Kerr \qnm{} frequencies.
+%
+Second, we apply \gmvr{} to the modeling of spin -2 spherical-spheroidal harmonic mixing coefficients.
+%
+While only 1D and 2D domains are treated here, we note that Ref. \cite{London:2018gaq} has used a version of \gmvp{} to model the \qnm{} excitation amplitudes in a 4D parameter space.
 %
 \subsection{\gmvr{} Toy Problem}
 %
-Here
+Here we demonstrate \gmvr{}
+%
+\begin{figure*}
+  %
+  \includegraphics[width=\textwidth]{fig/issue3_summary.pdf}
+  %
+	\caption{ Standard summary plot for \gmvr. }
+  %
+\end{figure*}
+
+
+%
+\begin{figure}[htb]
+  %
+  \includegraphics[width=0.45\textwidth]{fig/issue3_pgreedy.pdf}
+  %
+	\caption{ Convergence of greedy process for \gmvr{} toy problem. }
+  %
+\end{figure}
+
 %
 \subsection{Modeling \qnm{} frequencies using \gmvp{}}
 %
@@ -757,7 +780,7 @@ In the left panel, we have scaled $1/\tau_{\lmn}$ by factors for $m/(n+1/2)$ to 
 % Equations for mixing coefficients
 \begin{widetext}
   \input{src/ysprod_eqns}
-\end{widetext} 
+\end{widetext}
 
 % Plots of mixing coefficients
 \begin{figure*}
