@@ -2050,8 +2050,33 @@ def rotate3(vector,alpha,beta,gamma,invert=False):
     #
     return ans
 
-#
-def hilbertclean( complex_data ):
+# Look for point reflections in vector and correct
+def reflect_unwrap( vec ):
+    '''Look for point reflections in vector and correct'''
 
     #
-    return None
+    from numpy import array,sign,zeros_like
+
+    #
+    ans = array(vec)
+
+    #
+    for k,v in enumerate(vec):
+
+        #
+        if (k>0) and ( (k+1) < len(vec) ):
+
+            #
+            l = vec[k-1]
+            c = vec[k]
+            r = vec[k+1]
+
+            #
+            apply_reflection = (sign(l)==sign(r)) and (sign(l)==-sign(c))
+            if apply_reflection:
+
+                #
+                ans[k] *= -1
+
+    #
+    return ans

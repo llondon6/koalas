@@ -410,7 +410,7 @@ Note that in practice it may be useful to encode elements of $\mlam_{bulk}$ with
 %
 \par The action, $\mathcal{A}(\mlam_{trial})$, required by Alg. (\ref{alg:pgreedy}) encompasses the evaluation of \eqn{eq:linsol1} to solve for the basis coefficients, $\mu_k$, and the calculation of the modeling error.
 %
-An explicit sktech of this is given by Alg. (\ref{alg:A_gmvp}).
+An explicit sketch of this is given by Alg. (\ref{alg:A_gmvp}).
 %
 \hspace{1cm}
 {\scriptsize
@@ -424,7 +424,7 @@ An explicit sktech of this is given by Alg. (\ref{alg:A_gmvp}).
     \State {\bf Input:} $\mlam_{trial}$
     \vskip 10pt
     \State Calculate $\mu_k$ via \eqn{eq:linsol1}.
-    \State Calculate the model representation error, e.g.: $\epsilon = ||\hatU \vecmu - \vec{f}||/||\vec{f}||$, where $var$ is the variance of the respective list.
+    \State Calculate the model representation error, e.g.: $\epsilon = ||\hatU \vecmu - \vec{f}||/||\vec{f}||$, where $||a||$ is the L-2 norm of $a$.
     \vskip 10pt
     \State {\bf Output:} $\epsilon$
   \end{algorithmic}
@@ -675,7 +675,12 @@ While only 1D and 2D domains are treated here, we note that Ref. \cite{London:20
 %
 \subsection{\gmvr{} Toy Problem}
 %
-Here we demonstrate \gmvr{}
+Let's start by applying \gmvr{} to a fiducial scalar function,
+%
+\begin{align}
+  %
+  f(x_0,x_1) = 50 + \frac{1.1 +0.2 x_0+0.5 x_1+x_0 x_1}{ 0.9 + x_0^2 + x_1^2 }
+\end{align}
 %
 \begin{figure*}
   %

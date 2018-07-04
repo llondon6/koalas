@@ -307,7 +307,7 @@ class mvrfit:
         from matplotlib.pyplot import plot,figure,title,xlabel,ylabel,legend,subplots,gca,sca,xlim,yticks
         from numpy import diff,linspace,meshgrid,amin,amax,ones,array,angle,ones,sqrt,pi,mean
         from mpl_toolkits.mplot3d import Axes3D
-        from scipy.stats import norm
+        from scipy.stats import norm,uniform
         from matplotlib.ticker import ScalarFormatter
 
         # Handle optinal map input: transform the range values for plotting use
@@ -334,8 +334,12 @@ class mvrfit:
         xmin,xmax=xlim()
         x = linspace( mu-3*std, mu+3*std, 2e2 )
         pdf =  norm.pdf( x, mu, std ) * sum(n) * (bins[1]-bins[0])
+
+        umu,ustd = uniform.fit( res )
+        updf =  uniform.pdf( x, umu, ustd ) * sum(n) * (bins[1]-bins[0])
         # pdf =  norm.pdf( x, mu, std ) * len(res) * (bins[1]-bins[0])
-        plot( x, pdf, color=color, label='Normal Approx.' )
+        plot( x, pdf, color=color, label='Normal Approx.', ls='-' )
+        plot( x, updf, color='k', label='Uniform Approx.', ls='--' )
         #xlim(lim(bins))
         xfmt = ScalarFormatter()
         xfmt.set_useOffset(0)
@@ -476,7 +480,7 @@ class mvrfit:
         scalar_range = this.scalar_range
 
         # Plot the raw data points
-        ax.scatter( domain[:,0], domain[:,1], _map(scalar_range), marker='o', color='k',zorder=1, facecolors='k',label='Raw Data')
+        ax.scatter( domain[:,0], domain[:,1], _map(scalar_range), marker='o', color='k',zorder=1, facecolors='k',label='Training Data')
 
         # Setup grid points for model
         padf = 0.1
@@ -495,6 +499,10 @@ class mvrfit:
         # ax = gcf().add_subplot(122,projection='3d')
         # ax.scatter( domain[:,0], domain[:,1], this.residuals.reshape( domain[:,0].shape ), marker='o', color='b',zorder=1, facecolors='k',label='Residuals')
         # legend(frameon=False)
+
+        #
+        ax.set_xlabel('$x_0$',size=24)
+        ax.set_ylabel('$x_1$',size=24)
 
         #
         if show:
@@ -537,7 +545,7 @@ class mvrfit:
         axhline( est1, color='k', linestyle=':' )
         axhline( est0, color='k', linestyle='--' )
         # xlabel('$k$ (iteration)')
-        ylabel(r'$\mu$ (estimator)')
+        ylabel(r'Estimator, $\epsilon$')
         yfmt = ScalarFormatter()
         yfmt.set_useOffset(mean(est_list))
         ax1.yaxis.set_major_formatter(yfmt)
@@ -548,7 +556,7 @@ class mvrfit:
         plot(x,linestyle='-',color=clr[0] )
         plot(x,'ok',alpha=0.7,mec='k',mfc='none' )
         xlabel('$k$')
-        ylabel(r'$\mu-\mu_0$ ')
+        ylabel(r'$\epsilon-\epsilon_0$ ')
         if len(est_list)>2: yscale('log')
         #
         if show:
@@ -663,6 +671,7 @@ def gmvrfit( domain,
              plot = False,
              show = False,
              verbose = False,
+             take_raw_symbols = True,
              apply_negative = True,
              **kwargs ):
 
@@ -691,7 +700,7 @@ def gmvrfit( domain,
         trial_numerator_symbols   = [ k[0] for k in trial_boundary if k[1] ]
         trial_denominator_symbols = [ k[0] for k in trial_boundary if not k[1] ]
         # NOTE that here we tell mvrfit to use the raw input symbols, and NOT automatically adjust them according to range centering
-        foo = mvrfit(domain,scalar_range,trial_numerator_symbols,trial_denominator_symbols,take_raw_symbols=True)
+        foo = mvrfit(domain,scalar_range,trial_numerator_symbols,trial_denominator_symbols,take_raw_symbols=take_raw_symbols)
         # estimator = foo.frmse
         estimator = foo.frmse
         return estimator,foo
@@ -2153,8 +2162,8 @@ class ngreedy:
         offset = 1 if this.reference_estimator_list is None else len(this.reference_estimator_list)
         if this.reference_estimator_list:
             x = range(1,len(this.reference_estimator_list)+1)
-            plot( x, this.reference_estimator_list, '-ob', label = 'Reference Values' )
-        plot( range(offset,len(this.estimator_list)+offset), this.estimator_list, '-vr', label='Negative Greedy Steps' )
+            plot( x, this.reference_estimator_list, '-ob', label = 'Positive Greedy Steps',ms=8  )
+        plot( range(offset,len(this.estimator_list)+offset), this.estimator_list, '-sr', label='Negative Greedy Steps',ms=12,mfc='none' )
         xlabel('Iteration #')
         ylabel('Estimator Value')
         title('Convergence: Negative Greedy')

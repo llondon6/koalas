@@ -204,7 +204,7 @@ def complex2str( x, precision=None, latex=False ):
             # Write phase as positive number
             phase = phase+2*pi if phase<0 else phase
             # Create string
-            fmt = '%s.%ig'%(r'%',precision)
+            fmt = '%s.%if'%(r'%',precision)
             # fmt = '%s1.%if'%(r'%',precision)
             ans_ = '%s*%s%s%s' % (fmt, 'e^{' if latex else 'exp(' ,fmt, 'i}' if latex else 'j)') % (amp,phase)
             if latex: ans_ = ans_.replace('*',r'\,')
