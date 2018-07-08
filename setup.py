@@ -27,5 +27,6 @@ setup(
         'Intended Audience :: Developers',
         'Topic :: Software Development',
         'Topic :: Scientific/Engineering'
-    )
+    ),
+    license='MIT'
 )
