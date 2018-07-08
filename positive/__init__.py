@@ -4,7 +4,6 @@
 # -------------------------------------------------------- #
 import os,shutil
 import glob
-import urllib2
 import tarfile,sys
 import time
 import subprocess
@@ -24,14 +23,14 @@ import copy
 
 # list all py files within this directory
 from os.path import dirname, basename, isdir, realpath
-modules = [ basename(f)[:-3] for f in glob.glob(dirname(__file__)+"/*.py") if not ('__init__.py' in f) ]
+modules = list( basename(f)[:-3] for f in glob.glob(dirname(__file__)+"/*.py") if not ('__init__.py' in f) )
 
 # Dynamically import all modules within this folder (namespace preserving)
 for module in modules:
-    exec 'from %s import *' % module
+    exec('from .%s import *' % module)
 
 # Cleanup
-del modules, module, f
+del modules, module
 
 # Setup plotting backend
 alert('Applying custom matplotlib settings.','positive')

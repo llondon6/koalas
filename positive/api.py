@@ -1,6 +1,6 @@
 #
 from positive import *
-from strings import *
+from .strings import *
 
 #
 def parsin( keys, dict, default=False, verbose=False, fname='*', **kwarg ):
@@ -27,7 +27,7 @@ def parsin( keys, dict, default=False, verbose=False, fname='*', **kwarg ):
         if key in dict:
 
             if verbose:
-                print('[%s]>> Found "%s" or variant thereof.' % (fname,key) )
+                print(('[%s]>> Found "%s" or variant thereof.' % (fname,key) ))
 
             value = dict[key]
             break
@@ -63,7 +63,7 @@ def grep( flag, file_location, options=None, comment=None ):
                 raise TypeError('Hi there!! Comment input must be string or list of stings. :D ')
             # Masking in Python:
             mask = [line[0]!=commet for line in output]
-            output = [output[k] for k in xrange(len(output)) if mask[k]]
+            output = [output[k] for k in range(len(output)) if mask[k]]
 
     # Return the list of lines
     return output
@@ -110,9 +110,9 @@ def rfind( path , pattern = None, verbose = False, ignore = None ):
                 if pattern in filename:
                     parts = os.path.join(root, filename).split(pattern)
                     if len(parts)==2:
-                        if verbose: print magenta('  ->  '+parts[0])+cyan(pattern)+magenta(parts[1])
+                        if verbose: print(magenta('  ->  '+parts[0])+cyan(pattern)+magenta(parts[1]))
                     else:
-                        if verbose: print magenta('  ->  '+os.path.join(root, filename) )
+                        if verbose: print(magenta('  ->  '+os.path.join(root, filename) ))
                     matches.append(os.path.join(root, filename))
 
     return matches
@@ -148,7 +148,7 @@ def alert(msg,fname=None,say=False,output_string=False,heading=None,header=None,
             _msg = '\n# %s #\n%s\n# %s #\n'%(hl,bold(_msg),hl)
         if verbose:
             if not output_string:
-                print _msg
+                print(_msg)
             else:
                 return _msg
 
@@ -180,7 +180,7 @@ def warning(msg,fname=None,output_string=False,heading=None,header=None,pattern=
         hl = ('-~' if pattern is None else pattern) * int( len(_msg.replace('033','') )/2 )
         _msg = '\n# %s #\n%s\n# %s #\n'%(hl,bold(_msg),hl)
     if not output_string:
-        if verbose: print _msg
+        if verbose: print(_msg)
     else:
         return _msg
 

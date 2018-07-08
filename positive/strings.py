@@ -234,7 +234,7 @@ def center_space(str):
     return ' '*int(a)
 def center_print(str):
     pad = center_space(str)
-    print pad + str
+    print(pad + str)
 
 
 # Print a short about statement to the prompt
@@ -247,7 +247,7 @@ def print_hl(symbol="<>"):
     if x:
         rows, columns = x.split()
         if columns:
-            print symbol*int(float(columns)/float(len(symbol)))
+            print(symbol*int(float(columns)/float(len(symbol))))
 
 
 # Function that returns randome strings of desired length and component of the desired set of characters

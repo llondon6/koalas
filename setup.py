@@ -16,5 +16,5 @@ setup(name='positive',
       package_data={'./': ['docs/*', 'examples/*', 'factory/*', 'gallery/*', 'issues/*']},
       url='https://github.com/llondon6/positive',
       download_url='https://github.com/llondon6/positive/archive/master.zip',
-      install_requires=['numpy','scipy','matplotlib'],
+      install_requires=['numpy','scipy','matplotlib','h5py','six'],
      )

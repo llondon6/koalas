@@ -811,7 +811,7 @@ class pn:
             this.h[l,-m] = (-1)**l * this.h[l,m].conj()
         #
         alert('Updating lmlist to inlcude m<0 multipoles.')
-        this.lmlist = this.h.keys()
+        this.lmlist = list(this.h.keys())
 
 
     # Use previously calculated strain waveforms to calculate psi4
@@ -1337,14 +1337,14 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     T += ringdown_pad+td_window_width
     input_T = N*dt
     if verbose:
-        print '>> The total time needed for the waveform is %g'%T
-        print '>> The total time provided for the waveform is %g'%input_T
-        if force_t: print '>> The time provided for the waveform will not be adjusted according to the internal estimate becuase teh force_t=True input has been given.'
+        print('>> The total time needed for the waveform is %g'%T)
+        print('>> The total time provided for the waveform is %g'%input_T)
+        if force_t: print('>> The time provided for the waveform will not be adjusted according to the internal estimate becuase teh force_t=True input has been given.')
     if (input_T < T) and (not force_t):
         input_N = N
         N = int( float(N*T)/input_T )
         if verbose:
-            print '>> The number of samples is being changed from %i to %i.'%(input_N,N)
+            print('>> The number of samples is being changed from %i to %i.'%(input_N,N))
     ## INPUTS: N, dt (in some form)
     # Given dt and N (double sided), Create the new frequency domain
     N = int(N)
@@ -1355,7 +1355,7 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     # Apply the time shift
     model_pha -= 2*pi*(time_shift+ringdown_pad)*model_f
 
-    if verbose: print '>> shift = %f'%time_shift
+    if verbose: print('>> shift = %f'%time_shift)
     # figure()
     # plot( model_f[mask],  intrp_diff(2*pi*model_f,model_pha)[mask] )
     # axhline(0,color='k',alpha=0.5)
@@ -1366,7 +1366,7 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     fd_k_start = find( model_f > fstart )[0]
     t_start = dmodel_pha[ fd_k_start ] - time_shift
     if t_start > 0: t_start -= (N-1)*dt
-    if verbose: print 't_start = %f'%t_start
+    if verbose: print('t_start = %f'%t_start)
     # Define the index end of the window; here we take use of the point that
     # dmodel_pha=0 corresponds to the end of the time vector as to corroborate
     # with the application of time_shift
@@ -1439,7 +1439,7 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     #----------------------------------------------#
     # ind_shift = -argmax(abs(ht))+len(ht)/2
     # ht = ishift( ht, ind_shift )
-    if verbose: print '>> The time domain waveform has a peak at index %i of %i'%(argmax(abs(ht)),len(t))
+    if verbose: print('>> The time domain waveform has a peak at index %i of %i'%(argmax(abs(ht)),len(t)))
     t -= t[ argmax(abs(ht)) ]
 
     if __plot__:

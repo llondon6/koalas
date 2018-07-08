@@ -1,7 +1,9 @@
 #
+from __future__ import print_function
 from positive import *
 from positive.api import *
 from positive.io import *
+from six.moves import urllib
 
 # Function to copy files
 def copyfile(src,dst,verbose=True,overwrite=False):
@@ -27,7 +29,7 @@ def untar(tar_file,savedir='',verbose=False,cleanup=False):
     tar.extractall(savedir)
     tar.close()
     if verbose:
-        print ">> untar: Found %i files in tarball." % len(internal_files)
+        print(">> untar: Found %i files in tarball." % len(internal_files))
     if cleanup:
         os.remove(tar_file)
 
@@ -41,7 +43,7 @@ def download( url, save_path='', save_name='', size_floor=[], verbose=False, ove
     # Create full path of file that will be downloaded using URL
     path,file_type = os.path.splitext(url)
     file_location = save_path + save_name
-    u = urllib2.urlopen(url)
+    u = urllib.request.urlopen(url)
 
     # Determine whether the download is desired
     DOWNLOAD = os.path.isfile(file_location) and overwrite
@@ -74,20 +76,20 @@ def download( url, save_path='', save_name='', size_floor=[], verbose=False, ove
                 status = r"   Download Progress:%1.2f MB downloaded at %1.2f Mb/sec     " % (mb_downloaded,(len(buffer)/(10.0**6.0))/dt)
             status = status + chr(8)*(len(status)+1)
             k += 1
-            if verbose: print status,
+            if verbose: print(status, end=' ')
         # Close file
         f.close()
         # Get the final time
         tf = time.time()
         # Show completion notice
-        if verbose: print "   Download of %1.4f MB completed in %1.4f sec" % ((file_size_dl/(10.0**6.0)),tf-t0)
-        if verbose: print "   Average download rate: %1.4f Mb/sec" % ((file_size_dl/(10.0**6.0))/(tf-t0))
-        if verbose: print('   Saving:"%s"' % file_location )
+        if verbose: print("   Download of %1.4f MB completed in %1.4f sec" % ((file_size_dl/(10.0**6.0)),tf-t0))
+        if verbose: print("   Average download rate: %1.4f Mb/sec" % ((file_size_dl/(10.0**6.0))/(tf-t0)))
+        if verbose: print(('   Saving:"%s"' % file_location ))
         # If the size of this file is below the floor, delete it.
         if size_floor:
             if file_size_dl<size_floor:
                 os.remove(file_location)
-                if verbose: print( '   *File is smaller than %i bytes and has been deleted.' % size_floor )
+                if verbose: print(( '   *File is smaller than %i bytes and has been deleted.' % size_floor ))
                 done = True
     else:
         #
@@ -172,7 +174,7 @@ class smart_object:
         thisfun = inspect.stack()[0][3]
 
         #
-        for attr in this.__dict__.keys():
+        for attr in list(this.__dict__.keys()):
             value = this.__dict__[attr]
             alert( '%s = %s ' % (yellow(attr),green(str(value))) )
 
@@ -200,8 +202,8 @@ class smart_object:
         keys = ('verbose','verb')
         VERB = parsin( keys, kwargs )
         if VERB:
-            print '[%s]>> VERBOSE mode on.' % thisfun
-            print 'Lines with %s will not be considered.' % comment
+            print('[%s]>> VERBOSE mode on.' % thisfun)
+            print('Lines with %s will not be considered.' % comment)
 
         # Get rid of partial line comments. NOTE that full line comments have been removed in grep
         done = False
@@ -228,7 +230,7 @@ class smart_object:
         # NOTE that this will mean that 1,2,3,4 5 is treated as 1,2,3,4,5
         part[1] = (','.join( [ p for p in part[1].split(' ') if p ] )).replace(',,',',')
 
-        if VERB: print( '   ** Trying to learn:\n \t\t[%s]=[%s]' % (attr,part[1]))
+        if VERB: print(( '   ** Trying to learn:\n \t\t[%s]=[%s]' % (attr,part[1])))
         # if True: print( '   ** Trying to learn:\n \t\t[%s]=[%s]' % (attr,part[1]))
 
         # Correctly formatted lines will be parsed into exactly two parts
@@ -243,10 +245,10 @@ class smart_object:
                         is_number = False
                         if 'unstring' in this.__dict__:
                             if this.__unstring__: val = val.replace("'",'').replace('"','')
-                        if VERB: print( '>> Learning character: %s' % val )
+                        if VERB: print(( '>> Learning character: %s' % val ))
                         value.append( val )
                     else:                       # Else
-                        if VERB: print( '>> Learning number: %s' % val)
+                        if VERB: print(( '>> Learning number: %s' % val))
                         if val:
                             # NOTE that the line below contains eval rather than float becuase we want our data collation process to preserve type
                             value.append( eval(val) )
@@ -261,7 +263,7 @@ class smart_object:
 
             if this.overwrite is False:
                 # If the attr does not already exist, then add it
-                if not ( attr in this.__dict__.keys() ):
+                if not ( attr in list(this.__dict__.keys()) ):
                     setattr( this, attr, value )
                 else:
                     # If it's already a list, then append
@@ -375,7 +377,7 @@ def h5tofiles( h5_path, save_dir, file_filter= lambda s: True, cleanup = False, 
             if this_dir[-1] is not '/': this_dir = this_dir + '/'
             mkdir( this_dir )
             #
-            for key in group.keys():
+            for key in list(group.keys()):
                 #
                 if type(group[key]) is h5py._hl.group.Group or \
                    type(group[key]) is h5py._hl.files.File:
@@ -391,7 +393,7 @@ def h5tofiles( h5_path, save_dir, file_filter= lambda s: True, cleanup = False, 
                         data = numpy.zeros( group[key].shape )
                         group[key].read_direct(data)
                         #
-                        print( '[%s]>> ' % thisfun + bold('Writing') + ': "%s"'% data_file_path)
+                        print(( '[%s]>> ' % thisfun + bold('Writing') + ': "%s"'% data_file_path))
                         numpy.savetxt( data_file_path, data, delimiter="  ", fmt="%20.8e")
                 else:
                     #
@@ -407,7 +409,7 @@ def h5tofiles( h5_path, save_dir, file_filter= lambda s: True, cleanup = False, 
         h5_file = h5py.File(h5_path,'r')
 
         # Begin pasing each key, and use group to recursively make folder trees
-        for key in h5_file.keys():
+        for key in list(h5_file.keys()):
 
             # reset output directory
             this_dir = save_dir
@@ -424,12 +426,12 @@ def h5tofiles( h5_path, save_dir, file_filter= lambda s: True, cleanup = False, 
 
             else: # Else, if it's a writable object
 
-                print('[%s]>> type(%s) = %s' % (thisfun,key,type(ref)) )
+                print(('[%s]>> type(%s) = %s' % (thisfun,key,type(ref)) ))
 
         # If the cleanup option is true, delete the original h5 file
         if cleanup:
             #
-            print('[%s]>> Removing the original h5 file at: "%s"' % (thisfun,h5_path) )
+            print(('[%s]>> Removing the original h5 file at: "%s"' % (thisfun,h5_path) ))
             os.remove(h5_path)
 
     else:
@@ -465,7 +467,7 @@ def replace_line(file_path, pattern, substitute, **kwargs):
     keys = ('verbose','verb')
     VERB = parsin( keys, kwargs )
     if VERB:
-        print('[%s]>> VERBOSE mode on.' % thisfun)
+        print(('[%s]>> VERBOSE mode on.' % thisfun))
 
     #
     if substitute[-1] is not '\n':
@@ -475,20 +477,20 @@ def replace_line(file_path, pattern, substitute, **kwargs):
     if os.path.isfile(file_path):
         #
         if VERB:
-            print( '[%s]>> Found "%s"' % (thisfun,file_path) )
+            print(( '[%s]>> Found "%s"' % (thisfun,file_path) ))
         # Create temp file
         fh, abs_path = mkstemp()
-        if VERB: print( '[%s]>> Temporary file created at "%s"' % (thisfun,abs_path) )
+        if VERB: print(( '[%s]>> Temporary file created at "%s"' % (thisfun,abs_path) ))
         new_file = open(abs_path,'w')
         old_file = open(file_path)
         for line in old_file:
             pattern_found = line.find(pattern) != -1
             if pattern_found:
                 if VERB:
-                    print( '[%s]>> Found pattern "%s" in line:\n\t"%s"' % (thisfun,pattern,line) )
+                    print(( '[%s]>> Found pattern "%s" in line:\n\t"%s"' % (thisfun,pattern,line) ))
                 new_file.write(substitute)
                 if VERB:
-                    print( '[%s]>> Line replaced with:\n\t"%s"' % (thisfun,substitute) )
+                    print(( '[%s]>> Line replaced with:\n\t"%s"' % (thisfun,substitute) ))
             else:
                 new_file.write(line)
         # Close temp file
@@ -500,26 +502,26 @@ def replace_line(file_path, pattern, substitute, **kwargs):
         # Move new file
         move(abs_path, file_path)
         # NOTE that the temporary file is automatically removed
-        if VERB: print( '[%s]>> Replacing original file with the temporary file.' % (thisfun) )
+        if VERB: print(( '[%s]>> Replacing original file with the temporary file.' % (thisfun) ))
     else:
         #
         if VERB:
-            print( '[%s]>> File not found at "%s"' % (thisfun,file_path) )
+            print(( '[%s]>> File not found at "%s"' % (thisfun,file_path) ))
         if VERB:
-            print( '[%s]>> Creating new file at "%s"' % (thisfun,file_path) )
+            print(( '[%s]>> Creating new file at "%s"' % (thisfun,file_path) ))
         #
         file = open( file_path, 'w' )
         if substitute[-1]!='\n':
             substitute = substitute + '\n'
         #
         if VERB:
-            print( '[%s]>> Writing "%s"' % (thisfun,substitute) )
+            print(( '[%s]>> Writing "%s"' % (thisfun,substitute) ))
         #
         file.write(substitute)
         file.close()
     #
     if VERB:
-        print('[%s] All done!',thisfun)
+        print(('[%s] All done!',thisfun))
 
 
 # Simple function to determine whether or not a string is intended to be a

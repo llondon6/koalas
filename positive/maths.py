@@ -62,7 +62,7 @@ class smooth:
 
         #
         err,smo = [],[]
-        width_range = range(3,min(50,int(len(this.scalar_range)/2)))
+        width_range = list(range(3,min(50,int(len(this.scalar_range)/2))))
         #
         for j,k in enumerate(width_range):
             smo.append( smooth(this.scalar_range,k,method='average').answer )
@@ -214,7 +214,7 @@ def sunwrap( a ):
     b[nanmap] = -200*pi*abs(amax(b[isfinite(b)]))
 
     # Sort
-    chart = sorted(  range(len(b))  ,key=lambda c: b[c])
+    chart = sorted(  list(range(len(b)))  ,key=lambda c: b[c])
 
     # Apply the sort
     c = b[ chart ]
@@ -226,7 +226,7 @@ def sunwrap( a ):
         d += 2*pi
 
     # Re-order
-    rechart = sorted(  range(len(d))  ,key=lambda r: chart[r])
+    rechart = sorted(  list(range(len(d)))  ,key=lambda r: chart[r])
 
     # Restore non-finites
     e = d[ rechart ]
@@ -593,7 +593,7 @@ def findpeaks( y, min_distance = None ):
 
             #
             pks_,locs_ = findpeaks(pks_)
-            print 'length is %i' % len(locs_)
+            print('length is %i' % len(locs_))
 
             #
             if len( locs_ ) > 1 :
@@ -608,7 +608,7 @@ def findpeaks( y, min_distance = None ):
 
             #
             c+=1
-            print c
+            print(c)
 
     #
     return pks,locs
@@ -698,10 +698,10 @@ def maketaper(arr,state,window_type='hann',ramp=True):
             true_ramp = twice_ramp[ true_width: ]
         else:
             proceed = False
-            print a,b
+            print(a,b)
             alert('Whatght!@!')
     else:
-        print 'ramp is false'
+        print('ramp is false')
         if window_type in ('nr'):
             true_ramp = nrwindow(true_width)
         elif window_type in ('exp'):
@@ -999,7 +999,7 @@ def intrp_max( y, domain=None, verbose=False, return_argmax=False, plot = False,
         #
         space = mod( raw_space, len(y)-1 )
         #
-        raw_kspace = range( len(space) )
+        raw_kspace = list(range( len(space)))
 
         #
         if PLOT:
@@ -1024,11 +1024,11 @@ def intrp_max( y, domain=None, verbose=False, return_argmax=False, plot = False,
 
         # IF the clostest point is on the other side of the peak AND there is an assymetry detected
         # THEN make more symmetric by removing points from left or right
-        mask = range( len(raw_suby) )
+        mask = list(range( len(raw_suby)))
         if (right_k < center_k): # and (left_k != len(raw_suby)-1) :
-            mask = range( right_k, len(raw_suby) )
+            mask = list(range( right_k, len(raw_suby)))
         elif (left_k > center_k): # and (right_k != 0) :
-            mask = range( 0, left_k+1 )
+            mask = list(range( 0, left_k+1))
 
         # Apply the mask
         kspace = array([ raw_kspace[v] for v in mask ])
@@ -1056,11 +1056,11 @@ def intrp_max( y, domain=None, verbose=False, return_argmax=False, plot = False,
             kspace_max = kspace_maxes[ argmax( intrp_suby(kspace_maxes) ) ]
         except:
             warning('somthing\'s wrong folks ....')
-            print kspace_maxes
+            print(kspace_maxes)
             from matplotlib import pyplot as pp
             pp.figure()
             from numpy import isnan
-            print sum(isnan(y))
+            print(sum(isnan(y)))
             pp.plot( kspace, suby, '-o' )
             pp.title( diff(lim(c)) )
             pp.show()
@@ -1082,13 +1082,13 @@ def intrp_max( y, domain=None, verbose=False, return_argmax=False, plot = False,
 
         max_val = intrp_suby(kspace_max)
         index_arg_max = spline( raw_kspace, raw_space, k=1, s=0 )(kspace_max)
-        arg_max = spline( range(len(t)), t )( index_arg_max )
+        arg_max = spline( list(range(len(t))), t )( index_arg_max )
 
         #
         if verbose:
-            print '\n>> Results of intrp_max:\n%s' % ( '--'*20 )
-            print '    intrp_max \t = \t %f' % max_val
-            print 'intrp_arg_max \t = \t %f\n' % arg_max
+            print('\n>> Results of intrp_max:\n%s' % ( '--'*20 ))
+            print('    intrp_max \t = \t %f' % max_val)
+            print('intrp_arg_max \t = \t %f\n' % arg_max)
 
         #
         if PLOT:
@@ -1141,7 +1141,7 @@ def intrp_max_depreciated( y,
     from numpy import linspace,argmax
 
     #
-    x = range(len(y)) if domain is None else domain
+    x = list(range(len(y))) if domain is None else domain
 
     #
     yspline = spline( x, y )
@@ -1191,7 +1191,7 @@ def expsin_window( N ):
     A -= min(A)
     A /= max(A)
     #
-    ans = hstack( [A, A[range(len(A)-1,0,-1)] ] ) if 2*len(A)==N else hstack( [A, A[range(len(A)-1,1,-1)] ] )
+    ans = hstack( [A, A[list(range(len(A)-1,0,-1))] ] ) if 2*len(A)==N else hstack( [A, A[list(range(len(A)-1,1,-1))] ] )
     #
     return ans
 
@@ -1237,7 +1237,7 @@ def sinc_interp(x, s, u):
     """
 
     if len(x) != len(s):
-        raise Exception, 'x and s must be the same length'
+        raise Exception('x and s must be the same length')
 
     # Find the period
     T = s[1] - s[0]
@@ -1276,7 +1276,7 @@ def nrwindow( N ):
     #
     A = spline(f,a)( linspace(0,1,int(N)/2) )
     #
-    ans = hstack( [A, A[range(len(A)-1,0,-1)] ] ) if 2*len(A)==N else hstack( [A, A[range(len(A)-1,1,-1)] ] )
+    ans = hstack( [A, A[list(range(len(A)-1,0,-1))] ] ) if 2*len(A)==N else hstack( [A, A[list(range(len(A)-1,1,-1))] ] )
     #
     return ans
 
@@ -1838,7 +1838,7 @@ def smoothness(y,r=20,stepsize=1,domain=None,unsigned=False):
     from scipy.interpolate import InterpolatedUnivariateSpline as spline
 
     #
-    if domain is None: domain = range(0,len(y))
+    if domain is None: domain = list(range(0,len(y)))
 
     x,u = [],[]
     for k in arange( 0, len(y), stepsize ):
@@ -1963,13 +1963,13 @@ def smoothest_part( data,
     if k.all():
         #
         warning('the data appears to be smooth everywhere; please consider using this function\'s optional inputs to set your smoothing criteria')
-        mask = range(len(data))
+        mask = list(range(len(data)))
     elif k.any():
         clumps,clump_masks = clump(k)
         mask = clump_masks[ argmax( [ len(_) for _ in clump_masks ] ) ]
     else:
         warning('the data appears to not be smooth anywhere; please consider using this function\'s optional inputs to set your smoothing criteria')
-        mask = range(len(data))
+        mask = list(range(len(data)))
 
     # Return answer
     ans = mask

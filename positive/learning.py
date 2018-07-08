@@ -1,5 +1,5 @@
 #
-from maths import *
+from .maths import *
 from positive import *
 
 # Alias for scipy spline
@@ -709,7 +709,7 @@ def gmvrfit( domain,
     # Create a lexicon of symbols to consider for model learning
     maxbulk = mvsyms( domain_dimension, maxdeg )
     # Define the space of all possible degrees bounded above by maxdeg
-    degree_space = range(mindeg,maxdeg+1)
+    degree_space = list(range(mindeg,maxdeg+1))
     # Increment through degrees
     last_min_est,last_d_est = inf,inf
     for deg in degree_space:
@@ -748,8 +748,8 @@ def gmvrfit( domain,
             elif the_estimator_hasnt_changed_since_last_deg_value:
                 exit_msg = 'the estimator hasnt changes since the last degree value'
 
-            print '&& The estimator has changed by %f' % d_est
-            print '&& '+ ('Degree tempering will continue.' if not done else 'Degree tempering has completed becuase %s. The results of the last iteration will be kept.'%exit_msg)
+            print('&& The estimator has changed by %f' % d_est)
+            print('&& '+ ('Degree tempering will continue.' if not done else 'Degree tempering has completed becuase %s. The results of the last iteration will be kept.'%exit_msg))
 
         #
         if (not done) or not ('A' in locals()):
@@ -758,25 +758,25 @@ def gmvrfit( domain,
             last_min_est = est_list[-1]
             last_d_est = d_est
             if verbose:
-                print '&& The current boundary is %s' % boundary
-                print '&& The current estimator value is %f\n' % est_list[-1]
+                print('&& The current boundary is %s' % boundary)
+                print('&& The current estimator value is %f\n' % est_list[-1])
         else:
             if plot:
                 A.answer.plot()
                 A.plot()
             if verbose:
-                print '&& The Final boundary is %s' % boundary
-                print '&& The Final estimator value is %f\n' % est_list[-1]
+                print('&& The Final boundary is %s' % boundary)
+                print('&& The Final estimator value is %f\n' % est_list[-1])
             break
 
-    if verbose: print '\n%s\n# Degree Tempered Positive Greedy Solution:\n%s\n'%(10*'====',10*'====')+str(A.answer)
+    if verbose: print('\n%s\n# Degree Tempered Positive Greedy Solution:\n%s\n'%(10*'====',10*'====')+str(A.answer))
 
     #
     if apply_negative:
         # Apply a negative greedy process to futher refine the symbol content
         B = ngreedy( boundary, action, plot = plot, show=show, plotfun = mvplotfun, verbose = verbose, ref_est_list = est_list )
         #
-        if verbose: print '\n%s\n# Negative Greedy Solution:\n%s\n'%(10*'====',10*'====')+str(B.answer)
+        if verbose: print('\n%s\n# Negative Greedy Solution:\n%s\n'%(10*'====',10*'====')+str(B.answer))
         #
         ans = B.answer
     else:
@@ -787,7 +787,7 @@ def gmvrfit( domain,
     ans.bin['ngreedy_result'] = B if apply_negative else None
 
     #
-    if verbose: print '\nFit Information:\n%s\n'%(10*'----')+str(ans)
+    if verbose: print('\nFit Information:\n%s\n'%(10*'----')+str(ans))
 
     #
     return ans
@@ -818,8 +818,8 @@ def romline(  domain,           # Domain of Map
     if not positive:
         #
         done = False
-        space = range( len(d) )
-        raw_space = range( len(d) )
+        space = list(range( len(d)))
+        raw_space = list(range( len(d)))
         err = lambda x: mean( abs(x) ) # std(x) #
         raw_mask = []
         while not done:
@@ -888,9 +888,9 @@ def positive_romline(   domain,           # Domain of Map
 
     # Some basic validation
     if len(d) != len(R):
-        raise(ValueError,'length of domain (of len %i) and range (of len %i) mus be equal'%(len(d),len(R)))
+        raise ValueError('length of domain (of len %i) and range (of len %i) mus be equal'%(len(d),len(R)))
     if len(d)<3:
-        raise(ValueError,'domain length is less than 3. it must be longer for a romline porcess to apply. domain is %s'%domain)
+        raise ValueError('domain length is less than 3. it must be longer for a romline porcess to apply. domain is %s'%domain)
 
     # Normalize Data
     R0,R1 = mean(R), std(R)
@@ -910,7 +910,7 @@ def positive_romline(   domain,           # Domain of Map
     #
     done = False
     space = [ seed ]
-    domain_space = range(len(d))
+    domain_space = list(range(len(d)))
     err = lambda x: mean( abs(x) ) # std(x) #
     min_space = list(space)
     while not done:
@@ -966,9 +966,9 @@ def romspline(   domain,           # Domain of Map
 
     # Some basic validation
     if len(d) != len(R):
-        raise(ValueError,'length of domain (of len %i) and range (of len %i) mus be equal'%(len(d),len(R)))
+        raise ValueError('length of domain (of len %i) and range (of len %i) mus be equal'%(len(d),len(R)))
     if len(d)<3:
-        raise(ValueError,'domain length is less than 3. it must be longer for a romline porcess to apply. domain is %s'%domain)
+        raise ValueError('domain length is less than 3. it must be longer for a romline porcess to apply. domain is %s'%domain)
 
     # Normalize Data
     R0,R1 = mean(R), std(R)
@@ -979,7 +979,7 @@ def romspline(   domain,           # Domain of Map
         error('weights and range should one-to-one in reference --> they should at have the same shape')
 
     #
-    domain_space = range(len(d))
+    domain_space = list(range(len(d)))
     err = lambda x: std(x)**2
 
     # Define an action for each greedy step
@@ -1073,24 +1073,24 @@ def mvsyms( dimension, max_degree, verbose=False ):
     # For all orders
     for order in arange(1,dimension+1):
         basis = [ ''.join(s) for s in combinations(dims,order) ]
-        if verbose: print 'Order=%i\n%s'%(order,10*'####')
-        if verbose: print 'basis = %s'%basis
+        if verbose: print('Order=%i\n%s'%(order,10*'####'))
+        if verbose: print('basis = %s'%basis)
         for B in basis:
             # For degrees between 1 and max degree
             # NOTE that while degree can be greater than order, the converse is not true: terms of order N have a degree of at least N
             for degree in arange(order,max_degree+1):
                 # Create all symbols of the desired order that have the desired degree
-                if verbose: print '\nDegree=%i\n%s'%(degree,10*'----')
+                if verbose: print('\nDegree=%i\n%s'%(degree,10*'----'))
                 # Power basis
                 pwrbasis = rnsum(order,degree)
-                if verbose: print pwrbasis
+                if verbose: print(pwrbasis)
                 # For all power lists
                 for pwr in pwrbasis:
                     # Create symbols for all permutations of the current power list
-                    if verbose: print pwr
+                    if verbose: print(pwr)
                     for P in permutations( pwr ):
                         this_symbol = ''.join([ p*B[k] for k,p in enumerate(P) ])
-                        if verbose: print this_symbol
+                        if verbose: print(this_symbol)
                         _ans += [this_symbol]
 
     # Remove duplicate symbols, ans sort according to order
@@ -1775,7 +1775,7 @@ class mvpolyfit:
                 ax = subplot(spdim+'1',projection='3d')
                 this.__plotND__( ax )
 
-            print '2/3d plotting is not enabled as the map is %id'% (1+this.domain.shape[-1])
+            print('2/3d plotting is not enabled as the map is %id'% (1+this.domain.shape[-1]))
 
         # --------------------------------------------- #
         # Plot Histogram of Fractional Residuals
@@ -1968,7 +1968,7 @@ class pgreedy:
         from copy import deepcopy as copy
 
         # Let the people know
-        if verbose: print '\n############################################\n# Applying a Positive Greedy Algorithm\n############################################\n'
+        if verbose: print('\n############################################\n# Applying a Positive Greedy Algorithm\n############################################\n')
 
         # The positive greedy process will move information from the bulk to the boundary based upon interactions with the input data
         boundary= [] if initial_boundary is None else list(initial_boundary)
@@ -2020,12 +2020,12 @@ class pgreedy:
             #
             itercount += 1
             if verbose:
-                print '\n%sIteration #%i (Positive Greedy)\n%s' % ( 'Final ' if done else '', itercount, 12*'---' )
-                print '>> The current estimator value is %1.4e' % min_est
-                print '>> %s was added to the boundary' % ( min_term if isinstance(min_term,(list,str,ndarray)) else (str(min_term) if not (min_term is None) else 'Nothing' ) )
-                print '>> This caused the estimator value to change by %f' % d_est
-                print '>> The current boundary is %s' % boundary
-                if done: print state_msg
+                print('\n%sIteration #%i (Positive Greedy)\n%s' % ( 'Final ' if done else '', itercount, 12*'---' ))
+                print('>> The current estimator value is %1.4e' % min_est)
+                print('>> %s was added to the boundary' % ( min_term if isinstance(min_term,(list,str,ndarray)) else (str(min_term) if not (min_term is None) else 'Nothing' ) ))
+                print('>> This caused the estimator value to change by %f' % d_est)
+                print('>> The current boundary is %s' % boundary)
+                if done: print(state_msg)
 
         #
         this.boundary = boundary
@@ -2040,7 +2040,7 @@ class pgreedy:
         from numpy import array
         fig = figure( figsize=2*array([4,3]) )
         gca().set_yscale('log')
-        plot( range(1,len(this.estimator_list)+1), this.estimator_list, '-o' )
+        plot( list(range(1,len(this.estimator_list)+1)), this.estimator_list, '-o' )
         xlabel('Iteration #')
         ylabel('Estimator Value')
         title('Convergence: Positive Greedy')
@@ -2068,7 +2068,7 @@ class ngreedy:
         from copy import deepcopy as copy
 
         # Let the people know
-        if verbose: print '\n############################################\n# Applying a Negative Greedy Algorithm\n############################################\n'
+        if verbose: print('\n############################################\n# Applying a Negative Greedy Algorithm\n############################################\n')
 
         # The negative greedy process will move information from the boundary ("to the bulk") based upon interactions with the input data
         # bulk = [] # NOTE that the information about the "bulk" is not used, and so it is not stored
@@ -2091,7 +2091,7 @@ class ngreedy:
             #
             if verbose:
                 itercount += 1
-                print '\n%sIteration #%i (Negative Greedy)\n%s' % ( '(Final) ' if done else '', itercount, 12*'---' )
+                print('\n%sIteration #%i (Negative Greedy)\n%s' % ( '(Final) ' if done else '', itercount, 12*'---' ))
 
             # Try to add a single term, and make note of the one that results in the smallest (i.e. best) fractional root-mean-square-error (frmse)
             min_est,min_term = inf,None
@@ -2137,12 +2137,12 @@ class ngreedy:
 
             #
             if verbose:
-                print '>> min_estimator = %1.4e' % min_est
+                print('>> min_estimator = %1.4e' % min_est)
                 if not done:
-                    print '>> "%s" was removed from the boundary.' % ( min_term if isinstance(min_term,(list,str,ndarray)) else str(min_term) )
-                    print '>> As a result, the estimator value changed by %f. The tolerance for this change is %f' % (d_est,fitatol)
-                print '>> The current boundary = %s' % boundary
-                if done: print state_msg
+                    print('>> "%s" was removed from the boundary.' % ( min_term if isinstance(min_term,(list,str,ndarray)) else str(min_term) ))
+                    print('>> As a result, the estimator value changed by %f. The tolerance for this change is %f' % (d_est,fitatol))
+                print('>> The current boundary = %s' % boundary)
+                if done: print(state_msg)
 
         #
         this.boundary = boundary
@@ -2161,9 +2161,9 @@ class ngreedy:
         gca().set_yscale('log')
         offset = 1 if this.reference_estimator_list is None else len(this.reference_estimator_list)
         if this.reference_estimator_list:
-            x = range(1,len(this.reference_estimator_list)+1)
+            x = list(range(1,len(this.reference_estimator_list)+1))
             plot( x, this.reference_estimator_list, '-ob', label = 'Positive Greedy Steps',ms=8  )
-        plot( range(offset,len(this.estimator_list)+offset), this.estimator_list, '-sr', label='Negative Greedy Steps',ms=12,mfc='none' )
+        plot( list(range(offset,len(this.estimator_list)+offset)), this.estimator_list, '-sr', label='Negative Greedy Steps',ms=12,mfc='none' )
         xlabel('Iteration #')
         ylabel('Estimator Value')
         title('Convergence: Negative Greedy')
@@ -2245,7 +2245,7 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
     if homogeneous: maxbulk = [ s for s in maxbulk if s != 'K' ]
 
     # Define the space of all possible degrees bounded above by maxdeg
-    degree_space = range(mindeg,maxdeg+1) if temper else [maxdeg]
+    degree_space = list(range(mindeg,maxdeg+1)) if temper else [maxdeg]
 
     # Increment through degrees
     # NOTE that this for-loop is not directly castable as a greedy algorithm because the dictionary set is of size 1 (i.e. one degree at a time), and corresponds to a heuristically structured family
@@ -2284,8 +2284,8 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
             elif we_are_at_maxdeg:
                 exit_msg = 'we are at the maximum degree of %i' % deg
 
-            print '&& The estimator has changed by %f' % d_est
-            print '&& '+ ('Degree tempering will continue.' if not done else 'Degree tempering has completed becuase %s. The results of the last iteration wil be kept.'%exit_msg)
+            print('&& The estimator has changed by %f' % d_est)
+            print('&& '+ ('Degree tempering will continue.' if not done else 'Degree tempering has completed becuase %s. The results of the last iteration wil be kept.'%exit_msg))
 
         #
         if (not done) or not ('A' in locals()):
@@ -2293,27 +2293,27 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
             boundary,est_list = A.boundary, A.estimator_list
             last_min_est = est_list[-1]
             if verbose:
-                print '&& The current boundary is %s' % boundary
-                print '&& The current estimator value is %f\n' % est_list[-1]
+                print('&& The current boundary is %s' % boundary)
+                print('&& The current estimator value is %f\n' % est_list[-1])
         else:
             if plot:
                 A.answer.plot()
                 A.plot()
             if verbose:
-                print '&& The Final boundary is %s' % boundary
-                print '&& The Final estimator value is %f\n' % est_list[-1]
+                print('&& The Final boundary is %s' % boundary)
+                print('&& The Final estimator value is %f\n' % est_list[-1])
             break
 
 
 
-    if verbose: print '\n%s\n# Degree Tempered Positive Greedy Solution:\n%s\n'%(10*'====',10*'====')+str(A.answer)
+    if verbose: print('\n%s\n# Degree Tempered Positive Greedy Solution:\n%s\n'%(10*'====',10*'====')+str(A.answer))
 
     #
     if apply_negative:
         # Apply a negative greedy process to futher refine the symbol content
         B = ngreedy( boundary, action, plot = plot, show=show, plotfun = mvplotfun, verbose = verbose, ref_est_list = est_list, permanent = permanent_symbols ) if apply_negative==True else None
         #
-        if apply_negative and verbose: print '\n%s\n# Negative Greedy Solution:\n%s\n'%(10*'====',10*'====')+str(B.answer)
+        if apply_negative and verbose: print('\n%s\n# Negative Greedy Solution:\n%s\n'%(10*'====',10*'====')+str(B.answer))
         #
         ans = B.answer
     else:
@@ -2324,7 +2324,7 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
     ans.bin['ngreedy_result'] = B if apply_negative else None
 
     #
-    if verbose: print '\nFit Information:\n%s\n'%(10*'----')+str(ans)
+    if verbose: print('\nFit Information:\n%s\n'%(10*'----')+str(ans))
 
     #
     return ans
@@ -2357,8 +2357,8 @@ def romline(  domain,           # Domain of Map
     if not positive:
         #
         done = False
-        space = range( len(d) )
-        raw_space = range( len(d) )
+        space = list(range( len(d)))
+        raw_space = list(range( len(d)))
         err = lambda x: mean( abs(x) ) # std(x) #
         raw_mask = []
         while not done:
@@ -2426,9 +2426,9 @@ def positive_romline(   domain,           # Domain of Map
 
     # Some basic validation
     if len(d) != len(R):
-        raise(ValueError,'length of domain (of len %i) and range (of len %i) mus be equal'%(len(d),len(R)))
+        raise ValueError('length of domain (of len %i) and range (of len %i) mus be equal'%(len(d),len(R)))
     if len(d)<3:
-        raise(ValueError,'domain length is less than 3. it must be longer for a romline porcess to apply. domain is %s'%domain)
+        raise ValueError('domain length is less than 3. it must be longer for a romline porcess to apply. domain is %s'%domain)
 
     # Normalize Data
     R0,R1 = mean(R), std(R)
@@ -2448,7 +2448,7 @@ def positive_romline(   domain,           # Domain of Map
     #
     done = False
     space = [ seed ]
-    domain_space = range(len(d))
+    domain_space = list(range(len(d)))
     err = lambda x: mean( abs(x) ) # std(x) #
     min_space = list(space)
     while not done:
