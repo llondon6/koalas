@@ -4,11 +4,17 @@
 from distutils.core import setup
 from setuptools import find_packages
 
+# Load README for long description
+with open('README.md', 'r') as f:
+    readme = f.read()
+
 #
 setup(
     name='positive',
     version='0.1.0',
     description='Low level python API for NR+LIGO packages.',
+    long_description=readme,
+    long_description_content_type='text/markdown',
     author='Lionel London',
     author_email='lionel.london@ligo.org',
     packages=find_packages(),
