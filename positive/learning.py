@@ -1655,7 +1655,7 @@ class mvpolyfit:
         mu,std = norm.fit( res )
 
         # Plot histogram
-        n, bins, patches = ax.hist( res, max([len(res)/5,3]), facecolor=0.92*ones((3,)), alpha=1.0 )
+        n, bins, patches = ax.hist( res, int(max([len(res)/5,3])), facecolor=0.92*ones((3,)), alpha=1.0 )
 
         # Plot estimate normal distribution
         xmin,xmax=xlim()
