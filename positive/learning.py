@@ -674,7 +674,46 @@ def gmvrfit( domain,
              take_raw_symbols = True,
              apply_negative = True,
              **kwargs ):
+    """Adaptive (Greedy) Multivariate rational fitting
 
+    Supports general domain dimension, but range must be 1D (possibly complex).
+
+    Parameters
+    ----------
+    domain: list
+        The N-D domain over which a scalar will be modeled. List of vector
+        coordinates.
+    scalar_range: list
+        The scalar range to model on the domain. 1d iterable of range values
+        corresponding to domain entries.
+    maxdeg: int, optional
+        Polynomial degrees of at most this order in domain variables will be
+        considered: e.g. x*y and y*y are both degree 2. NOTE that the effective
+        degree will be optimized over: increased incrementally until the model
+        becomes less optimal.
+    mindeg: int, optional
+        Minimum degree to consider for tempering.
+    fitatol: float, optional
+        Tolerance in fractional chance in estimator.
+    initial_boundary: list, optional
+        Seed boundary for positive greedy process.
+    plot: bool, optional
+        Toggle plotting.
+    show: bool, optional
+        Toggle for showing plots as they are created.
+    verbose: bool, optional
+        Let the people know.
+    take_raw_symbols: bool, optional
+        By defualt, adjust numerator symbols according to range centering.
+    apply_negative: bool, optional
+        Toggle for the application of a negtative greedy algorithm following
+        the positive one. This is set true by default to handle overmodelling.
+
+    Returns
+    -------
+    fit: :class:`positive.mvpolyfit`
+        Polynomial model fit over `scalar_range`.
+    """
     # Import stuff
     from itertools import combinations as combo
     from itertools import product as cartesian_product
@@ -2192,7 +2231,58 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
              homogeneous=False,     # Toggle for homogenous polynomials
              maxres_estimator = False, # Toggle for using abs of max residual as estimator rather then frmse
              **kwargs ):
-    '''Adaptive (Greedy) Multivariate polynomial fitting: general domain dimension, but range must be 1D (possibly complex).'''
+    """Adaptive (Greedy) Multivariate polynomial fitting
+
+    Supports general domain dimension, but range must be 1D (possibly complex).
+
+    Parameters
+    ----------
+    domain: list
+        The N-D domain over which a scalar will be modeled. List of vector
+        coordinates.
+    scalar_range: list
+        The scalar range to model on the domain. 1d iterable of range values
+        corresponding to domain entries.
+    maxdeg: int, optional
+        Polynomial degrees of at most this order in domain variables will be
+        considered: e.g. x*y and y*y are both degree 2. NOTE that the effective
+        degree will be optimized over: increased incrementally until the model
+        becomes less optimal.
+    mindeg: int, optional
+        Minimum degree to consider for tempering.
+    plot: bool, optional
+        Toggle plotting.
+    show: bool, optional
+        Toggle for showing plots as they are created.
+    fitatol: float, optional
+        Tolerance in fractional chance in estimator.
+    permanent_symbols: list, optional
+        If given, these symbols (compatible with mvpfit) will always be used in
+        the final fit.
+    initial_boundary: list, optional
+        Seed boundary for positive greedy process.
+    apply_negative: bool, optional
+        Toggle for the application of a negtative greedy algorithm following
+        the positive one. This is set true by default to handle overmodelling.
+    temper: bool, optional
+        Toggle for applying degree tempering, where the positive greedy process
+        is forward optimized over max polynomial degree.
+    range_map: dict, optional
+        Operation to apply to range before fitting, and inverse. EXAMPLE:
+        range_map = { 'forward': lambda x: external_variable*x, 'backward':
+        lambda y: y/external_variable }.
+    verbose: bool, optional
+        Let the people know.
+    homogeneous: bool, optional
+        Toggle for homogenous polynomials.
+    maxres_estimator: bool, optional
+        Toggle for using abs of max residual as estimator rather then frmse.
+
+    Returns
+    -------
+    fit: :class:`positive.mvpolyfit`
+        Polynomial model fit over `scalar_range`.
+    """
     # Import stuff
     from itertools import combinations as combo
     from numpy import arange,isfinite,inf,amin
