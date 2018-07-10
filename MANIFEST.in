@@ -1,0 +1,5 @@
+include LICENSE README.md MANIFEST.in
+recursive-include docs *
+recursive-include examples *
+recursive-include factory *
+recursive-include gallery *
