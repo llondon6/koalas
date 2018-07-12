@@ -66,6 +66,8 @@ superscriptaddress,10pt]{revtex4-1}
 \def\NumCalibrationPointsPlotted{\red{21} }
 \def\NumCalibrationPoints{\red{61} }
 
+\newcommand{\Cardiff}{School of Physics and Astronomy, Cardiff University, Queens Buildings, Cardiff, CF24 3AA, United Kingdom}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{document}
@@ -75,7 +77,9 @@ superscriptaddress,10pt]{revtex4-1}
 \title{On modeling for Kerr black holes: Basis learning, QNM frequencies, and spherical-spheroidal mixing coefficients }
 
 \author{L. London}
-\affiliation{School of Physics and Astronomy, Cardiff University, The Parade, Cardiff, CF24 3AA, United Kingdom}
+\affiliation{\Cardiff}
+\author{Edward Fauchon-Jones}
+\affiliation{\Cardiff}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Abstract %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
@@ -675,18 +679,60 @@ While only 1D and 2D domains are treated here, we note that Ref. \cite{London:20
 %
 \subsection{\gmvr{} Toy Problem}
 %
-Let's start by applying \gmvr{} to a fiducial scalar function,
+Here, our goal is to very brielfy assess
+%
+Let's start by applying \gmvr{} to a fiducial scalar function of the form
 %
 \begin{align}
   %
-  f(x_0,x_1) = 50 + \frac{1.1 +0.2 x_0+0.5 x_1+x_0 x_1}{ 0.9 + x_0^2 + x_1^2 }
+  % f(x_0,x_1) = 50 + \frac{1.1 +0.2 x_0+0.5 x_1+x_0 x_1}{ 0.9 + x_0^2 + x_1^2 }
+  %
+  f(x_0,x_1) = \mu + \sigma \, \left( \, \frac{a_0 +a_1  x_0 + a_2 x_1 + a_3 x_0 x_1}{ 1 + b_1 \, x_0^2 +  b_2 x_1^2 } \, \right) + 0.05 \, n \; ,
 \end{align}
+%
+where $n$ is a uniform random variable on $[-1,1]$.
+%
+Towards easily identifying test values for $a_j$ and $b_k$ with those recovered, it is more straightforward to distribute $\sigma$ to the denominator, yielding
+%
+\begin{align}
+  \label{eq:gmvrtoy1}
+  f(x_0,x_1) = \mu + \, \frac{a_0 +a_1  x_0 + a_2 x_1 + a_3 x_0 x_1}{ 1/\sigma + (b_1/\sigma) \, x_0^2 +  (b_2/\sigma) x_1^2 } + 0.05 \, n \; .
+\end{align}
+%
+Under this perspective we will consider test data generated with the following parameters:
+%
+$\mu = 50.0$,
+%
+$a_0 = 1.1$,
+%
+$a_1 = 0.2$,
+%
+$a_3 = 1.0$,
+%
+$1/\sigma = 0.9$,
+%
+$b_1/\sigma = b_2/\sigma = 1.0$.
+%
+\par To generate the test data, \eqn{eq:gmvrtoy1} is evaluated with 25 points in $x_0$ and $x_1$, where each is between -3 and 3.
+%
+\par \fig{fig:gmvrtoy} shows the application of \gmvr{} to this fiducial dataset.
+%
+\fig{fig:gmvrtoy}'s central bottom panel displays the distribution of fractional residuals, and demonstrates their approximately flat distribution. A gaussian fit to the fractional residuals is displayed only for optical comparison.
+%
+We find that the direct sample residuals are $99.46\%$ correlated with the input noise.
+%
+\par \fig{fig:gmvrtoy}'s left top and bottom panels show the convergence of Alg. (\ref{alg:A_gmvr})'s iterative refinement stage (i.e. its while-loop).
+%
+Here it is demonstrated that \gmvr{} converges exponentially, as expected given th.
+%
 %
 \begin{figure*}
   %
   \includegraphics[width=\textwidth]{fig/issue3_summary.pdf}
   %
 	\caption{ Standard summary plot for \gmvr. }
+  %
+  \label{fig:gmvrtoy}
   %
 \end{figure*}
 
@@ -695,7 +741,6 @@ Let's start by applying \gmvr{} to a fiducial scalar function,
 \begin{figure}[htb]
   %
   \includegraphics[width=0.45\textwidth]{fig/issue3_pgreedy.pdf}
-  %
 	\caption{ Convergence of greedy process for \gmvr{} toy problem. }
   %
 \end{figure}
