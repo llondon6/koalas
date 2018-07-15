@@ -78,7 +78,7 @@ superscriptaddress,10pt]{revtex4-1}
 
 \author{L. London}
 \affiliation{\Cardiff}
-\author{Edward Fauchon-Jones}
+\author{E. Fauchon-Jones}
 \affiliation{\Cardiff}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Abstract %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -679,9 +679,16 @@ While only 1D and 2D domains are treated here, we note that Ref. \cite{London:20
 %
 \subsection{\gmvr{} Toy Problem}
 %
-Here, our goal is to very brielfy assess
+Here, our goal is to very briefly overview the functionality of the \gmvr{} algorithm as implemented in Ref. \red{[positive]}.
 %
-Let's start by applying \gmvr{} to a fiducial scalar function of the form
+While it is possible to investigate the output of \gmvr{} with varying hyper-parameters (such as the tolerance input to Alg. \ref{alg:gmvr}), we will focus only on a simple usage case.
+%
+Similarly, we note that \gmvr{} as implemented in Ref. \red{[positive]} involves a reverse (or negative) greedy step to counter over-modeling in cases where the aforementioned $tol$ is too low.
+%
+For relevance of presentation to physics examples in subsequent sections, we will restrict ourselves to a case where numerical noise is low, and the negative greedy step does not alter the output of Alg. \ref{alg:gmvr}).
+%
+%
+\par Let's start by applying \gmvr{} to a fiducial scalar function of the form
 %
 \begin{align}
   %
@@ -723,7 +730,7 @@ We find that the direct sample residuals are $99.46\%$ correlated with the input
 %
 \par \fig{fig:gmvrtoy}'s left top and bottom panels show the convergence of Alg. (\ref{alg:A_gmvr})'s iterative refinement stage (i.e. its while-loop).
 %
-Here it is demonstrated that \gmvr{} converges exponentially, as expected given th.
+Here it is demonstrated that \gmvr{} in a way that is approximately exponential, owing to the underlying analytic nature of the training data.
 %
 %
 \begin{figure*}
