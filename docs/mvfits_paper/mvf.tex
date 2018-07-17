@@ -587,7 +587,7 @@ To broach these complications, we again use a greedy algorithm with degree tempe
 %
 However, rather than independent greedy optimizations for the numerator and denominator bases symbols, \eqn{eq:rat3} suggests that the appropriate labeling of symbols (e.g. ``numerator'' or ``denominator'') may yield an effective flattening of the supposed 2D basis selection problem.
 %
-Put another way, rather than two greedy optimizations over $R$ and $V-1$ symbols (with $(V-1)R$ iterations), a single greedy process over $V+R$ symbols is performed.
+Put another way, rather than two simulteneous greedy optimizations over $R$ and $V-1$ symbols (with $(V-1)R$ iterations), a single greedy process over $V+R$ symbols is performed.
 %
 \par With the conceptual tools in hand, we may proceed to constructing \gmvr{} by first defining its action, $\mathcal{A}_{\gmvr}$.
 %
@@ -713,6 +713,8 @@ $\mu = 50.0$,
 $a_0 = 1.1$,
 %
 $a_1 = 0.2$,
+%
+$a_2 = 0.5$,
 %
 $a_3 = 1.0$,
 %

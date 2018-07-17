@@ -857,9 +857,9 @@ def romline(  domain,           # Domain of Map
     if not positive:
         #
         done = False
-        space = list(range( len(d)))
-        raw_space = list(range( len(d)))
-        err = lambda x: mean( abs(x) ) # std(x) #
+        space = list(range( len(d) ))
+        raw_space = list(range( len(d) ))
+        err = lambda x: mean( abs(x) )
         raw_mask = []
         while not done:
             #
