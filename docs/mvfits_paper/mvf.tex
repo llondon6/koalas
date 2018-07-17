@@ -295,7 +295,7 @@ where
   \hatP = \left( \left( \hatU^{-1} \right)^T \hatU^{-1} \right)^{-1}
 \end{align}
 %
-is the \textit{pseudo-inverse} of $\hatU$.
+is the \textit{pseudo-inverse} \cite{Moore1920,Penrose:1955} of $\hatU$.
 %
 Equations (\ref{lin1}), and related discussion through \eqn{pinv1} illustrate the most rudimentary solution to the linear modeling problem.
 %
@@ -492,7 +492,7 @@ where $\muf$ is the additive mean of $f(\vec{x})$, and $\sif$ is the standard de
 %
 Note that, in \eqn{eq:rat1}, the sum over $v$ does not include the constant term associated with $\phi_0$.
 %
-\par While it is tempting to embrace \eqn{eq:rat1}'s $f({\vec{x}})$ as a nonlinear function and so resort to nonlinear modeling methods, a reformulation reveals an underlying linear structure.
+\par While it is tempting to embrace \eqn{eq:rat1}'s $f({\vec{x}})$ as a nonlinear function and so resort to nonlinear modeling methods, a reformulation reveals an underlying linear structure  \cite{Press:1992:NRC:148286}..
 %
 Namely, if we let
 %
@@ -587,7 +587,7 @@ To broach these complications, we again use a greedy algorithm with degree tempe
 %
 However, rather than independent greedy optimizations for the numerator and denominator bases symbols, \eqn{eq:rat3} suggests that the appropriate labeling of symbols (e.g. ``numerator'' or ``denominator'') may yield an effective flattening of the supposed 2D basis selection problem.
 %
-Put another way, rather than two greedy optimizations over $R$ and $V-1$ symbols (with $(V-1)R$ iterations), a single greedy process over $V+R$ symbols is performed.
+Put another way, rather than two simulteneous greedy optimizations over $R$ and $V-1$ symbols (with $(V-1)R$ iterations), a single greedy process over $V+R$ symbols is performed.
 %
 \par With the conceptual tools in hand, we may proceed to constructing \gmvr{} by first defining its action, $\mathcal{A}_{\gmvr}$.
 %
@@ -713,6 +713,8 @@ $\mu = 50.0$,
 $a_0 = 1.1$,
 %
 $a_1 = 0.2$,
+%
+$a_2 = 0.5$,
 %
 $a_3 = 1.0$,
 %
