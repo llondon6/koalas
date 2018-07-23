@@ -706,33 +706,63 @@ Towards easily identifying test values for $a_j$ and $b_k$ with those recovered,
   f(x_0,x_1) = \mu + \, \frac{a_0 +a_1  x_0 + a_2 x_1 + a_3 x_0 x_1}{ 1/\sigma + (b_1/\sigma) \, x_0^2 +  (b_2/\sigma) x_1^2 } + 0.05 \, n \; .
 \end{align}
 %
-Under this perspective we will consider test data generated with the following parameters:
-%
-$\mu = 50.0$,
-%
-$a_0 = 1.1$,
-%
-$a_1 = 0.2$,
-%
-$a_2 = 0.5$,
-%
-$a_3 = 1.0$,
-%
-$1/\sigma = 0.9$,
-%
-$b_1/\sigma = b_2/\sigma = 1.0$.
+Under this perspective we will consider test data generated with the parameters listed in \tbl{tb:gmvrtoy}'s left two panels.
 %
 \par To generate the test data, \eqn{eq:gmvrtoy1} is evaluated with 25 points in $x_0$ and $x_1$, where each is between -3 and 3.
 %
 \par \fig{fig:gmvrtoy} shows the application of \gmvr{} to this fiducial dataset.
 %
-\fig{fig:gmvrtoy}'s central bottom panel displays the distribution of fractional residuals, and demonstrates their approximately flat distribution. A gaussian fit to the fractional residuals is displayed only for optical comparison.
+\fig{fig:gmvrtoy}'s central bottom panel displays the distribution of fractional residuals, and demonstrates their approximately flat distribution. A gaussian fit to the fractional residuals is displayed only for comparison. In particular, a biased fit will often have residuals that are approximately gaussian; we see that this is not the case here, and that the uniformly random noise distribution is approximately recovered.
 %
-We find that the direct sample residuals are $99.46\%$ correlated with the input noise.
+When considering many noise realizations, we find that sample noise and residuals have a typically correlation of $99.46\%$.
 %
 \par \fig{fig:gmvrtoy}'s left top and bottom panels show the convergence of Alg. (\ref{alg:A_gmvr})'s iterative refinement stage (i.e. its while-loop).
 %
 Here it is demonstrated that \gmvr{} in a way that is approximately exponential, owing to the underlying analytic nature of the training data.
+%
+\tbl{tb:gmvrtoy} demonstrates \gmvr{}'s accurate recovery of the underlying model parameters. We note that that in going from \gmvr{}'s initial output contains terms in the numerator which correspond to the addition of a constant to the overall model, thus correcting for the difference between the offset parameter, $\mu$, and the true, but arbitrary, mean of the dataset.
+%
+%
+% $\mu = 50.0$,
+% %
+% $a_0 = 1.1$,
+% %
+% $a_1 = 0.2$,
+% %
+% $a_2 = 0.5$,
+% %
+% $a_3 = 1.0$,
+% %
+% $1/\sigma = 0.9$,
+% %
+% $b_1/\sigma = b_2/\sigma = 1.0$.
+%
+\begin{table}
+  \caption{Summary of recovered model parameters for \gmvr{} toy problem.}
+  \label{tb:gmvrtoy}
+  \begin{tabular}{|c|c|c|c|}
+    \hline
+    \hline
+    Parameter & Training Value & Modeled Value & Difference \\ \hline \hline
+    $\mu$ & 50.0 & 49.9915 & 0.0171 \% \\ \hline
+    $a_0$ & 1.1 & 1.1374 & 3.4002 \% \\ \hline
+    $a_1$ & 0.2 & 0.2000 & 0.0000 \% \\ \hline
+    $a_2$ & 0.5 & 0.5068 & 1.36784 \% \\ \hline
+    $a_3$ & 1.0 & 1.0063 & 0.6300 \% \\ \hline
+    $1/\sigma$ & 0.9 & 0.9375 & 4.1612 \% \\ \hline
+    $b_1/\sigma$ & 1.0 & 0.9941 & 0.5906 \% \\ \hline
+    $b_2/\sigma$ & 1.0 & 1.0000 & 0.0000 \% \\ \hline
+    \hline
+  \end{tabular}
+
+\end{table}
+%
+%
+\par Here, it is clear that \gmvr{} correctly recovers the functional form of the input data. In general, \gmvr{} and related techniques will attempt to model minor correlations and offsets within the training data's noise.
+%
+However, we have demonstrated the utility of \gmvr{} in a relatively ideal usage case where the underlying function is rational, and the training data is inly weakly contaminated with noise.
+%
+In the following sections, we consider cases where the functional form of the sample data is not known to be explicitly rational, but the amount of noise within the training data is negligible.
 %
 %
 \begin{figure*}
