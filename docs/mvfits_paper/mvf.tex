@@ -720,7 +720,11 @@ When considering many noise realizations, we find that sample noise and residual
 %
 Here it is demonstrated that \gmvr{} in a way that is approximately exponential, owing to the underlying analytic nature of the training data.
 %
-\tbl{tb:gmvrtoy} demonstrates \gmvr{}'s accurate recovery of the underlying model parameters. We note that that in going from \gmvr{}'s initial output contains terms in the numerator which correspond to the addition of a constant to the overall model, thus correcting for the difference between the offset parameter, $\mu$, and the true, but arbitrary, mean of the dataset.
+\tbl{tb:gmvrtoy} demonstrates \gmvr{}'s accurate recovery of the underlying model parameters.
+%
+We note that \gmvr{}'s initial output contains terms in the numerator which correspond to the addition of a constant to the overall model, thus correcting for the difference between the offset parameter, $\mu$, and the true, but arbitrary, mean of the dataset.
+%
+\tbl{tb:gmvrtoy} presents recovered model parameters after this effect has been accounted for with simple algebraic manipulation.
 %
 %
 % $\mu = 50.0$,
@@ -758,7 +762,7 @@ Here it is demonstrated that \gmvr{} in a way that is approximately exponential,
 \end{table}
 %
 %
-\par Here, it is clear that \gmvr{} correctly recovers the functional form of the input data. In general, \gmvr{} and related techniques will attempt to model minor correlations and offsets within the training data's noise.
+\par In this example case, \gmvr{} correctly recovers the functional form of the input data. But, in general, \gmvr{} and related techniques will attempt to model minor correlations and offsets within the training data's noise.
 %
 However, we have demonstrated the utility of \gmvr{} in a relatively ideal usage case where the underlying function is rational, and the training data is inly weakly contaminated with noise.
 %
