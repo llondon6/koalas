@@ -124,7 +124,7 @@ Most prominently, there is ongoing interest in signal models for \bbh{} \imr{}.
 %
 As the merger of isolated \bh{s} is expected to result in a perturbed Kerr \bh{}, there is related interest in having computationally efficient models for perturbative parameters, namely those that enable evaluation of the related \rd{} radiation.
 %
-\par In particular, a perturbed Kerr \bh{} (e.g. resulting from \bbh{} merger) will have \gw{} radiation that rings down with characteristic frequencies,
+\par In particular, a perturbed Kerr \bh{} (e.g. resulting from \bbh{} merger) will have \gw{} radiation that rings down with characteristic \textit{dimensionless} frequencies,
 %
 $%\begin{align}
 	\cw\lmn = \omega\lmn + i/\tau\lmn
@@ -714,7 +714,7 @@ Under this perspective we will consider test data generated with the parameters 
 %
 \fig{fig:gmvrtoy}'s central bottom panel displays the distribution of fractional residuals, and demonstrates their approximately flat distribution. A gaussian fit to the fractional residuals is displayed only for comparison. In particular, a biased fit will often have residuals that are approximately gaussian; we see that this is not the case here, and that the uniformly random noise distribution is approximately recovered.
 %
-When considering many noise realizations, we find that sample noise and residuals have a typically correlation of $99.46\%$.
+When considering many noise realizations, we find that sample noise and residuals have an average correlation of $99.46\%$.
 %
 \par \fig{fig:gmvrtoy}'s left top and bottom panels show the convergence of Alg. (\ref{alg:A_gmvr})'s iterative refinement stage (i.e. its while-loop).
 %
@@ -762,7 +762,7 @@ We note that \gmvr{}'s initial output contains terms in the numerator which corr
 \end{table}
 %
 %
-\par In this example case, \gmvr{} correctly recovers the functional form of the input data. But, in general, \gmvr{} and related techniques will attempt to model minor correlations and offsets within the training data's noise.
+\par In this example case, \gmvr{} correctly recovers the functional form of the input data. But, in general, \gmvr{} and related techniques, having no knowledge of , will attempt to model minor correlations and offsets within the training data's noise.
 %
 However, we have demonstrated the utility of \gmvr{} in a relatively ideal usage case where the underlying function is rational, and the training data is inly weakly contaminated with noise.
 %
@@ -787,23 +787,31 @@ In the following sections, we consider cases where the functional form of the sa
 	\caption{ Convergence of greedy process for \gmvr{} toy problem. }
   %
 \end{figure}
-
 %
+%
+%
+%
+% %%%%%%
 \subsection{Modeling \qnm{} frequencies using \gmvp{}}
+% %%%%%%
 %
-In seeking to apply \gmvp{} to select \qnm{} frequencies, we wish to impose a zero-damping constraint, namely that some frequencies are real as $\jf \rightarrow 1$.
 %
-We also wish the impose a domain transformation, $\kappa(\jf)$, such that $0 \leq \kappa \leq 1$ and the individual \qnm{} frequencies are morphologically simplified.
+%
+In seeking to apply \gmvp{} to select \qnm{} frequencies, we wish to account for the known extremal Kerr behavior of some modes.
+%
+Namely, we will impose a zero-damping constraint: some frequencies are real as $\jf \rightarrow 1$.
+%
+We also wish the impose a domain transformation, $\kappa(\jf,\ell,m)$, such that $0 \leq \kappa \leq 1$ and the individual \qnm{} frequencies are made approx. polynomial in $\kappa$.
 %
 \par For the domain transformation, inspection of \qnm{} frequencies with $\ell \leq 5$ suggest that
 %
 \begin{align}
-  \kappa(\jf) = \left( \ln( 2 - \jf ) / \ln(3) \right)^{1/(2-\ell+|m|)}
+  \kappa(\jf,\ell,m) = \left( \log_3( 2 - \jf ) \right)^{1/(2-\ell+|m|)}
 \end{align}
 %
-appropriately linearizes the sharp behavior of each frequency near $\jf=1$.
+appropriately linearizes the sharp behavior of each frequency near $\jf=1$, and maps $-1 \le \jf \le 1$ onto $0 \le \kappa \le 1$.
 %
-\par For the zero-damping constraint, when considering a \qnm{} frequency $\cw_{\lmn}$, zero-damping at $\jf=1$ implies that $\cw_{\lmn}(\kappa \approx 0)-m/2 \propto \kappa$, where $m/2$ is the well known limiting value for each \qnm{} frequencies real part as $\jf\rightarrow 1$.
+\par Towards the zero-damping constraint, when considering a \qnm{} frequency $\cw_{\lmn}$, zero-damping at $\jf=1$ implies that $\cw_{\lmn}(\kappa \approx 0)-m/2 \propto \kappa$, where $m/2$ is the well known limiting value for each \qnm{} frequencies real part as $\jf\rightarrow 1$.
 %
 % Plots of QNM frequencies
 \begin{figure*}
@@ -853,19 +861,30 @@ In the case of the non-zero damped \qnm{s}, (e.g. $(\ell,m)=(3,2)$), a more gene
 %
 \eqns{eq:cw_fit_1}{eq:cw_fit_9} display the resulting polynomial models.
 %
-Although each model's fractional error is within 2\%, each is error is dominated by well known nonlinear oscillations which are considered to be outside of the experimental accuracy of current \gw{} efforts.
+In particular, the domain map allows most \qnm frequencies to be well modeled by 4th order polynomials which include all lower degree terms; concurrently, the real and imaginary parts of each $\cw\lmn$ are modeled simultaneously.
 %
-\par \fig{fig:qnms} displays select training points, as well as model fits for $\cw_{lmn}$'s real and imaginary parts.
+Although each model's fractional error is within 2\%, each is error is dominated by well known nonlinear oscillations which are considered to be outside of the experimental accuracy of current 2nd generation \gw{} efforts.
 %
-For the right and left panels, simple polynomial behavior of each curve is a result of the displayed linear domain in $\kappa(\jf)$.
+\par \fig{fig:qnms} displays select training points, as well as model fits for $\cw\lmn$'s real and imaginary parts.
 %
-In the left panel, we have scaled $1/\tau_{\lmn}$ by factors for $m/(n+1/2)$ to place the \qnm{s} with $n=0$ and $n=1$ at approximately the same scale.
+For the right and left panels, simple polynomial behavior of each curve is a result of the displayed linear domain in $\kappa(\jf,\ell,m)$.
+%
+In the left panel, we have scaled $1/\tau\lmn$ by factors for $m/(n+1/2)$ to place the \qnm{s} with $n=0$ and $n=1$ at approximately the same scale.
 %
 % Equations for QNM frequency fits
 \begin{widetext}
 	\input{src/cwfit_eqns}
 \end{widetext}
 %
+\par In each panel of \fig{fig:qnms}, the horizontal upper and lower demonstrate the effect of mapping $\jf$ onto $\kappa$.
+%
+In particular, it is shown that the two solution branches ($\jf>0$ and $\jf<0$) naturally form a single family of solutions when accounting for the sign of the \bh{}'s oriented spin.
+%
+Concurrently, the use of $\kappa$ as a domain variable has the desirable effect of making each $\cw\lmn$ and $\tau\lmn$ approximately parabolic.
+%
+We note that, in the asymptotic vicinity of $\jf=1$, the \qnm{} frequencies and decay times are known to have solutions that are asymptoticly degenerate.
+%
+In allowing \eqns{eq:cw_fit_1}{eq:cw_fit_9} to extrapolate to $\jf \sim 1$, we do not explicitly account for this additional effect.
 %
 \subsection{Modeling spherical-spheroidal inner-products using \gmvr{}}
 %
