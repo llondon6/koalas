@@ -307,7 +307,7 @@ First we will consider the general polynomial modeling of multivariate scalar fu
 %
 This will encompass the \gmvp{} algorithm.
 %
-Second, we will build upon the \gmvp{} approach by considering models of rational functions: polynomials divided by polynomilas.
+Second, we will build upon the \gmvp{} approach by considering models of rational functions: polynomials divided by polynomials.
 %
 To consider these two approaches in a largely automated way (i.e. where the set of possible basis functions is known, but the select basis functions ultimately used are \textit{learned}), we will make use of the \textit{greedy} algorithm approach.
 %
@@ -400,7 +400,7 @@ From the first to second line of \eqn{eq:mvt}, we have used the definition of th
 %
 In the second line, the equality has been replaced by an approximation as we have limited the linear representation to $K$ terms.
 %
-This latter point is key to the perspective of \gmvp{}: given training data thought to be related to a smooth multivariate function, it may be well approximated by a truncated series expansion in the appropriate coordinate basis.
+This latter point is key to the perspective of \gmvp{}: given training data thought to be related to a smooth multivariate function, it may be well approximated by a truncated series expansion in an appropriate coordinate basis.
 %
 \par This truncated expansion happens to be a polynomial in at most $N$ variables.
 %
@@ -509,7 +509,7 @@ then the algebraic manipulation of \eqn{eq:rat1} results in
 %
 We are free to relabel the indices such that \eqn{eq:rat2} is manifestly linear in a single index.
 %
-At this stage, we will also explicitely consider the $j^\mathrm{th}$ samples of the domain, and so refer to $\vec{x}$ as $\vec{x}_j$.
+At this stage, we will also explicitly consider the $j^\mathrm{th}$ samples of the domain, and so refer to $\vec{x}$ as $\vec{x}_j$.
 %
 These adjustments of perspective result in
 %
@@ -587,7 +587,7 @@ To broach these complications, we again use a greedy algorithm with degree tempe
 %
 However, rather than independent greedy optimizations for the numerator and denominator bases symbols, \eqn{eq:rat3} suggests that the appropriate labeling of symbols (e.g. ``numerator'' or ``denominator'') may yield an effective flattening of the supposed 2D basis selection problem.
 %
-Put another way, rather than two simulteneous greedy optimizations over $R$ and $V-1$ symbols (with $(V-1)R$ iterations), a single greedy process over $V+R$ symbols is performed.
+Put another way, rather than two simultaneous greedy optimizations over $R$ and $V-1$ symbols (with $(V-1)R$ iterations), a single greedy process over $V+R$ symbols is performed.
 %
 \par With the conceptual tools in hand, we may proceed to constructing \gmvr{} by first defining its action, $\mathcal{A}_{\gmvr}$.
 %
@@ -806,6 +806,7 @@ We also wish the impose a domain transformation, $\kappa(\jf,\ell,m)$, such that
 \par For the domain transformation, inspection of \qnm{} frequencies with $\ell \leq 5$ suggest that
 %
 \begin{align}
+  \label{eq:kappa}
   \kappa(\jf,\ell,m) = \left( \log_3( 2 - \jf ) \right)^{1/(2-\ell+|m|)}
 \end{align}
 %
@@ -863,8 +864,6 @@ In the case of the non-zero damped \qnm{s}, (e.g. $(\ell,m)=(3,2)$), a more gene
 %
 In particular, the domain map allows most \qnm frequencies to be well modeled by 4th order polynomials which include all lower degree terms; concurrently, the real and imaginary parts of each $\cw\lmn$ are modeled simultaneously.
 %
-Although each model's fractional error is within 2\%, each is error is dominated by well known nonlinear oscillations which are considered to be outside of the experimental accuracy of current 2nd generation \gw{} efforts.
-%
 \par \fig{fig:qnms} displays select training points, as well as model fits for $\cw\lmn$'s real and imaginary parts.
 %
 For the right and left panels, simple polynomial behavior of each curve is a result of the displayed linear domain in $\kappa(\jf,\ell,m)$.
@@ -886,8 +885,21 @@ We note that, in the asymptotic vicinity of $\jf=1$, the \qnm{} frequencies and 
 %
 In allowing \eqns{eq:cw_fit_1}{eq:cw_fit_9} to extrapolate to $\jf \sim 1$, we do not explicitly account for this additional effect.
 %
+\par Lastly, \fig{fig:qnm_err} shows residual errors.
+%
+Although each model's fractional error is within 2\%, each is error is dominated by well known nonlinear oscillations which are considered to be outside of the experimental accuracy of current 2nd generation \gw{} efforts.
+%
+\par Together, \eqns{eq:cw_fit_1}{eq:cw_fit_9} along with Figures (\ref{fig:qnms})-(\ref{fig:qnm_err}) present precise and accurate fits for the real and imaginary parts of \qnm{} frequencies for gravitational perturbations of Kerr \qnm{s}.
+%
 \subsection{Modeling spherical-spheroidal inner-products using \gmvr{}}
 %
+Here we apply \gmvr{} to the spherical-spheroidal mixing coefficients, $\sigma_{\LMlmn}$.
+%
+As in the case of the \qnm{} frequencies, we use the domain transformation defined by \eqn{eq:kappa} to simplify the functional form of each $\sigma_{\LMlmn}$.
+%
+\par While it is possible to enforce extremal Kerr conditions $\sigma_{\LMlmn}$, we find it effective to first use \gmvr{} to determine a functional form that works for all $\sigma_{\LMlmn}$, and then apply this form to the modeling of all $\sigma_{\LMlmn}$.
+%
+% \par \eqns{}
 %
 % Equations for mixing coefficients
 \begin{widetext}
