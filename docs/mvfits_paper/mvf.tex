@@ -66,6 +66,9 @@ superscriptaddress,10pt]{revtex4-1}
 \def\NumCalibrationPointsPlotted{\red{21} }
 \def\NumCalibrationPoints{\red{61} }
 
+
+\def\pgreedy{\texttt{PGREEDY}}
+
 \newcommand{\Cardiff}{School of Physics and Astronomy, Cardiff University, Queens Buildings, Cardiff, CF24 3AA, United Kingdom}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -339,49 +342,6 @@ This rough algorithmic picture encapsulated in Alg. \ref{alg:pgreedy}.
 %
 % \par
 %
-% Forward greedy algo
-\hspace{1cm}
-\def\pgreedy{\texttt{PGREEDY}}
-{\scriptsize
-\begin{algorithm}[H]
-  %
-  \caption{A positive (forward) greedy algorithm, \pgreedy{}, \texttt{PGREEDY}. Note that a required input, $\mathcal{A}$, is a function that takes in a list of basis symbols, and outputs an estimator of fit error. In this setting, $\mathcal{A}$ is assumed to have access to peripheral information, such as the training data.}
-  \label{alg:pgreedy}
-  %
-  \begin{algorithmic}[1]
-    %
-    \State {\bf Input:} $ \{ \mlam_{bulk} = \text{basis symbols}$, $\mathcal{A} = \text{action}$, $tol=\text{greedy tolerance}\}$
-    \vskip 10pt
-    \State Define empty list of kept symbols: $\mlam_{kept} = \{\}$
-    \State Initialize estimator value and loop boolean: $\epsilon_{last} = \mathrm{inf}$, $done = \text{False}$
-    %
-    \While{not $done$}
-      \State $\epsilon_{min} = \epsilon_{last}$
-      %
-      \For { $\mlam$ in $\mlam^{bulk}$ }
-        \State $\mlam_{trial} = \mlam_{kept} \cup \mlam$ {\hskip0.525in} (add $\mlam$ to $\mlam_{kept}$)
-        \State $\epsilon = \mathcal{A}(\mlam_{trial})$ {\hskip0.70in} (action returns fit error)
-        \If { $\epsilon < \epsilon_{min}$ }
-          \State $\epsilon_{min} = \epsilon$  {\hskip0.825in} (store trial min)
-          \State $\mlam_{min} = \mlam_{trial}$
-        \EndIf
-      \EndFor
-      %
-      \State $done = |\epsilon_{min}-\epsilon_{last}|<tol$ %{\hskip0.4in} (determine if estimator has changed significantly)
-      \If { not $done$ }
-        \State $\epsilon_{last} = \epsilon_{min}$
-        \State $\mlam_{kept} = \mlam_{kept} \cup \mlam_{min}$ {\hskip0.4in} (update kept symbols)
-      \EndIf
-      %
-    \EndWhile
-    \vskip 10pt
-    \State {\bf Output:} $\{ \mlam_{kept} \}$ (the Greedy Basis)
-    %
-  \end{algorithmic}
-  %
-\end{algorithm}
-}
-
 %
 \subsection{Greedy Multivariate Polynomial Fitting}
 %
@@ -416,25 +376,6 @@ Note that in practice it may be useful to encode elements of $\mlam_{bulk}$ with
 %
 An explicit sketch of this is given by Alg. (\ref{alg:A_gmvp}).
 %
-\hspace{1cm}
-{\scriptsize
-\begin{algorithm}[H]
-  %
-  \caption{$\mathcal{A}_{\gmvp}$, the action for \gmvp. Model calculation given basis symbols, and output of model error estimate.}
-  %
-  \label{alg:A_gmvp}
-  \begin{algorithmic}[1]
-    %
-    \State {\bf Input:} $\mlam_{trial}$
-    \vskip 10pt
-    \State Calculate $\mu_k$ via \eqn{eq:linsol1}.
-    \State Calculate the model representation error, e.g.: $\epsilon = ||\hatU \vecmu - \vec{f}||/||\vec{f}||$, where $||a||$ is the L-2 norm of $a$.
-    \vskip 10pt
-    \State {\bf Output:} $\epsilon$
-  \end{algorithmic}
-\end{algorithm}
-}
-%
 \par The combination of these two ideas alone results in an algorithm prone to a deficit of stepwise methods: the algorithm may confuse correlated basis vectors (e.g. $x^2$ may be confused for $x^4$).
 %
 To counter this, we may incrementally increase, or \textit{temper}, the maximum allowed multinomial order.
@@ -442,37 +383,6 @@ To counter this, we may incrementally increase, or \textit{temper}, the maximum 
 Recall that a term such as $x_0x_1x_3^2$ has an effective degree of 4.
 %
 The combination of degree tempering with the greedy approach results in the \gmvp{} algorithm as presented in Alg. (\ref{alg:gmvp}).
-%
-% GMVP
-\hspace{1cm}
-{\scriptsize
-\begin{algorithm}[H]
-  %
-  \caption{\gmvp{}, a degree tempered stepwise algorithm for multivariate polynomial modeling of scalar data.}
-  \label{alg:gmvp}
-  %
-  \begin{algorithmic}[1]
-    %
-    \State {\bf Input:} $ \{ x, f, $max\_degree = 6$, tol \}$
-    \vskip 10pt
-    \State Define, $\mlam_{bulk}$, the bulk symbol space using the $n$-fold cartesian inner-product of the power set of each basis symbol
-    \State Define $\mathcal{A}_{\gmvp{}}$ according to Alg. (\ref{alg:A_gmvp}).
-    \State Given $max\_degree$, define, ${ D}$, a list of allowed polynomial degrees (e.g. $\{0,1,2,3,4,5,6\}$)
-    \For {$d$ \textbf{in}  ${ D}$ }
-      \State Define $\mlam_{bulk}^{(d)}$ as all symbols from $\mlam_{bulk}$ with degree less than or equal to current degree: $\mlam^{(d)}_{bulk}$
-      \State Using $\mlam_{bulk}^{(d)}$, apply Alg. (\ref{alg:pgreedy}), \pgreedy{}, with $\mathcal{A}_{\gmvp{}}$ to get symbol subset, $\mlam^{(d)}_{opt}$ and estimator val, $\epsilon^{(d)}_{opt}$
-      \If { $|\mlam^{(d)}_{opt}-\mlam^{(d-1)}_{opt}|<tol$ }
-        \State \textbf{break}
-      \EndIf
-    \EndFor
-    \vskip 10pt
-    \State {\bf Output:} $\mlam^{(d)}_{opt}$
-    %
-  \end{algorithmic}
-  %
-\end{algorithm}
-}
-%
 %
 \subsection{Greedy Multivariate Rational Fitting}
 %
@@ -593,34 +503,6 @@ Put another way, rather than two simultaneous greedy optimizations over $R$ and 
 %
 This is done in Alg. (\ref{alg:A_gmvr}).
 %
-\hspace{1cm}
-{\scriptsize
-\begin{algorithm}[H]
-  %
-  \caption{$\mathcal{A}_{\gmvr}$, the action for \gmvr. Model calculation given basis symbols, and output of model error estimate.}
-  %
-  \label{alg:A_gmvr}
-  \begin{algorithmic}[1]
-    %
-    \State {\bf Input:} \{ $\mlam_{trial}$, $tol=10^{-3}$ \}
-    \vskip 10pt
-    \State Calculate $\alpha^{(1)}_k$ via \eqn{eq:pinv3}. Implicitly, $n=1$.
-    \State Calculate the current model prediction $g^{(1)}$ via \eqn{eq:rat4}.
-    \State Calculate the model representation error, e.g.: $\epsilon^{(1)}  = ||var(g^{(n)} - g^{(0)})||/||g^{(0)}||$.
-    \State $done = False$
-    \While { not $done$ }
-      \State Calculate $\alpha^{n+1}_{k}$  via \eqn{eq:pinv3}.
-      \State Calculate the current model prediction $g^{(n)}$ via \eqn{eq:rat4}.
-      \State Calculate the model representation error, e.g. $\epsilon^{(n)} = ||g^{(n)} - g^{(0)}||/||g^{(0)}||$.
-      \State $done = \epsilon^{(n-1)}-\epsilon^{(n)} < tol$
-      \State (Implicitly, $n = n+1$)
-    \EndWhile
-    \vskip 10pt
-    \State {\bf Output:} $\epsilon^{(n)}$
-  \end{algorithmic}
-\end{algorithm}
-}
-%
 \par The combination of \eqns{eq:pinv3} and \eqn{eq:rat4}, along with \pgreedy{} and degree tempering, results in the \gmvr{} algorithm as presented in Alg. (\ref{alg:gmvr}).
 %
 \par While not treated here, it is noted that Ref. \cite{London:2018gaq} utilizes \gmvp{} with a parameter dimension of 4.
@@ -628,36 +510,6 @@ This is done in Alg. (\ref{alg:A_gmvr}).
 \par In the following section we apply both \gmvp{} and \gmvr{} to the modeling of noiseless (up to roundoff error) data: the \qnm{} frequencies of Kerr \bh{s}, and the inner-products of the spherical and spheroidal harmonics.
 %
 In each case, the underlying 1D parameter in each case will be the dimensionless \bh{} spin, $\jf{}$.
-%
-% GMVR
-\hspace{1cm}
-{\scriptsize
-\begin{algorithm}[H]
-  %
-  \caption{\gmvr{}, a degree tempered stepwise algorithm for multivariate rational modeling of scalar data.}
-  \label{alg:gmvr}
-  %
-  \begin{algorithmic}[1]
-    %
-    \State {\bf Input:} $ \{ x, f, $max\_degree = 6$, tol \}$
-    \vskip 10pt
-    \State Define, $\mlam_{bulk}$, the bulk symbol space using the $n$-fold cartesian inner-product of the power set of each basis symbol. This is the combined bulk for numerator and denominator symbols.
-    \State Define $\mathcal{A}_{\gmvr{}}$ according to Alg. (\ref{alg:A_gmvr}).
-    \State Given $max\_degree$, define, ${ D}$, a list of allowed polynomial degrees (e.g. $\{0,1,2,3,4,5,6\}$)
-    \For {$d$ \textbf{in}  ${ D}$ }
-      \State Define $\mlam_{bulk}^{(d)}$ as all symbols from $\mlam_{bulk}$ with degree less than or equal to current degree: $\mlam^{(d)}_{bulk}$
-      \State Using $\mlam_{bulk}^{(d)}$, apply Alg. (\ref{alg:pgreedy}), \pgreedy{}, with $\mathcal{A}_{\gmvp{}}$ to get symbol subset, $\mlam^{(d)}_{opt}$ and estimator val, $\epsilon^{(d)}_{opt}$
-      \If { $|\mlam^{(d)}_{opt}-\mlam^{(d-1)}_{opt}|<tol$ }
-        \State \textbf{break}
-      \EndIf
-    \EndFor
-    \vskip 10pt
-    \State {\bf Output:} $\mlam^{(d)}_{opt}$
-    %
-  \end{algorithmic}
-  %
-\end{algorithm}
-}
 %
 %
 \section{Results}
@@ -814,36 +666,6 @@ appropriately linearizes the sharp behavior of each frequency near $\jf=1$, and 
 %
 \par Towards the zero-damping constraint, when considering a \qnm{} frequency $\cw_{\lmn}$, zero-damping at $\jf=1$ implies that $\cw_{\lmn}(\kappa \approx 0)-m/2 \propto \kappa$, where $m/2$ is the well known limiting value for each \qnm{} frequencies real part as $\jf\rightarrow 1$.
 %
-% Plots of QNM frequencies
-\begin{figure*}
-  %
-  \begin{tabular}{lcr}
-    \includegraphics[width=\figfactor\textwidth]{fig/fits_w.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/fits_tau.pdf}
-  \end{tabular}
-  %
-	\caption{ Fits of dimensionless \qnm{} central frequencies (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}.
-  %
-  Before the application of $\kappa(\j{})$, points are spaced between -\CwFitCalibrationRegion and \CwFitCalibrationRegion according to \CwFitCalibrationRegion times the $\sin$ of a fiducial angle which is uniformly spaced between $-\pi/2$ and $\pi/2$. Values of $\j{}$ are shown in the upper axis for $\kappa$ at $l=m$.
-  %
-  The grey dashed line marks the value of $\kappa$ where $\j{}=0$. Fits of dimensionless \qnm{} decay rates (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. }
-  %
-  \label{fig:qnms}
-  %
-\end{figure*}
-%
-% Plots of QNM frequencies
-\begin{figure*}
-  %
-  \begin{tabular}{lcr}
-    \includegraphics[width=\figfactor\textwidth]{fig/res_w.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/res_tau.pdf}
-  \end{tabular}
-  %
-	\caption{ Fractional residual errors for fits of dimensionless \qnm{} central frequencies and decay times (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. }
-  %
-  \label{fig:qnm_err}
-  %
-\end{figure*}
-%
 This implies that
 %
 \begin{align}
@@ -899,12 +721,224 @@ As in the case of the \qnm{} frequencies, we use the domain transformation defin
 %
 \par While it is possible to enforce extremal Kerr conditions $\sigma_{\LMlmn}$, we find it effective to first use \gmvr{} to determine a functional form that works for all $\sigma_{\LMlmn}$, and then apply this form to the modeling of all $\sigma_{\LMlmn}$.
 %
-% \par \eqns{}
+\par \eqns{eq:ys22220}{eq:ys55550} ...
+
+
+
+%
+\section{Discussion}
+\label{discuss}
+
+%
+\appendix
+
+
+\section{Algorithms}
+\label{app:algos}
+
+
+% \begin{widetext}
+
+% Forward greedy algo
+\hspace{1cm}
+{\scriptsize
+\begin{algorithm}[H]
+  %
+  \caption{A positive (forward) greedy algorithm, \pgreedy{}, \texttt{PGREEDY}. Note that a required input, $\mathcal{A}$, is a function that takes in a list of basis symbols, and outputs an estimator of fit error. In this setting, $\mathcal{A}$ is assumed to have access to peripheral information, such as the training data.}
+  \label{alg:pgreedy}
+  %
+  \begin{algorithmic}[1]
+    %
+    \State {\bf Input:} $ \{ \mlam_{bulk} = \text{basis symbols}$, $\mathcal{A} = \text{action}$, $tol=\text{greedy tolerance}\}$
+    \vskip 10pt
+    \State Define empty list of kept symbols: $\mlam_{kept} = \{\}$
+    \State Initialize estimator value and loop boolean: $\epsilon_{last} = \mathrm{inf}$, $done = \text{False}$
+    %
+    \While{not $done$}
+      \State $\epsilon_{min} = \epsilon_{last}$
+      %
+      \For { $\mlam$ in $\mlam^{bulk}$ }
+        \State $\mlam_{trial} = \mlam_{kept} \cup \mlam$ {\hskip0.525in} (add $\mlam$ to $\mlam_{kept}$)
+        \State $\epsilon = \mathcal{A}(\mlam_{trial})$ {\hskip0.70in} (action returns fit error)
+        \If { $\epsilon < \epsilon_{min}$ }
+          \State $\epsilon_{min} = \epsilon$  {\hskip0.825in} (store trial min)
+          \State $\mlam_{min} = \mlam_{trial}$
+        \EndIf
+      \EndFor
+      %
+      \State $done = |\epsilon_{min}-\epsilon_{last}|<tol$ %{\hskip0.4in} (determine if estimator has changed significantly)
+      \If { not $done$ }
+        \State $\epsilon_{last} = \epsilon_{min}$
+        \State $\mlam_{kept} = \mlam_{kept} \cup \mlam_{min}$ {\hskip0.4in} (update kept symbols)
+      \EndIf
+      %
+    \EndWhile
+    \vskip 10pt
+    \State {\bf Output:} $\{ \mlam_{kept} \}$ (the Greedy Basis)
+    %
+  \end{algorithmic}
+  %
+\end{algorithm}
+}
+%
+%
+% GMVR
+% \hspace{1cm}
+{\scriptsize
+\begin{algorithm}[H]
+  %
+  \caption{\gmvr{}, a degree tempered stepwise algorithm for multivariate rational modeling of scalar data.}
+  \label{alg:gmvr}
+  %
+  \begin{algorithmic}[1]
+    %
+    \State {\bf Input:} $ \{ x, f, $max\_degree = 6$, tol \}$
+    \vskip 10pt
+    \State Define, $\mlam_{bulk}$, the bulk symbol space using the $n$-fold cartesian inner-product of the power set of each basis symbol. This is the combined bulk for numerator and denominator symbols.
+    \State Define $\mathcal{A}_{\gmvr{}}$ according to Alg. (\ref{alg:A_gmvr}).
+    \State Given $max\_degree$, define, ${ D}$, a list of allowed polynomial degrees (e.g. $\{0,1,2,3,4,5,6\}$)
+    \For {$d$ \textbf{in}  ${ D}$ }
+      \State Define $\mlam_{bulk}^{(d)}$ as all symbols from $\mlam_{bulk}$ with degree less than or equal to current degree: $\mlam^{(d)}_{bulk}$
+      \State Using $\mlam_{bulk}^{(d)}$, apply Alg. (\ref{alg:pgreedy}), \pgreedy{}, with $\mathcal{A}_{\gmvp{}}$ to get symbol subset, $\mlam^{(d)}_{opt}$ and estimator val, $\epsilon^{(d)}_{opt}$
+      \If { $|\mlam^{(d)}_{opt}-\mlam^{(d-1)}_{opt}|<tol$ }
+        \State \textbf{break}
+      \EndIf
+    \EndFor
+    \vskip 10pt
+    \State {\bf Output:} $\mlam^{(d)}_{opt}$
+    %
+  \end{algorithmic}
+  %
+\end{algorithm}
+}
+%
+% GMVP
+% \hspace{1cm}
+{\scriptsize
+\begin{algorithm}[H]
+  %
+  \caption{\gmvp{}, a degree tempered stepwise algorithm for multivariate polynomial modeling of scalar data.}
+  \label{alg:gmvp}
+  %
+  \begin{algorithmic}[1]
+    %
+    \State {\bf Input:} $ \{ x, f, $max\_degree = 6$, tol \}$
+    \vskip 10pt
+    \State Define, $\mlam_{bulk}$, the bulk symbol space using the $n$-fold cartesian inner-product of the power set of each basis symbol
+    \State Define $\mathcal{A}_{\gmvp{}}$ according to Alg. (\ref{alg:A_gmvp}).
+    \State Given $max\_degree$, define, ${ D}$, a list of allowed polynomial degrees (e.g. $\{0,1,2,3,4,5,6\}$)
+    \For {$d$ \textbf{in}  ${ D}$ }
+      \State Define $\mlam_{bulk}^{(d)}$ as all symbols from $\mlam_{bulk}$ with degree less than or equal to current degree: $\mlam^{(d)}_{bulk}$
+      \State Using $\mlam_{bulk}^{(d)}$, apply Alg. (\ref{alg:pgreedy}), \pgreedy{}, with $\mathcal{A}_{\gmvp{}}$ to get symbol subset, $\mlam^{(d)}_{opt}$ and estimator val, $\epsilon^{(d)}_{opt}$
+      \If { $|\mlam^{(d)}_{opt}-\mlam^{(d-1)}_{opt}|<tol$ }
+        \State \textbf{break}
+      \EndIf
+    \EndFor
+    \vskip 10pt
+    \State {\bf Output:} $\mlam^{(d)}_{opt}$
+    %
+  \end{algorithmic}
+  %
+\end{algorithm}
+}
+%
+%
+% \hspace{1cm}
+{\scriptsize
+\begin{algorithm}[H]
+  %
+  \caption{$\mathcal{A}_{\gmvr}$, the action for \gmvr. Model calculation given basis symbols, and output of model error estimate.}
+  %
+  \label{alg:A_gmvr}
+  \begin{algorithmic}[1]
+    %
+    \State {\bf Input:} \{ $\mlam_{trial}$, $tol=10^{-3}$ \}
+    \vskip 10pt
+    \State Calculate $\alpha^{(1)}_k$ via \eqn{eq:pinv3}. Implicitly, $n=1$.
+    \State Calculate the current model prediction $g^{(1)}$ via \eqn{eq:rat4}.
+    \State Calculate the model representation error, e.g.: $\epsilon^{(1)}  = ||var(g^{(n)} - g^{(0)})||/||g^{(0)}||$.
+    \State $done = False$
+    \While { not $done$ }
+      \State Calculate $\alpha^{n+1}_{k}$  via \eqn{eq:pinv3}.
+      \State Calculate the current model prediction $g^{(n)}$ via \eqn{eq:rat4}.
+      \State Calculate the model representation error, e.g. $\epsilon^{(n)} = ||g^{(n)} - g^{(0)}||/||g^{(0)}||$.
+      \State $done = \epsilon^{(n-1)}-\epsilon^{(n)} < tol$
+      \State (Implicitly, $n = n+1$)
+    \EndWhile
+    \vskip 10pt
+    \State {\bf Output:} $\epsilon^{(n)}$
+  \end{algorithmic}
+\end{algorithm}
+}
+%
+%
+% \hspace{1cm}
+{\scriptsize
+\begin{algorithm}[H]
+  %
+  \caption{$\mathcal{A}_{\gmvp}$, the action for \gmvp. Model calculation given basis symbols, and output of model error estimate.}
+  %
+  \label{alg:A_gmvp}
+  \begin{algorithmic}[1]
+    %
+    \State {\bf Input:} $\mlam_{trial}$
+    \vskip 10pt
+    \State Calculate $\mu_k$ via \eqn{eq:linsol1}.
+    \State Calculate the model representation error, e.g.: $\epsilon = ||\hatU \vecmu - \vec{f}||/||\vec{f}||$, where $||a||$ is the L-2 norm of $a$.
+    \vskip 10pt
+    \State {\bf Output:} $\epsilon$
+  \end{algorithmic}
+\end{algorithm}
+}
+
+% \end{widetext}
+
+\section{Equations}
+\label{app:eqns}
+
+
+
 %
 % Equations for mixing coefficients
+%
 \begin{widetext}
   \input{src/ysprod_eqns}
 \end{widetext}
+
+\section{Figures}
+\label{app:figs}
+
+
+%
+% Plots of QNM frequencies
+\begin{figure*}
+  %
+  \begin{tabular}{lcr}
+    \includegraphics[width=\figfactor\textwidth]{fig/fits_w.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/fits_tau.pdf}
+  \end{tabular}
+  %
+	\caption{ Fits of dimensionless \qnm{} central frequencies (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}.
+  %
+  Before the application of $\kappa(\j{})$, points are spaced between -\CwFitCalibrationRegion and \CwFitCalibrationRegion according to \CwFitCalibrationRegion times the $\sin$ of a fiducial angle which is uniformly spaced between $-\pi/2$ and $\pi/2$. Values of $\j{}$ are shown in the upper axis for $\kappa$ at $l=m$.
+  %
+  The grey dashed line marks the value of $\kappa$ where $\j{}=0$. Fits of dimensionless \qnm{} decay rates (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. }
+  %
+  \label{fig:qnms}
+  %
+\end{figure*}
+%
+% Plots of QNM frequencies
+\begin{figure*}
+  %
+  \begin{tabular}{lcr}
+    \includegraphics[width=\figfactor\textwidth]{fig/res_w.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/res_tau.pdf}
+  \end{tabular}
+  %
+	\caption{ Fractional residual errors for fits of dimensionless \qnm{} central frequencies and decay times (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. }
+  %
+  \label{fig:qnm_err}
+  %
+\end{figure*}
 
 % Plots of mixing coefficients
 \begin{figure*}
@@ -927,12 +961,6 @@ As in the case of the \qnm{} frequencies, we use the domain transformation defin
 	\caption{ Percentage residual errors for spherical-spheroidal harmonic mixing coefficient models. }
   %
 \end{figure*}
-
-
-
-%
-\section{Discussion}
-\label{discuss}
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
 \bibliographystyle{ieeetr}
