@@ -743,6 +743,7 @@ def gmvrfit( domain,
         # estimator = foo.frmse
         estimator = foo.frmse
         return estimator,foo
+
     def mvplotfun( foo ): foo.plot(show=show)
 
     # Create a lexicon of symbols to consider for model learning
@@ -1706,8 +1707,8 @@ class mvpolyfit:
 
         # Decorate plot
         title(r'$frmse = %1.4e$, $\langle res \rangle =%1.4e$'%(this.frmse,mean(res)))
-        # xlabel('Fractional Residaul Error')
-        xlabel('Residaul Error')
+        # xlabel('Fractional Residual Error')
+        xlabel('Residual Error')
         ylabel('Count in Bin')
         # legend( frameon=False )
 

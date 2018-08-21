@@ -338,6 +338,49 @@ The forward process is to end when the model accuracy (or changes thereof) pass 
 %
 This rough algorithmic picture encapsulated in Alg. \ref{alg:pgreedy}.
 %
+% Forward greedy algo
+\hspace{1cm}
+{\scriptsize
+\begin{algorithm}[H]
+  %
+  \caption{A positive (forward) greedy algorithm, \pgreedy{}, \texttt{PGREEDY}. Note that a required input, $\mathcal{A}$, is a function that takes in a list of basis symbols, and outputs an estimator of fit error. In this setting, $\mathcal{A}$ is assumed to have access to peripheral information, such as the training data.}
+  \label{alg:pgreedy}
+  %
+  \begin{algorithmic}[1]
+    %
+    \State {\bf Input:} $ \{ \mlam_{bulk} = \text{basis symbols}$, $\mathcal{A} = \text{action}$, $tol=\text{greedy tolerance}\}$
+    \vskip 10pt
+    \State Define empty list of kept symbols: $\mlam_{kept} = \{\}$
+    \State Initialize estimator value and loop boolean: $\epsilon_{last} = \mathrm{inf}$, $done = \text{False}$
+    %
+    \While{not $done$}
+      \State $\epsilon_{min} = \epsilon_{last}$
+      %
+      \For { $\mlam$ in $\mlam^{bulk}$ }
+        \State $\mlam_{trial} = \mlam_{kept} \cup \mlam$ {\hskip0.525in} (add $\mlam$ to $\mlam_{kept}$)
+        \State $\epsilon = \mathcal{A}(\mlam_{trial})$ {\hskip0.70in} (action returns fit error)
+        \If { $\epsilon < \epsilon_{min}$ }
+          \State $\epsilon_{min} = \epsilon$  {\hskip0.825in} (store trial min)
+          \State $\mlam_{min} = \mlam_{trial}$
+        \EndIf
+      \EndFor
+      %
+      \State $done = |\epsilon_{min}-\epsilon_{last}|<tol$ %{\hskip0.4in} (determine if estimator has changed significantly)
+      \If { not $done$ }
+        \State $\epsilon_{last} = \epsilon_{min}$
+        \State $\mlam_{kept} = \mlam_{kept} \cup \mlam_{min}$ {\hskip0.4in} (update kept symbols)
+      \EndIf
+      %
+    \EndWhile
+    \vskip 10pt
+    \State {\bf Output:} $\{ \mlam_{kept} \}$ (the Greedy Basis)
+    %
+  \end{algorithmic}
+  %
+\end{algorithm}
+}
+%
+%
 \par Note that we will use the terms ``basis vector'' and ``model symbol'' interchangeably. However, in practice, it can be useful to represent basis vectors symbolically (e.g. with strings), and have a way of bijectively mapping between symbols and numerical basis vectors.
 %
 % \par
@@ -420,6 +463,17 @@ then the algebraic manipulation of \eqn{eq:rat1} results in
 We are free to relabel the indices such that \eqn{eq:rat2} is manifestly linear in a single index.
 %
 At this stage, we will also explicitly consider the $j^\mathrm{th}$ samples of the domain, and so refer to $\vec{x}$ as $\vec{x}_j$.
+%
+%
+\begin{figure*}[htb]
+  %
+  \includegraphics[width=\textwidth]{fig/issue3_summary.pdf}
+  %
+	\caption{ Standard summary plot for \gmvr. }
+  %
+  \label{fig:gmvrtoy}
+  %
+\end{figure*}
 %
 These adjustments of perspective result in
 %
@@ -619,17 +673,6 @@ We note that \gmvr{}'s initial output contains terms in the numerator which corr
 However, we have demonstrated the utility of \gmvr{} in a relatively ideal usage case where the underlying function is rational, and the training data is inly weakly contaminated with noise.
 %
 In the following sections, we consider cases where the functional form of the sample data is not known to be explicitly rational, but the amount of noise within the training data is negligible.
-%
-%
-\begin{figure*}
-  %
-  \includegraphics[width=\textwidth]{fig/issue3_summary.pdf}
-  %
-	\caption{ Standard summary plot for \gmvr. }
-  %
-  \label{fig:gmvrtoy}
-  %
-\end{figure*}
 
 
 %
@@ -719,11 +762,19 @@ Here we apply \gmvr{} to the spherical-spheroidal mixing coefficients, $\sigma_{
 %
 As in the case of the \qnm{} frequencies, we use the domain transformation defined by \eqn{eq:kappa} to simplify the functional form of each $\sigma_{\LMlmn}$.
 %
-\par While it is possible to enforce extremal Kerr conditions $\sigma_{\LMlmn}$, we find it effective to first use \gmvr{} to determine a functional form that works for all $\sigma_{\LMlmn}$, and then apply this form to the modeling of all $\sigma_{\LMlmn}$.
+\par While it is possible to enforce extremal Kerr and Schwarzschild limiting conditions for $\sigma_{\LMlmn}$, we find it effective to first use \gmvr{} to determine a functional form that works for all $\sigma_{\LMlmn}$, and then apply this form to the modeling of all $\sigma_{\LMlmn}$.
 %
-\par \eqns{eq:ys22220}{eq:ys55550} ...
-
-
+\eqns{eq:ys22220}{eq:ys55550} present the resulting model equations.
+%
+\fig{fig:ys} display comparisons of the fits with training data as well as related residuals.
+%
+For efficiency of presentation, each $\sigma_{\LMlmn}$ is plotted against its real and imaginary part.
+%
+In cases where $(\bar\ell,\bar{m})=(\ell,m)$, the real part of $\sigma_{\LMlmn}$ varies about unity in a manner consistent with the Schwarzschild limit, where $\sigma_{\LMlmn}=\delta_{\bar\ell}^{\ell}\;\delta_{\bar{m}}^{m}$.
+%
+This is equally true in cases where $(\bar\ell,\bar{m}) \neq (\ell,m)$.
+%
+As with the \qnm{} frequencies, residuals are dominated by small scale oscillations with amplitudes that are fractions of a percent.
 
 %
 \section{Discussion}
@@ -739,48 +790,7 @@ As in the case of the \qnm{} frequencies, we use the domain transformation defin
 
 % \begin{widetext}
 
-% Forward greedy algo
-\hspace{1cm}
-{\scriptsize
-\begin{algorithm}[H]
-  %
-  \caption{A positive (forward) greedy algorithm, \pgreedy{}, \texttt{PGREEDY}. Note that a required input, $\mathcal{A}$, is a function that takes in a list of basis symbols, and outputs an estimator of fit error. In this setting, $\mathcal{A}$ is assumed to have access to peripheral information, such as the training data.}
-  \label{alg:pgreedy}
-  %
-  \begin{algorithmic}[1]
-    %
-    \State {\bf Input:} $ \{ \mlam_{bulk} = \text{basis symbols}$, $\mathcal{A} = \text{action}$, $tol=\text{greedy tolerance}\}$
-    \vskip 10pt
-    \State Define empty list of kept symbols: $\mlam_{kept} = \{\}$
-    \State Initialize estimator value and loop boolean: $\epsilon_{last} = \mathrm{inf}$, $done = \text{False}$
-    %
-    \While{not $done$}
-      \State $\epsilon_{min} = \epsilon_{last}$
-      %
-      \For { $\mlam$ in $\mlam^{bulk}$ }
-        \State $\mlam_{trial} = \mlam_{kept} \cup \mlam$ {\hskip0.525in} (add $\mlam$ to $\mlam_{kept}$)
-        \State $\epsilon = \mathcal{A}(\mlam_{trial})$ {\hskip0.70in} (action returns fit error)
-        \If { $\epsilon < \epsilon_{min}$ }
-          \State $\epsilon_{min} = \epsilon$  {\hskip0.825in} (store trial min)
-          \State $\mlam_{min} = \mlam_{trial}$
-        \EndIf
-      \EndFor
-      %
-      \State $done = |\epsilon_{min}-\epsilon_{last}|<tol$ %{\hskip0.4in} (determine if estimator has changed significantly)
-      \If { not $done$ }
-        \State $\epsilon_{last} = \epsilon_{min}$
-        \State $\mlam_{kept} = \mlam_{kept} \cup \mlam_{min}$ {\hskip0.4in} (update kept symbols)
-      \EndIf
-      %
-    \EndWhile
-    \vskip 10pt
-    \State {\bf Output:} $\{ \mlam_{kept} \}$ (the Greedy Basis)
-    %
-  \end{algorithmic}
-  %
-\end{algorithm}
-}
-%
+
 %
 % GMVR
 % \hspace{1cm}
@@ -913,52 +923,33 @@ As in the case of the \qnm{} frequencies, we use the domain transformation defin
 % Plots of QNM frequencies
 \begin{figure*}
   %
-  \begin{tabular}{lcr}
+  \begin{tabular}{lr}
     \includegraphics[width=\figfactor\textwidth]{fig/fits_w.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/fits_tau.pdf}
+    \\
+    \includegraphics[width=\figfactor\textwidth]{fig/res_w.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/res_tau.pdf}
   \end{tabular}
   %
 	\caption{ Fits of dimensionless \qnm{} central frequencies (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}.
   %
   Before the application of $\kappa(\j{})$, points are spaced between -\CwFitCalibrationRegion and \CwFitCalibrationRegion according to \CwFitCalibrationRegion times the $\sin$ of a fiducial angle which is uniformly spaced between $-\pi/2$ and $\pi/2$. Values of $\j{}$ are shown in the upper axis for $\kappa$ at $l=m$.
   %
-  The grey dashed line marks the value of $\kappa$ where $\j{}=0$. Fits of dimensionless \qnm{} decay rates (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. }
+  The grey dashed line marks the value of $\kappa$ where $\j{}=0$. Fits of dimensionless \qnm{} decay rates (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. (Bottom) Percentage residual errors for fits of dimensionless \qnm{} central frequencies and decay times (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. }
   %
-  \label{fig:qnms}
-  %
-\end{figure*}
-%
-% Plots of QNM frequencies
-\begin{figure*}
-  %
-  \begin{tabular}{lcr}
-    \includegraphics[width=\figfactor\textwidth]{fig/res_w.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/res_tau.pdf}
-  \end{tabular}
-  %
-	\caption{ Fractional residual errors for fits of dimensionless \qnm{} central frequencies and decay times (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. }
-  %
-  \label{fig:qnm_err}
+  \label{fig:qnm}
   %
 \end{figure*}
 
 % Plots of mixing coefficients
 \begin{figure*}
   %
-  \begin{tabular}{lcr}
-    \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_1.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_2.pdf}
-  \end{tabular}
-  %
-	\caption{ Spherical-spheroidal harmonic mixing coefficients. }
-  %
-\end{figure*}
-
-% Plots of mixing coefficients
-\begin{figure*}
-  %
-  \begin{tabular}{lcr}
+  \begin{tabular}{lr}
+    \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_1.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_2.pdf} \\
     \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_3.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_4.pdf}
   \end{tabular}
   %
-	\caption{ Percentage residual errors for spherical-spheroidal harmonic mixing coefficient models. }
+	\caption{ Spherical-spheroidal harmonic mixing coefficients. Percentage residual errors for spherical-spheroidal harmonic mixing coefficient models. }
+  %
+  \label{fig:ys}
   %
 \end{figure*}
 
