@@ -86,8 +86,18 @@ superscriptaddress,10pt]{revtex4-1}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Abstract %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
-	%
-	The ongoing direct detection of gravitational wave signals is aided by representative models of theoretical predictions. In particular, the process of model based detection, and subsequent comparison of signals the general relativity's predictions are aided by the modeling of information related to perturbed Kerr black holes. Here, we summarize recent methods and models for the analytically understood gravitational wave spectra (quasi-normal mode frequencies), and harmonic structure of Kerr black holes (mixing coefficients between spherical and spheroidal harmonics). Towards the construction of these models, two algorithms, GMVP and GMVR, for the automated polynomial and rational modeling of general dimensional complex scalars are presented. GMVR is a quasi-linear numerical method for interpolating rational functions. It therefore represents a solution to the problem of Runge's phenomenon.
+  %
+  Models of black hole properties are an important component to the ongoing direct detection of gravitational waves from black hole binaries.
+  %
+  In particular, model based detection, and subsequent parameter estimation are directly enabled by the modeling of information related to perturbed Kerr black holes.
+  %
+  Here, we summarize recent methods and models for the analytically understood gravitational wave spectra (quasi-normal mode frequencies), and harmonic structure of Kerr black holes (mixing coefficients between spherical and spheroidal harmonics).
+  %
+  Towards the construction of these models, two algorithms are presented.
+  %
+  A greedy-multivariate-polynomial (GMVP) regression method and greedy-multivariate-rational (GMVR) regression method are presented for the automated modeling of polynomial and rational functions.
+  %
+  GMVR is a quasi-linear numerical method for interpolating rational functions. It therefore represents a solution to the problem of Runge's phenomenon.
 	%
 \end{abstract}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -99,33 +109,19 @@ superscriptaddress,10pt]{revtex4-1}
 
 \maketitle
 
-% \begin{itemize}
-% 	\item BH detections happen, and use fits at various levels
-% 	\item Fits for Kerr are important for modeling and testing GR, they are fast to eval comapred to formal calculations which has data analysis implications
-% 	\item Many fits have been done for perturbative Kerr parameters: QNM frequencies most prominently.
-% 	\item The problem/motivation:
-% 		\begin{itemize}
-% 			\item 1. There are many fits, and we would like to provide a reference for many of them, including key methods
-% 			\item 2. Methods for fits: basis learning
-% 			\item 3. (results) Summarize "simple fits": QNM frequencies and decay times, enforcing zero damping
-% 			\item 4. (results) Summarize more general fits: mixing coefficients
-% 		\end{itemize}
-% 	\item (discussion) We have presented ...
-% \end{itemize}
-
 \section{Introduction}
 %
-In the coming years, expectations for frequent \gw{} detections of increasing \snr{} are high.
+In the coming years, expectations for frequent \gw{} detections of increasing \snr{} are high \cite{TheLIGOScientific:2016pea,Abbott:2016nhf}.
 %
-Concurrent with \virgo{}, the \aligo{} detectors will enter their third observing run in \check{late 2018}.
+Concurrent with \virgo{}, the \aligo{} detectors will enter their third observing run in approximately late 2018.
 %
-At this time, \bbh{} detections are expected at a rate of \check{X} per month.
+During this period, a few to dozens of \bbh{} signals are likely to be detected. \cite{Abbott:2016nhf}.
 %
-In this context, signal detection and subsequent inference of physical parameters hinges upon efficient models for source properties and dynamics.
+In this context, signal detection and subsequent inference of physical parameters hinges upon efficient models for source properties and dynamics \cite{Abbott:2016wiq}.
 %
-Most prominently, there is ongoing interest in signal models for \bbh{} \imr{}.
+Most prominently, there is ongoing interest in signal models for \bbh{} \imr{} \cite{Blackman:2017dfb, London:2017bcn, Hannam:2013oca}.
 %
-As the merger of isolated \bh{s} is expected to result in a perturbed Kerr \bh{}, there is related interest in having computationally efficient models for perturbative parameters, namely those that enable evaluation of the related \rd{} radiation.
+As the merger of isolated \bh{s} is expected to result in a perturbed Kerr \bh{}, there is related interest in having computationally efficient models for perturbative parameters, namely those that enable evaluation of the related \rd{} radiation \cite{Berti:2005ys}.
 %
 \par In particular, a perturbed Kerr \bh{} (e.g. resulting from \bbh{} merger) will have \gw{} radiation that rings down with characteristic \textit{dimensionless} frequencies,
 %
@@ -134,7 +130,7 @@ $%\begin{align}
 $%\end{align}
 .
 %
-These discrete frequencies have associated radial and spatial functions which are \textit{spheroidal} harmonic in nature.
+These discrete frequencies have associated radial and spatial functions which are \textit{spheroidal} harmonic in nature \cite{Leaver85,London:2014cma}.
 %
 These frequencies and harmonic functions are the so-called \qnm{s}.
 %
@@ -154,7 +150,7 @@ The well known and effective completeness of these solutions allows \grad{} from
 	%
 \end{align}
 %
-\par In the first and second lines of \eqn{hrd}, we relate the observable \gw{} polarizations, $h_+$ and $h_\times$, with the analytically understood morphology of the time domain waveform.
+\par In the first and second lines of \eqn{hrd}, we relate the observable \gw{} polarizations, $h_+$ and $h_\times$, to the analytically understood morphology of the time domain waveform.
 %
 Here, the labels $\ell$ and $m$ are eigenvalues of \tk{'s} angular equations, where units of $M=1$ (e.g. the initial mass of the \bbh{} system), and $c=1$.
 %
@@ -248,7 +244,7 @@ We first consider the application of \gmvp{} to the modeling of \qnm{} frequenci
 We then consider the application of \gmvr{} to the modeling of spherical-spheroidal mixing coefficients.
 %
 In \sec{discuss}, we review the performance of \gmvp{} and \gmvr{}, and we discuss potential applications for these methods.
-
+%
 %
 \section{Methods}
 \label{meth}
@@ -729,7 +725,7 @@ In the case of the non-zero damped \qnm{s}, (e.g. $(\ell,m)=(3,2)$), a more gene
 %
 In particular, the domain map allows most \qnm frequencies to be well modeled by 4th order polynomials which include all lower degree terms; concurrently, the real and imaginary parts of each $\cw\lmn$ are modeled simultaneously.
 %
-\par \fig{fig:qnms} displays select training points, as well as model fits for $\cw\lmn$'s real and imaginary parts.
+\par \fig{fig:qnm} displays select training points, as well as model fits for $\cw\lmn$'s real and imaginary parts.
 %
 For the right and left panels, simple polynomial behavior of each curve is a result of the displayed linear domain in $\kappa(\jf,\ell,m)$.
 %
@@ -740,7 +736,7 @@ In the left panel, we have scaled $1/\tau\lmn$ by factors for $m/(n+1/2)$ to pla
 	\input{src/cwfit_eqns}
 \end{widetext}
 %
-\par In each panel of \fig{fig:qnms}, the horizontal upper and lower demonstrate the effect of mapping $\jf$ onto $\kappa$.
+\par \fig{fig:qnm}'s top left and right panels demonstrate the effect of mapping $\jf$ onto $\kappa$.
 %
 In particular, it is shown that the two solution branches ($\jf>0$ and $\jf<0$) naturally form a single family of solutions when accounting for the sign of the \bh{}'s oriented spin.
 %
@@ -750,13 +746,15 @@ We note that, in the asymptotic vicinity of $\jf=1$, the \qnm{} frequencies and 
 %
 In allowing \eqns{eq:cw_fit_1}{eq:cw_fit_9} to extrapolate to $\jf \sim 1$, we do not explicitly account for this additional effect.
 %
-\par Lastly, \fig{fig:qnm_err} shows residual errors.
+\par Lastly, \fig{fig:qnm}'s bottom two panels show residual errors.
 %
 Although each model's fractional error is within 2\%, each is error is dominated by well known nonlinear oscillations which are considered to be outside of the experimental accuracy of current 2nd generation \gw{} efforts.
 %
-\par Together, \eqns{eq:cw_fit_1}{eq:cw_fit_9} along with Figures (\ref{fig:qnms})-(\ref{fig:qnm_err}) present precise and accurate fits for the real and imaginary parts of \qnm{} frequencies for gravitational perturbations of Kerr \qnm{s}.
+\par Together, \eqns{eq:cw_fit_1}{eq:cw_fit_9} along with Figures (\ref{fig:qnm})-(\ref{fig:qnm_err}) present precise and accurate fits for the real and imaginary parts of \qnm{} frequencies for gravitational perturbations of Kerr \qnm{s}.
+%
 %
 \subsection{Modeling spherical-spheroidal inner-products using \gmvr{}}
+%
 %
 Here we apply \gmvr{} to the spherical-spheroidal mixing coefficients, $\sigma_{\LMlmn}$.
 %
@@ -766,7 +764,8 @@ As in the case of the \qnm{} frequencies, we use the domain transformation defin
 %
 \eqns{eq:ys22220}{eq:ys55550} present the resulting model equations.
 %
-\fig{fig:ys} display comparisons of the fits with training data as well as related residuals.
+%
+\par \fig{fig:ys} displays fits, training data and related residuals.
 %
 For efficiency of presentation, each $\sigma_{\LMlmn}$ is plotted against its real and imaginary part.
 %
@@ -774,12 +773,33 @@ In cases where $(\bar\ell,\bar{m})=(\ell,m)$, the real part of $\sigma_{\LMlmn}$
 %
 This is equally true in cases where $(\bar\ell,\bar{m}) \neq (\ell,m)$.
 %
-As with the \qnm{} frequencies, residuals are dominated by small scale oscillations with amplitudes that are fractions of a percent.
-
+As with the \qnm{} frequencies, residuals are dominated by small scale oscillations with amplitudes that are fractions of a percent of the central values.
 %
 \section{Discussion}
 \label{discuss}
-
+%
+\par We have developed upon previous techniques for the linear and pseudo-linear modeling of low noise data.
+%
+In particular, the \gmvp{} algorithm performs multivariate polynomial modeling of real and complex valued scalar functions.
+%
+The \gmvr{} algorithm does the same with multivariate rational functions.
+%
+%
+\par Treating a toy problem with \gmvr{} demonstrates \gmvr{}'s ability to faithfully recover underlying model parameters for a plausible dataset.
+%
+This treatment also demonstrates the convergence of the algorithm's greedy phase with increasing iterations, as well as the convergence of an underlying iterative refinement phase (\ceqn{eq:rat4}).
+%
+%
+\par Both \gmvp{} and \gmvr{} may be used to automatically determine the functional form and model for a given dataset that is expected to be respectively multinomial or rational.
+%
+An alternative use strategy is to use either \gmvp{} or \gmvr{} to determine a fitting ansatz for individual cases (e.g. individual \qnm{s}), and then use these results to develop a single ansatz for all cases.
+%
+This is what as been done for the modeling of \qnm{} frequencies and spherical-spheroidal mixing coefficients.
+%
+%
+\par \gmvp{} has been applied to the modeling \qnm{} frequencies. The resulting models have been constrained in the extremal Kerr limit.
+%
+These models are found to have residual errors well below $1\%$ when $| \jf | \leq \CwFitCalibrationRegion$.
 %
 \appendix
 
