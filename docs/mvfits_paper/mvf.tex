@@ -820,7 +820,13 @@ These fits are of direct use in Ref. \cite{Carullo:2018sfu}, and may be of futur
 %
 \par While \gmvr{} and \gmvp{} show promise in the cases shown here, in their presented rudimentary form, both posses a number of limitations.
 %
-Neither method directly accounts for information
+Neither currently performs cross-validation, given sufficiently dense training data.
+%
+And perhaps most notably, neither method directly accounts for information about the noise distribution within the training data.
+%
+As such, the methods presented are recommended primarily for datasets where noise is very small or negligible.
+%
+Nevertheless, the \gmvr{} toy problem demonstrates \gmvr{}'s ability to handle moderately noisy training data, suggesting current applicability to a large number of problems where polynomial interpolation is insufficient. 
 %
 \appendix
 
