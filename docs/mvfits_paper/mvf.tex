@@ -330,9 +330,9 @@ When considering all trial models, the single models symbol which yields the gre
 %
 In this way, a list of optimal model symbols is learned.
 %
-The forward process is to end when the model accuracy (or changes thereof) pass a specified threshold.
+The forward process is to end when the model accuracy, or changes thereof, pass a specified threshold.
 %
-This rough algorithmic picture encapsulated in Alg. \ref{alg:pgreedy}.
+This rough algorithmic picture is encapsulated by Alg. \ref{alg:pgreedy}.
 %
 % Forward greedy algo
 \hspace{1cm}
@@ -408,7 +408,7 @@ given training data thought to be related to a smooth multivariate function, it 
 %
 In this setting, the uncertainty of which and how many basis terms to include makes this a problem ripe for the application of linear modeling driven by a greedy process, namely \eqn{eq:linsol1} and Alg. (\ref{alg:pgreedy}) .
 %
-\par In this setting, the basis symbols required by Alg. (\ref{alg:pgreedy}) are the multinomial terms in \eqn{eq:mvt}.
+\par Here, the basis symbols required by Alg. (\ref{alg:pgreedy}) are the multinomial terms in \eqn{eq:mvt}.
 %
 Each term is an element of the $n$-fold cartesian inner-product of the power-sets of each model dimension. That is $\mlam_{bulk} = \{x_0,x_1 .. x_N, ... x_0^1, x_0^2, x_0^3, ...  , (x_0^K x_1^K ... x_N^K) \}$.
 %
@@ -502,7 +502,7 @@ and
   %
   \psi_k(\vec{x}_j) = \left\{\begin{array}{cc}
         \phi_k(\vec{x}_j),      & \text{for }0\leq k\leq R\\
-        \phi_k(\vec{x}_j)\, g , & \quad \;\; \;\text{for }R+1\leq k\leq R+V
+        \phi_k(\vec{x}_j)\, g_j , & \quad \;\; \;\text{for }R+1\leq k\leq R+V
         \end{array} \right\}
 \end{align}
 %
@@ -513,31 +513,31 @@ and
   \vec{\alpha} = \hat{P} \; \vec{g} \;.
 \end{align}
 %
-where, here, $\hat{P}$ is the pseudo-inverse of the matrix whose elements are $\psi_k(\vec{x}_j)$.
+where, $\hat{P}$ is the pseudo-inverse of the matrix whose elements are $\psi_k(\vec{x}_j)$, $\vec\alpha = ( z_0, z_1, ... z_{R+V-1},z_{R+V} )$, and $\vec{g} = ( g_0, g_1, ... g_{R+V-1},g_{R+V} )$.
 %
 \par However, we note that $\hat{P}$'s depending on $g$ signals that there is more to be done.
 %
 In particular, let us briefly consider the effect of zero-mean noise on $g$, e.g. $g \rightarrow g+n$.
 %
-In this contemplation, it may be that shown that $n$ may be entirely regelated to $\hat{P}$.
+In this, it may be that shown that $n$ may be entirely regelated to $\hat{P}$.
 %
-It is in this sense that \eqn{eq:pinv2} is insufficient to generally solve for $\vec{\alpha}$.
+It is in this sense that \eqn{eq:pinv2} is insufficient to generally solve for $\vec{\alpha}$, as $\hat{P}$ may be adversely affected by noise.
 %
 %
 \par The key to robustly solving for $\vec{\alpha}$ lies in iterative refinement \cite{Press:1992:NRC:148286}.
 %
 Specifically, we note that \eqn{eq:rat2} may be modified to iteratively minimize the impact of numerical noise on $\hat{P}$.
 %
-That is, to reduce the impact of noise on $\hat{P}$, we are free to calculate it using model evaluations of $g$ rather than the original training data.
+That is, to reduce the impact of noise on $\hat{P}$, we are free to calculate it using model evaluations of $g$ rather than the original (noisy) training data.
 %
-To this end, if we define $g^{(0)}=g$ (i.e. $g$ is the training data) then, with $\hat{P} = \hat{P}( \vec{g}^{\,(n)} )$, then \eqn{eq:pinv2} generalizes to
+To this end, if we define $g^{(0)}=g$ (i.e. $g$ is the training data), with $\hat{P} = \hat{P}( \vec{g}^{\,(n)} )$, then \eqn{eq:pinv2} generalizes to
 %
 \begin{align}
   \label{eq:pinv3}
   \vec{\alpha}^{(n+1)} = \hat{P}(\vec{g}^{\,(n)}) \, \vec{g}^{(0)}\;.
 \end{align}
 %
-In practice, one solves \eqn{eq:pinv3} for $\vec{\alpha}^{(n)}$, and then uses the related $a_r^{(n)}$ and $b_v^{(n)}$ to calculate $g^{(n+1)}$ via
+In practice, one solves \eqn{eq:pinv3} for $\vec{\alpha}^{(n+1)}$, and then uses the related $a_r^{(n+1)}$ and $b_v^{(n+1)}$ to calculate $g^{(n+1)}$ via
 %
 \begin{align}
   \label{eq:rat4}
@@ -552,11 +552,11 @@ The refinement process is to terminate when a measure of model error (e.g. $||g^
 %
 In principle, the existence of $a_r$ and $b_v$ makes the problem more complicated, as one might imagine optimizing over each symbol space independently.
 %
-To broach these complications, we again use a greedy algorithm with degree tempering.
+To broach this complications, we again use a greedy algorithm with degree tempering.
 %
 However, rather than independent greedy optimizations for the numerator and denominator bases symbols, \eqn{eq:rat3} suggests that the appropriate labeling of symbols (e.g. ``numerator'' or ``denominator'') may yield an effective flattening of the supposed 2D symbol selection problem.
 %
-Put another way, rather than two simultaneous greedy optimizations over $R+1$ and $V$ symbols (with $(R+1)V$ iterations), a single greedy process over $V+R+1$ symbols is performed.
+Put another way, rather than two simultaneous greedy optimizations over $R+1$ and $V$ symbols (with $(R+1)V$ iterations), a single greedy process over $V+R+1$ symbols is performed, where each symbol is additionally labeled as being in the numerator or denominator.
 %
 \par With the conceptual tools in hand, we may proceed to constructing \gmvr{} by first defining its action, $\mathcal{A}_{\gmvr}$.
 %
@@ -565,7 +565,7 @@ This is done in Alg. (\ref{alg:A_gmvr}).
 \par The combination of \eqn{eq:pinv3} and \eqn{eq:rat4}, along with \pgreedy{} and degree tempering, results in the \gmvr{} algorithm as presented in Alg. (\ref{alg:gmvr}).
 %
 %
-Both \gmvp{} and \gmvr{} are publicly available on Github through the \texttt{positive} repository \cite{lionel_london_2018_1402516}.
+Both \gmvp{} and \gmvr{} are publicly available on Github through the \texttt{positive} repository (Ref. \cite{lionel_london_2018_1402516}), and may be imported in python via {\small{\texttt{positive.learning.gmvpfit}}} and {\small{\texttt{positive.learning.gmvrfit}}}.
 %
 %
 \section{Results}
@@ -581,7 +581,7 @@ We then present two applications to \gw{s}.
 %
 First we apply \gmvp{} to the modeling of complex valued Kerr \qnm{} frequencies.
 %
-Second, we apply \gmvr{} to the modeling of spin -2 spherical-spheroidal harmonic mixing coefficients.
+Second, we apply \gmvr{} to the modeling of spin -2 spherical-spheroidal harmonic mixing coefficients (\ceqn{sigma}).
 %
 While only 1D and 2D domains are treated here, we note that Ref. \cite{London:2018gaq} has used a version of \gmvp{} to model the \qnm{} excitation amplitudes in a 4D parameter space.
 %
@@ -593,7 +593,7 @@ While it is possible to investigate the output of \gmvr{} with varying hyper-par
 %
 Similarly, we note that \gmvr{} as implemented in Ref. \cite{lionel_london_2018_1402516} involves a negative greedy phase to counter over-modeling in cases where the aforementioned $tol$ is too low.
 %
-For relevance of presentation to physics examples in subsequent sections, we will restrict ourselves to a case where numerical noise is low, and the negative greedy step does not alter the output of Alg. \ref{alg:gmvr}).
+For relevance of presentation to physics examples in subsequent sections, we will restrict ourselves to a case where numerical noise is low, and the negative greedy step does not alter the output of Alg. \ref{alg:gmvr}.
 %
 %
 \par Let us now consider the application of \gmvr{} to a fiducial scalar function of the form
@@ -614,7 +614,7 @@ Towards easily identifying test values for $a_j$ and $b_k$ with those recovered,
 %
 Under this perspective we will consider test data generated with the parameters listed in \tbl{tb:gmvrtoy}'s left two panels.
 %
-\par To generate the test data, \eqn{eq:gmvrtoy1} is evaluated with 25 points in $x_0$ and $x_1$, where each is between -3 and 3.
+\par To generate the test data, \eqn{eq:gmvrtoy1} is evaluated with 25 points in $x_0$ and $x_1$, where each is between -3 and 3. Though not a requirement of \gmvr{}, for simplicity of presentation, domain points are equally spaced.
 %
 \par \fig{fig:gmvrtoy} shows the application of \gmvr{} to this fiducial dataset.
 %
@@ -674,11 +674,13 @@ We note that \gmvr{}'s initial output contains terms in the numerator which corr
 \end{table}
 %
 %
-\par In this rudimentary example case, \gmvr{} correctly recovers the functional form of the input data. But, in general, \gmvr{} and related techniques, having no knowledge of the underlying noise distribution, will attempt to model minor correlations and offsets within the training data's noise.
+\par In this rudimentary example case, \gmvr{} correctly recovers the functional form of the input data, and accurately recovers the correct values of model parameters.
 %
-However, we have demonstrated the utility of \gmvr{} in a relatively ideal usage case where the underlying function is rational, and the training data is inly weakly contaminated with noise.
+But, in general, \gmvr{} and related techniques, having no knowledge of the underlying noise distribution, will attempt to model minor correlations and offsets within the training data's noise.
 %
-\par In the following sections, we consider still ideal cases, where the functional form of the sample data is not known to be explicitly polynomial or rational, but the amount of noise within the training data is negligible.
+However, we have demonstrated the utility of \gmvr{} in a relatively ideal usage case where the underlying function is rational, and the training data is only weakly contaminated with noise.
+%
+\par In the following sections, we consider realistic, but similarly ideal cases, where the functional form of the sample data is not known to be explicitly polynomial or rational, but the amount of noise within the training data is negligible.
 %
 \begin{figure}[htb]
   %
@@ -691,7 +693,7 @@ However, we have demonstrated the utility of \gmvr{} in a relatively ideal usage
 %
 %
 % %%%%%%
-\subsection{Modeling \qnm{} frequencies using \gmvp{}}
+\subsection{Modeling \qnm{} frequencies with \gmvp{}}
 % %%%%%%
 %
 %
@@ -744,11 +746,11 @@ In the top left panel, we have scaled $1/\tau\lmn$ by factors for $m/(n+1/2)$ to
 	\input{src/cwfit_eqns}
 \end{widetext}
 %
-\par \fig{fig:qnm}'s top left and right panels' upper axis demonstrate the effect of mapping $\jf$ onto $\kappa$.
+\par \fig{fig:qnm}'s top left and right panels' upper axes demonstrate the effect of mapping $\jf$ onto $\kappa$.
 %
-In particular, it is shown that the two solution branches ($\jf>0$ and $\jf<0$) naturally form a single family of solutions when accounting for the sign of the \bh{}'s oriented spin \cite{Husa:2007hp}.
+In particular, it is shown that the two branches (namely $\jf>0$ and $\jf<0$) naturally form a single family of solutions when accounting for the sign of the \bh{}'s oriented spin \cite{Husa:2007hp}.
 %
-Concurrently, the use of $\kappa$ as a domain variable has the desirable effect of making each $\cw\lmn$ and $\tau\lmn$ approximately quarctic.
+Concurrently, the use of $\kappa$ as a domain variable has the desirable effect of making each $\cw\lmn$ and $\tau\lmn$ approximately polynomial.
 %
 We note that, in the asymptotic vicinity of $\jf=1$, the \qnm{} frequencies and decay times are known to have solutions that are asymptoticly degenerate \cite{Zimmerman:2015rua}.
 %
@@ -761,7 +763,7 @@ Although each model's fractional error is within 2\%, each is error is dominated
 \par Together, \eqns{eq:cw_fit_1}{eq:cw_fit_9} along with Figures (\ref{fig:qnm})-(\ref{fig:qnm_err}) present precise and accurate fits for the real and imaginary parts of \qnm{} frequencies for gravitational perturbations of Kerr \qnm{s}.
 %
 %
-\subsection{Modeling spherical-spheroidal inner-products using \gmvr{}}
+\subsection{Modeling spherical-spheroidal inner-products with \gmvr{}}
 %
 %
 Here we apply \gmvr{} to the spherical-spheroidal mixing coefficients, $\sigma_{\LMlmn}$.
@@ -775,7 +777,7 @@ As in the case of the \qnm{} frequencies, we use the domain transformation defin
 %
 \par \fig{fig:ys} displays fits, training data and related residuals.
 %
-For efficiency of presentation, each $\sigma_{\LMlmn}$ is plotted against its real and imaginary part.
+For efficiency of presentation, each $\sigma_{\LMlmn}$ is plotted via its real and imaginary part.
 %
 In cases where $(\bar\ell,\bar{m})=(\ell,m)$, the real part of $\sigma_{\LMlmn}$ varies about unity in a manner consistent with the Schwarzschild limit, where $\sigma_{\LMlmn}=\delta_{\bar\ell}^{\ell}\;\delta_{\bar{m}}^{m}$.
 %
@@ -788,17 +790,18 @@ As with the \qnm{} frequencies, residuals are dominated by small scale oscillati
 %
 \par We have developed upon previous techniques for the linear and pseudo-linear modeling of low noise data.
 %
-In particular, the \gmvp{} algorithm performs multivariate polynomial modeling of real and complex valued scalar functions.
+In particular, the \gmvp{} algorithm performs multivariate polynomial modeling of real and complex valued scalar functions with no inherent limitation on the number of domain parameters.
 %
 The \gmvr{} algorithm does the same with multivariate rational functions.
 %
+When applied to the modeling of analytically computed quantities, both algorithms perform extremely well in producing accurate and precise representations of training data, suggesting extended applicability of \gmvr{} and \gmvp{} similar problems.
 %
-\par Treating a toy problem with \gmvr{} demonstrates \gmvr{}'s ability to faithfully recover underlying model parameters for a plausible dataset.
+\par Treating a toy problem with \gmvr{} demonstrates its ability to faithfully recover underlying model parameters for a plausible dataset.
 %
 This treatment also demonstrates the convergence of the algorithm's greedy phase with increasing iterations, as well as the convergence of an underlying iterative refinement phase (\ceqn{eq:rat4}).
 %
 %
-\par Both \gmvp{} and \gmvr{} may be used to automatically determine the functional form and model for a given dataset that is expected to be respectively multinomial or rational.
+\par Both \gmvp{} and \gmvr{} may be used to automatically determine the functional form and model for a given dataset that is expected to be respectively polynomial or rational.
 %
 An alternative use strategy is to use either \gmvp{} or \gmvr{} to determine a fitting ansatz for individual cases (e.g. individual \qnm{s}), and then use these results to develop a single ansatz for all cases.
 %
@@ -807,7 +810,17 @@ This is what as been done for the modeling of \qnm{} frequencies and spherical-s
 %
 \par \gmvp{} has been applied to the modeling \qnm{} frequencies. The resulting models have been constrained in the extremal Kerr limit.
 %
-These models are found to have residual errors well below $1\%$ when $| \jf | \leq \CwFitCalibrationRegion$.
+The fits presented are of direct use in Ref. \cite{London:2017bcn}, where efficiently evaluable \qnm{} frequencies are required to general template waveforms for \gw{} searches and parameter estimation.
+%
+The fits presented may find future use in Phenom or EOB based \gw{} models.
+%
+\par \gmvr{} has been applied to the modeling of mixing coefficients between the spherical and spheroidal harmonics.
+%
+These fits are of direct use in Ref. \cite{Carullo:2018sfu}, and may be of future use in similar ringdown-only models for the purpose of testing \gr{}.
+%
+\par While \gmvr{} and \gmvp{} show promise in the cases shown here, in their presented rudimentary form, both posses a number of limitations.
+%
+Neither method directly accounts for information
 %
 \appendix
 
