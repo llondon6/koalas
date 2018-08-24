@@ -404,9 +404,60 @@ In the second line, the equality has been replaced by an approximation as we hav
 %
 given training data thought to be related to a smooth multivariate function, it may in many cases be well approximated by a truncated series expansion in an appropriate coordinate basis.
 %
+% GMVP
+\hspace{1cm}
+{\scriptsize
+\begin{algorithm}[H]
+  %
+  \caption{\gmvp{}, a degree tempered stepwise algorithm for multivariate polynomial modeling of scalar data.}
+  \label{alg:gmvp}
+  %
+  \begin{algorithmic}[1]
+    %
+    \State {\bf Input:} $ \{ x, f, $max\_degree = 6$, tol \}$
+    \vskip 10pt
+    \State Define, $\mlam_{bulk}$, the bulk symbol space using the $n$-fold cartesian inner-product of the power set of each basis symbol
+    \State Define $\mathcal{A}_{\gmvp{}}$ according to Alg. (\ref{alg:A_gmvp}).
+    \State Given $max\_degree$, define, ${ D}$, a list of allowed polynomial degrees (e.g. $\{0,1,2,3,4,5,6\}$)
+    \For {$d$ \textbf{in}  ${ D}$ }
+      \State Define $\mlam_{bulk}^{(d)}$ as all symbols from $\mlam_{bulk}$ with degree less than or equal to current degree: $\mlam^{(d)}_{bulk}$
+      \State Using $\mlam_{bulk}^{(d)}$, apply Alg. (\ref{alg:pgreedy}), \pgreedy{}, with $\mathcal{A}_{\gmvp{}}$ to get symbol subset, $\mlam^{(d)}_{opt}$ and estimator val, $\epsilon^{(d)}_{opt}$
+      \If { $|\mlam^{(d)}_{opt}-\mlam^{(d-1)}_{opt}|<tol$ }
+        \State \textbf{break}
+      \EndIf
+    \EndFor
+    \vskip 10pt
+    \State {\bf Output:} $\mlam^{(d)}_{opt}$
+    %
+  \end{algorithmic}
+  %
+\end{algorithm}
+}
+%
+%
 \par This truncated expansion happens to be a polynomial in at most $N$ variables.
 %
 In this setting, the uncertainty of which and how many basis terms to include makes this a problem ripe for the application of linear modeling driven by a greedy process, namely \eqn{eq:linsol1} and Alg. (\ref{alg:pgreedy}) .
+%
+%
+% Plots of QNM frequencies
+\begin{figure*}[htb]
+  %
+  \begin{tabular}{lr}
+    \includegraphics[width=0.49\textwidth]{fig/fits_w.pdf} & \includegraphics[width=0.49\textwidth]{fig/fits_tau.pdf}
+    \\
+    \includegraphics[width=0.49\textwidth]{fig/res_w.pdf} & \includegraphics[width=0.49\textwidth]{fig/res_tau.pdf}
+  \end{tabular}
+  %
+	\caption{ Fits of dimensionless \qnm{} central frequencies (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}.
+  %
+  Before the application of $\kappa(\j{})$, points are spaced between -\CwFitCalibrationRegion and \CwFitCalibrationRegion according to \CwFitCalibrationRegion times the $\sin$ of a fiducial angle which is uniformly spaced between $-\pi/2$ and $\pi/2$. Values of $\j{}$ are shown in the upper axis for $\kappa$ at $l=m$.
+  %
+  The grey dashed line marks the value of $\kappa$ where $\j{}=0$. Fits of dimensionless \qnm{} decay rates (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. (Bottom) Percentage residual errors for fits of dimensionless \qnm{} central frequencies and decay times (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. }
+  %
+  \label{fig:qnm}
+  %
+\end{figure*}
 %
 \par Here, the basis symbols required by Alg. (\ref{alg:pgreedy}) are the multinomial terms in \eqn{eq:mvt}.
 %
@@ -418,7 +469,7 @@ Note that in practice it may be useful to encode elements of $\mlam_{bulk}$ with
 %
 An explicit sketch of this is given by Alg. (\ref{alg:A_gmvp}).
 %
-\par The combination of these two ideas alone results in an algorithm prone to a deficit of stepwise methods: the algorithm may confuse correlated basis vectors (e.g. $x^2$ may be confused for $x^4$).
+\par The combination of these two ideas alone results in an algorithm prone to a deficit of stepwise methods: the algorithm may confuse correlated basis vectors (e.g. $x^2$ may be confused with $x^4$).
 %
 To counter this, we may incrementally increase, or \textit{temper}, the maximum allowed multinomial degree.
 %
@@ -473,7 +524,7 @@ At this stage, we will also explicitly consider the $j^\mathrm{th}$ samples of t
   %
   \includegraphics[width=\textwidth]{fig/issue3_summary.pdf}
   %
-	\caption{ Standard summary plot for \gmvr. }
+	\caption{ Standard summary plot for Greedy Multivariate Rational fitting algorithm (\gmvr) as implemented in \cite{lionel_london_2018_1402516}. (\textit{left}) 3D plot of training data (black dots) and final fit (red mesh). (\textit{center top}) Same as left most panel, but in index space. (\textit{center bottom}) Fractional residual error (grey blocks) along with uniform (black) and gaussian (red) fits to error. (\textit{top right}) convergence of the L2 norm during iterative refinement. (\textit{bottom right}) Same as top right, but on log scale, where $\epsilon_0$ is the value of $\epsilon$ at the final $k^{\mathrm{th}}$ iteration of refinement. }
   %
   \label{fig:gmvrtoy}
   %
@@ -547,6 +598,27 @@ In practice, one solves \eqn{eq:pinv3} for $\vec{\alpha}^{(n+1)}$, and then uses
 Subsequently, $g^{(n+1)}$ is then fed back into \eqn{eq:pinv3} for further refinement.
 %
 The refinement process is to terminate when a measure of model error (e.g. $||g^{(0)}-g^{(n)}||$) passes a predetermined threshold.
+%
+%
+%
+% \hspace{1cm}
+{\scriptsize
+\begin{algorithm}[H]
+  %
+  \caption{$\mathcal{A}_{\gmvp}$, the action for \gmvp. Model calculation given basis symbols, and output of model error estimate.}
+  %
+  \label{alg:A_gmvp}
+  \begin{algorithmic}[1]
+    %
+    \State {\bf Input:} $\mlam_{trial}$
+    \vskip 10pt
+    \State Calculate $\mu_k$ via \eqn{eq:linsol1}.
+    \State Calculate the model representation error, e.g.: $\epsilon = ||\hatU \vecmu - \vec{f}||/||\vec{f}||$, where $||a||$ is the L-2 norm of $a$.
+    \vskip 10pt
+    \State {\bf Output:} $\epsilon$
+  \end{algorithmic}
+\end{algorithm}
+}
 %
 \par Much as in the case of multivariate polynomial fitting, we are left with an un unknown number and content of basis symbols.
 %
@@ -754,153 +826,6 @@ Concurrently, the use of $\kappa$ as a domain variable has the desirable effect 
 %
 We note that, in the asymptotic vicinity of $\jf=1$, the \qnm{} frequencies and decay times are known to have solutions that are asymptoticly degenerate \cite{Zimmerman:2015rua}.
 %
-In allowing \eqns{eq:cw_fit_1}{eq:cw_fit_9} to extrapolate to $\jf=1$, we do not explicitly account for this additional effect.
-%
-\par Lastly, \fig{fig:qnm}'s bottom two panels show fractional residual errors.
-%
-Although each model's fractional error is within 2\%, each is error is dominated by well known nonlinear oscillations which are considered to be outside of the experimental accuracy of current 2nd generation \gw{} efforts.
-%
-\par Together, \eqns{eq:cw_fit_1}{eq:cw_fit_9} along with Figures (\ref{fig:qnm})-(\ref{fig:qnm_err}) present precise and accurate fits for the real and imaginary parts of \qnm{} frequencies for gravitational perturbations of Kerr \qnm{s}.
-%
-%
-\subsection{Modeling spherical-spheroidal inner-products with \gmvr{}}
-%
-%
-Here we apply \gmvr{} to the spherical-spheroidal mixing coefficients, $\sigma_{\LMlmn}$.
-%
-As in the case of the \qnm{} frequencies, we use the domain transformation defined by \eqn{eq:kappa} to simplify the functional form of each $\sigma_{\LMlmn}$.
-%
-\par While it is possible to enforce extremal Kerr and Schwarzschild limiting conditions for $\sigma_{\LMlmn}$, we find it effective to first use \gmvr{} to determine a functional form that works for \textit{all} $\sigma_{\LMlmn}$, and then apply this form to the modeling of all $\sigma_{\LMlmn}$.
-%
-\eqns{eq:ys22220}{eq:ys55550} present the resulting model equations.
-%
-%
-\par \fig{fig:ys} displays fits, training data and related residuals.
-%
-For efficiency of presentation, each $\sigma_{\LMlmn}$ is plotted via its real and imaginary part.
-%
-In cases where $(\bar\ell,\bar{m})=(\ell,m)$, the real part of $\sigma_{\LMlmn}$ varies about unity in a manner consistent with the Schwarzschild limit, where $\sigma_{\LMlmn}=\delta_{\bar\ell}^{\ell}\;\delta_{\bar{m}}^{m}$.
-%
-This is equally true in cases where $(\bar\ell,\bar{m}) \neq (\ell,m)$.
-%
-As with the \qnm{} frequencies, residuals are dominated by small scale oscillations with amplitudes that are fractions of a percent of the central values.
-%
-\section{Discussion}
-\label{discuss}
-%
-\par We have developed upon previous techniques for the linear and pseudo-linear modeling of low noise data.
-%
-In particular, the \gmvp{} algorithm performs multivariate polynomial modeling of real and complex valued scalar functions with no inherent limitation on the number of domain parameters.
-%
-The \gmvr{} algorithm does the same with multivariate rational functions.
-%
-When applied to the modeling of analytically computed quantities, both algorithms perform extremely well in producing accurate and precise representations of training data, suggesting extended applicability of \gmvr{} and \gmvp{} similar problems.
-%
-\par Treating a toy problem with \gmvr{} demonstrates its ability to faithfully recover underlying model parameters for a plausible dataset.
-%
-This treatment also demonstrates the convergence of the algorithm's greedy phase with increasing iterations, as well as the convergence of an underlying iterative refinement phase (\ceqn{eq:rat4}).
-%
-%
-\par Both \gmvp{} and \gmvr{} may be used to automatically determine the functional form and model for a given dataset that is expected to be respectively polynomial or rational.
-%
-An alternative use strategy is to use either \gmvp{} or \gmvr{} to determine a fitting ansatz for individual cases (e.g. individual \qnm{s}), and then use these results to develop a single ansatz for all cases.
-%
-This is what as been done for the modeling of \qnm{} frequencies and spherical-spheroidal mixing coefficients.
-%
-%
-\par \gmvp{} has been applied to the modeling \qnm{} frequencies. The resulting models have been constrained in the extremal Kerr limit.
-%
-The fits presented are of direct use in Ref. \cite{London:2017bcn}, where efficiently evaluable \qnm{} frequencies are required to general template waveforms for \gw{} searches and parameter estimation.
-%
-The fits presented may find future use in Phenom or EOB based \gw{} models.
-%
-\par \gmvr{} has been applied to the modeling of mixing coefficients between the spherical and spheroidal harmonics.
-%
-These fits are of direct use in Ref. \cite{Carullo:2018sfu}, and may be of future use in similar ringdown-only models for the purpose of testing \gr{}.
-%
-\par While \gmvr{} and \gmvp{} show promise in the cases shown here, in their presented rudimentary form, both posses a number of limitations.
-%
-Neither currently performs cross-validation, given sufficiently dense training data.
-%
-And perhaps most notably, neither method directly accounts for information about the noise distribution within the training data.
-%
-As such, the methods presented are recommended primarily for datasets where noise is very small or negligible.
-%
-Nevertheless, the \gmvr{} toy problem demonstrates \gmvr{}'s ability to handle moderately noisy training data, suggesting current applicability to a large number of problems where polynomial interpolation is insufficient. 
-%
-\appendix
-
-
-\section{Algorithms}
-\label{app:algos}
-
-
-% \begin{widetext}
-
-
-%
-% GMVR
-% \hspace{1cm}
-{\scriptsize
-\begin{algorithm}[H]
-  %
-  \caption{\gmvr{}, a degree tempered stepwise algorithm for multivariate rational modeling of scalar data.}
-  \label{alg:gmvr}
-  %
-  \begin{algorithmic}[1]
-    %
-    \State {\bf Input:} $ \{ x, f, $max\_degree = 6$, tol \}$
-    \vskip 10pt
-    \State Define, $\mlam_{bulk}$, the bulk symbol space using the $n$-fold cartesian inner-product of the power set of each basis symbol. This is the combined bulk for numerator and denominator symbols.
-    \State Define $\mathcal{A}_{\gmvr{}}$ according to Alg. (\ref{alg:A_gmvr}).
-    \State Given $max\_degree$, define, ${ D}$, a list of allowed polynomial degrees (e.g. $\{0,1,2,3,4,5,6\}$)
-    \For {$d$ \textbf{in}  ${ D}$ }
-      \State Define $\mlam_{bulk}^{(d)}$ as all symbols from $\mlam_{bulk}$ with degree less than or equal to current degree: $\mlam^{(d)}_{bulk}$
-      \State Using $\mlam_{bulk}^{(d)}$, apply Alg. (\ref{alg:pgreedy}), \pgreedy{}, with $\mathcal{A}_{\gmvp{}}$ to get symbol subset, $\mlam^{(d)}_{opt}$ and estimator val, $\epsilon^{(d)}_{opt}$
-      \If { $|\mlam^{(d)}_{opt}-\mlam^{(d-1)}_{opt}|<tol$ }
-        \State \textbf{break}
-      \EndIf
-    \EndFor
-    \vskip 10pt
-    \State {\bf Output:} $\mlam^{(d)}_{opt}$
-    %
-  \end{algorithmic}
-  %
-\end{algorithm}
-}
-%
-% GMVP
-% \hspace{1cm}
-{\scriptsize
-\begin{algorithm}[H]
-  %
-  \caption{\gmvp{}, a degree tempered stepwise algorithm for multivariate polynomial modeling of scalar data.}
-  \label{alg:gmvp}
-  %
-  \begin{algorithmic}[1]
-    %
-    \State {\bf Input:} $ \{ x, f, $max\_degree = 6$, tol \}$
-    \vskip 10pt
-    \State Define, $\mlam_{bulk}$, the bulk symbol space using the $n$-fold cartesian inner-product of the power set of each basis symbol
-    \State Define $\mathcal{A}_{\gmvp{}}$ according to Alg. (\ref{alg:A_gmvp}).
-    \State Given $max\_degree$, define, ${ D}$, a list of allowed polynomial degrees (e.g. $\{0,1,2,3,4,5,6\}$)
-    \For {$d$ \textbf{in}  ${ D}$ }
-      \State Define $\mlam_{bulk}^{(d)}$ as all symbols from $\mlam_{bulk}$ with degree less than or equal to current degree: $\mlam^{(d)}_{bulk}$
-      \State Using $\mlam_{bulk}^{(d)}$, apply Alg. (\ref{alg:pgreedy}), \pgreedy{}, with $\mathcal{A}_{\gmvp{}}$ to get symbol subset, $\mlam^{(d)}_{opt}$ and estimator val, $\epsilon^{(d)}_{opt}$
-      \If { $|\mlam^{(d)}_{opt}-\mlam^{(d-1)}_{opt}|<tol$ }
-        \State \textbf{break}
-      \EndIf
-    \EndFor
-    \vskip 10pt
-    \State {\bf Output:} $\mlam^{(d)}_{opt}$
-    %
-  \end{algorithmic}
-  %
-\end{algorithm}
-}
-%
-%
-% \hspace{1cm}
 {\scriptsize
 \begin{algorithm}[H]
   %
@@ -927,67 +852,35 @@ Nevertheless, the \gmvr{} toy problem demonstrates \gmvr{}'s ability to handle m
   \end{algorithmic}
 \end{algorithm}
 }
-%
-%
-% \hspace{1cm}
-{\scriptsize
-\begin{algorithm}[H]
-  %
-  \caption{$\mathcal{A}_{\gmvp}$, the action for \gmvp. Model calculation given basis symbols, and output of model error estimate.}
-  %
-  \label{alg:A_gmvp}
-  \begin{algorithmic}[1]
-    %
-    \State {\bf Input:} $\mlam_{trial}$
-    \vskip 10pt
-    \State Calculate $\mu_k$ via \eqn{eq:linsol1}.
-    \State Calculate the model representation error, e.g.: $\epsilon = ||\hatU \vecmu - \vec{f}||/||\vec{f}||$, where $||a||$ is the L-2 norm of $a$.
-    \vskip 10pt
-    \State {\bf Output:} $\epsilon$
-  \end{algorithmic}
-\end{algorithm}
-}
-
 % \end{widetext}
-
-\section{Equations}
-\label{app:eqns}
-
-
-
 %
-% Equations for mixing coefficients
+In allowing \eqns{eq:cw_fit_1}{eq:cw_fit_9} to extrapolate to $\jf=1$, we do not explicitly account for this additional effect.
 %
-\begin{widetext}
-  \input{src/ysprod_eqns}
-\end{widetext}
-
-\section{Figures}
-\label{app:figs}
-
-
+\par Lastly, \fig{fig:qnm}'s bottom two panels show fractional residual errors.
 %
-% Plots of QNM frequencies
-\begin{figure*}
-  %
-  \begin{tabular}{lr}
-    \includegraphics[width=\figfactor\textwidth]{fig/fits_w.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/fits_tau.pdf}
-    \\
-    \includegraphics[width=\figfactor\textwidth]{fig/res_w.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/res_tau.pdf}
-  \end{tabular}
-  %
-	\caption{ Fits of dimensionless \qnm{} central frequencies (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}.
-  %
-  Before the application of $\kappa(\j{})$, points are spaced between -\CwFitCalibrationRegion and \CwFitCalibrationRegion according to \CwFitCalibrationRegion times the $\sin$ of a fiducial angle which is uniformly spaced between $-\pi/2$ and $\pi/2$. Values of $\j{}$ are shown in the upper axis for $\kappa$ at $l=m$.
-  %
-  The grey dashed line marks the value of $\kappa$ where $\j{}=0$. Fits of dimensionless \qnm{} decay rates (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. (Bottom) Percentage residual errors for fits of dimensionless \qnm{} central frequencies and decay times (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. }
-  %
-  \label{fig:qnm}
-  %
-\end{figure*}
-
+Although each model's fractional error is within 2\%, each is error is dominated by well known nonlinear oscillations which are considered to be outside of the experimental accuracy of current 2nd generation \gw{} efforts.
+%
+\par Together, \eqns{eq:cw_fit_1}{eq:cw_fit_9} along with \fig{fig:qnm} present precise and accurate fits for the real and imaginary parts of \qnm{} frequencies for gravitational perturbations of Kerr \qnm{s}.
+%
+%
+\subsection{Modeling spherical-spheroidal inner-products with \gmvr{}}
+%
+%
+Here we apply \gmvr{} to the spherical-spheroidal mixing coefficients, $\sigma_{\LMlmn}$.
+%
+As in the case of the \qnm{} frequencies, we use the domain transformation defined by \eqn{eq:kappa} to simplify the functional form of each $\sigma_{\LMlmn}$.
+%
+\par While it is possible to enforce extremal Kerr and Schwarzschild limiting conditions for $\sigma_{\LMlmn}$, we find it effective to first use \gmvr{} to determine a functional form that works for \textit{all} $\sigma_{\LMlmn}$, and then apply this form to the modeling of all $\sigma_{\LMlmn}$.
+%
+\eqns{eq:ys22220}{eq:ys55550} present the resulting model equations.
+%
+%
+\par \fig{fig:ys} displays fits, training data and related residuals.
+%
+For efficiency of presentation, each $\sigma_{\LMlmn}$ is plotted via its real and imaginary part.
+%
 % Plots of mixing coefficients
-\begin{figure*}
+\begin{figure*}[htb]
   %
   \begin{tabular}{lr}
     \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_1.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_2.pdf} \\
@@ -999,8 +892,193 @@ Nevertheless, the \gmvr{} toy problem demonstrates \gmvr{}'s ability to handle m
   \label{fig:ys}
   %
 \end{figure*}
+%
+In cases where $(\bar\ell,\bar{m})=(\ell,m)$, the real part of $\sigma_{\LMlmn}$ varies about unity in a manner consistent with the Schwarzschild limit, where $\sigma_{\LMlmn}=\delta_{\bar\ell}^{\ell}\;\delta_{\bar{m}}^{m}$.
+%
+This is equally true in cases where $(\bar\ell,\bar{m}) \neq (\ell,m)$.
+%
+As with the \qnm{} frequencies, residuals are dominated by small scale oscillations with amplitudes that are fractions of a percent of the central values.
+%
+\section{Discussion}
+\label{discuss}
+%
+\par We have developed upon previous techniques for the linear and pseudo-linear modeling of low noise data.
+%
+In particular, the \gmvp{} algorithm performs multivariate polynomial modeling of real and complex valued scalar functions with no inherent limitation on the number of domain parameters.
+%
+The \gmvr{} algorithm does the same with multivariate rational functions.
+%
+When applied to the modeling of analytically computed quantities, both algorithms perform extremely well in producing accurate and precise representations of training data, suggesting extended applicability of \gmvr{} and \gmvp{} similar problems.
+%
+\par Treating a toy problem with \gmvr{} demonstrates its ability to faithfully recover underlying model parameters for a plausible dataset.
+%
+This treatment also demonstrates the convergence of the algorithm's greedy phase with increasing iterations, as well as the convergence of an underlying iterative refinement phase (\ceqn{eq:rat4}).
+%
+%
+%
+% GMVR
+% \hspace{1cm}
+{\scriptsize
+\begin{algorithm}
+  %
+  \caption{\gmvr{}, a degree tempered stepwise algorithm for multivariate rational modeling of scalar data.}
+  \label{alg:gmvr}
+  %
+  \begin{algorithmic}[1]
+    %
+    \State {\bf Input:} $ \{ x, f, $max\_degree = 6$, tol \}$
+    \vskip 10pt
+    \State Define, $\mlam_{bulk}$, the bulk symbol space using the $n$-fold cartesian inner-product of the power set of each basis symbol. This is the combined bulk for numerator and denominator symbols.
+    \State Define $\mathcal{A}_{\gmvr{}}$ according to Alg. (\ref{alg:A_gmvr}).
+    \State Given $max\_degree$, define, ${ D}$, a list of allowed polynomial degrees (e.g. $\{0,1,2,3,4,5,6\}$)
+    \For {$d$ \textbf{in}  ${ D}$ }
+      \State Define $\mlam_{bulk}^{(d)}$ as all symbols from $\mlam_{bulk}$ with degree less than or equal to current degree: $\mlam^{(d)}_{bulk}$
+      \State Using $\mlam_{bulk}^{(d)}$, apply Alg. (\ref{alg:pgreedy}), \pgreedy{}, with $\mathcal{A}_{\gmvp{}}$ to get symbol subset, $\mlam^{(d)}_{opt}$ and estimator val, $\epsilon^{(d)}_{opt}$
+      \If { $|\mlam^{(d)}_{opt}-\mlam^{(d-1)}_{opt}|<tol$ }
+        \State \textbf{break}
+      \EndIf
+    \EndFor
+    \vskip 10pt
+    \State {\bf Output:} $\mlam^{(d)}_{opt}$
+    %
+  \end{algorithmic}
+  %
+\end{algorithm}
+}
+%
+\par Both \gmvp{} and \gmvr{} may be used to automatically determine the functional form and model for a given dataset that is expected to be respectively polynomial or rational.
+%
+An alternative use strategy is to use either \gmvp{} or \gmvr{} to determine a fitting ansatz for individual cases (e.g. individual \qnm{s}), and then use these results to develop a single ansatz for all cases.
+%
+This is what as been done for the modeling of \qnm{} frequencies and spherical-spheroidal mixing coefficients.
+%
+%
+\par \gmvp{} has been applied to the modeling \qnm{} frequencies. The resulting models have been constrained in the extremal Kerr limit.
+%
+The fits presented are of direct use in Ref. \cite{London:2017bcn}, where efficiently evaluable \qnm{} frequencies are required to general template waveforms for \gw{} searches and parameter estimation.
+%
+The fits presented may find future use in Phenom or EOB based \gw{} models.
+%
+\par \gmvr{} has been applied to the modeling of mixing coefficients between the spherical and spheroidal harmonics.
+%
+These fits are of direct use in Ref. \cite{Carullo:2018sfu}, and may be of future use in similar ringdown-only models for the purpose of testing \gr{}.
+%
+\par While \gmvr{} and \gmvp{} show promise in the cases shown here, in their presented rudimentary form, both posses a number of limitations.
+%
+Neither currently performs cross-validation, given sufficiently dense training data.
+%
+And perhaps most notably, neither method directly accounts for information about the noise distribution within the training data.
+%
+As such, the methods presented are recommended primarily for datasets where noise is very small or negligible.
+%
+Nevertheless, the \gmvr{} toy problem demonstrates \gmvr{}'s ability to handle moderately noisy training data, suggesting current applicability to a variety of problems where polynomial interpolation is insufficient.
+%
+\par Of relevance to current and future \gw{} science, the models presented for \qnm{} frequencies and harmonic mixing coefficients have aided (e.g. Refs. \cite{Carullo:2018sfu,London:2018gaq,London:2017bcn} ), and are expected to continue aiding the development and implementation of \gw{} signal models.
+
+
+%--%%----%%----%%----%%----%%----%%----%%--%
+\section*{Acknowledgements}
+%--%%----%%----%%----%%----%%----%%----%%--%
+%
+The authors thank Mark Hannam for useful discussions.
+%
+The work presented in this paper was supported by Science and Technology Facilities Council (STFC)
+grant ST/L000962/1, and European Research Council Consolidator Grant 647839.
+%
+
+\newpage
+
+%
+\appendix
+
+
+% \section{Algorithms}
+% \label{app:algos}
+% % \begin{widetext}
+% %
+% \hspace{1cm}
+% {\scriptsize
+% \begin{algorithm}[H]
+%   %
+%   \caption{$\mathcal{A}_{\gmvr}$, the action for \gmvr. Model calculation given basis symbols, and output of model error estimate.}
+%   %
+%   \label{alg:A_gmvr}
+%   \begin{algorithmic}[1]
+%     %
+%     \State {\bf Input:} \{ $\mlam_{trial}$, $tol=10^{-3}$ \}
+%     \vskip 10pt
+%     \State Calculate $\alpha^{(1)}_k$ via \eqn{eq:pinv3}. Implicitly, $n=1$.
+%     \State Calculate the current model prediction $g^{(1)}$ via \eqn{eq:rat4}.
+%     \State Calculate the model representation error, e.g.: $\epsilon^{(1)}  = ||var(g^{(n)} - g^{(0)})||/||g^{(0)}||$.
+%     \State $done = False$
+%     \While { not $done$ }
+%       \State Calculate $\alpha^{n+1}_{k}$  via \eqn{eq:pinv3}.
+%       \State Calculate the current model prediction $g^{(n)}$ via \eqn{eq:rat4}.
+%       \State Calculate the model representation error, e.g. $\epsilon^{(n)} = ||g^{(n)} - g^{(0)}||/||g^{(0)}||$.
+%       \State $done = \epsilon^{(n-1)}-\epsilon^{(n)} < tol$
+%       \State (Implicitly, $n = n+1$)
+%     \EndWhile
+%     \vskip 10pt
+%     \State {\bf Output:} $\epsilon^{(n)}$
+%   \end{algorithmic}
+% \end{algorithm}
+% }
+% % \end{widetext}
+\newpage
+\section{Additional Equations}
+\label{app:eqns}
+
+
+
+%
+% Equations for mixing coefficients
+%
+\begin{widetext}
+  \input{src/ysprod_eqns}
+\end{widetext}
+
+% \section{Figures}
+% \label{app:figs}
+
+
+% %
+% % Plots of QNM frequencies
+% \begin{figure*}[htb]
+%   %
+%   \begin{tabular}{lr}
+%     \includegraphics[width=\figfactor\textwidth]{fig/fits_w.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/fits_tau.pdf}
+%     \\
+%     \includegraphics[width=\figfactor\textwidth]{fig/res_w.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/res_tau.pdf}
+%   \end{tabular}
+%   %
+% 	\caption{ Fits of dimensionless \qnm{} central frequencies (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}.
+%   %
+%   Before the application of $\kappa(\j{})$, points are spaced between -\CwFitCalibrationRegion and \CwFitCalibrationRegion according to \CwFitCalibrationRegion times the $\sin$ of a fiducial angle which is uniformly spaced between $-\pi/2$ and $\pi/2$. Values of $\j{}$ are shown in the upper axis for $\kappa$ at $l=m$.
+%   %
+%   The grey dashed line marks the value of $\kappa$ where $\j{}=0$. Fits of dimensionless \qnm{} decay rates (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. (Bottom) Percentage residual errors for fits of dimensionless \qnm{} central frequencies and decay times (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. }
+%   %
+%   \label{fig:qnm}
+%   %
+% \end{figure*}
+%
+% % Plots of mixing coefficients
+% \begin{figure*}[htb]
+%   %
+%   \begin{tabular}{lr}
+%     \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_1.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_2.pdf} \\
+%     \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_3.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_4.pdf}
+%   \end{tabular}
+%   %
+% 	\caption{ Spherical-spheroidal harmonic mixing coefficients. Percentage residual errors for spherical-spheroidal harmonic mixing coefficient models. }
+%   %
+%   \label{fig:ys}
+%   %
+% \end{figure*}
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
-\bibliographystyle{ieeetr}
+\newpage
+% \bibliographystyle{ieeetr}
+\bibliographystyle{mnras}
 \bibliography{src/mvf.bib}
 \end{document}
