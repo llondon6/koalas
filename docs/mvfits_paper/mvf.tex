@@ -97,7 +97,7 @@ superscriptaddress,10pt]{revtex4-1}
   %
   A greedy-multivariate-polynomial (GMVP) regression method and greedy-multivariate-rational (GMVR) regression method are presented for the automated modeling of polynomial and rational functions respectively.
   %
-  GMVR is a quasi-linear numerical method for interpolating rational functions. It therefore represents a solution to the problem of Runge's phenomenon.
+  GMVR is a quasi-linear numerical method for interpolating rational functions. It therefore represents a solution to Runge's phenomenon.
 	%
 \end{abstract}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -115,7 +115,7 @@ In the coming years, expectations for frequent \gw{} detections of increasing \s
 %
 Concurrent with \virgo{}, the \aligo{} detectors will enter their third observing run in approximately late 2018.
 %
-During this period, a few to dozens of \bbh{} signals are likely to be detected. \cite{Abbott:2016nhf}.
+During this period, a few to dozens of \bbh{} signals are likely to be detected \cite{Abbott:2016nhf}.
 %
 In this context, signal detection and subsequent inference of physical parameters hinges upon efficient models for source properties and dynamics \cite{Abbott:2016wiq}.
 %
@@ -163,9 +163,11 @@ This latter form is ubiquitous for the development and implementation of \imr{} 
 %
 In the \eob{} formalism, $h\LM$ is modeled such that, after its peak (near merger), the effective functional form reduces (asymptotically) to \eqn{hrd}'s second line.
 %
-This view currently comes with the added assumption that ${_{-2}}S_{\ell m n} = {_{-2}}Y_{\ell m}$, where only $n=0$ is explicitly considered.
+This view currently comes with the added assumption that ${_{-2}}S_{\ell m n} = {_{-2}}Y_{\ell m}$, where only $n=0$ is explicitly considered, and ${_{-2}}Y_{\ell m}$ are the spins weighted -2 spherical harmonics.
 %
-The consequences of this choice, in particular mixing between spherical and spheroidal harmonics, are discussed in reference \cite{London:2014cma,London:2018gaq}.
+Only where $\jf \cw\lmn=0$ does $_{-2}S\lmn( 0,\theta,\phi) = {_{-2}}Y_{\ell m}\theta,\phi)$, which makes equating the spherical and spheroidal harmonics approximate at best for general values of $\jf \cw\lmn$.
+%
+The consequences of that choice, in particular the mixing between spherical and spheroidal harmonics, are discussed in reference \cite{London:2014cma,London:2018gaq}.
 %
 For the so-called \textit{Phenom} models, the frequency domain multipoles, $\tilde{h}\LM(f)$, are constructed such that their high frequency behavior is consistent with \eqn{hrd} in the time domain \cite{Hannam:2013oca,London:2017bcn,Khan:2015jqa,Schmidt:2014iyl}.
 %
@@ -534,7 +536,7 @@ These adjustments of perspective result in
 %
 \begin{align}
   \label{eq:rat3}
-  g_j = \sum_{k=0}^{R+V+1} \, z_{k} \, \psi_k(\vec{x}_j) \;,
+  g_j = \sum_{k=0}^{R+V} \, z_{k} \, \psi_k(\vec{x}_j) \;,
 \end{align}
 %
 where
@@ -965,7 +967,7 @@ These fits are of direct use in Ref. \cite{Carullo:2018sfu}, and may be of futur
 %
 \par While \gmvr{} and \gmvp{} show promise in the cases shown here, in their presented rudimentary form, both posses a number of limitations.
 %
-Neither currently performs cross-validation, given sufficiently dense training data.
+If given sufficiently dense training data, neither currently performs cross-validation.
 %
 And perhaps most notably, neither method directly accounts for information about the noise distribution within the training data.
 %
