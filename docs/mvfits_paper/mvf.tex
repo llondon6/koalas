@@ -322,17 +322,17 @@ In particular, if we refer to our set of all possible basis functions as our ``\
 %
 We will iteratively construct models with increasing number of symbols.
 %
-The process begins by finding the single symbol (basis vector) that yields the most accurate model (e.g. in the sense of minimizing the least-squares error).
+The process begins by finding the single symbol (basis vector) that yields the most accurate model in the sense of minimizing the least-squares error.
 %
 That encompasses the first iteration of a process in which we will greedily add symbols to our model.
 %
-In each new iteration, an all remaining symbols are added to the model one at a time, resulting in many trial models.
+In each subsequent iteration, remaining symbols are added to the model one at a time, resulting in many trial models, each with its own representation error.
 %
-When considering all trial models, the single models symbol which yields the greatest increase in model accuracy is kept for the subsequent greedy iteration.
+The the trial model with smallest representation error is kept for the next greedy iteration.
 %
 In this way, a list of optimal model symbols is learned.
 %
-The forward process is to end when the model accuracy, or changes thereof, pass a specified threshold.
+This forward greedy process ends when the model accuracy, or changes thereof, passes a previously specified threshold.
 %
 This rough algorithmic picture is encapsulated by Alg. \ref{alg:pgreedy}.
 %
@@ -889,7 +889,7 @@ For efficiency of presentation, each $\sigma_{\LMlmn}$ is plotted via its real a
     \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_3.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_4.pdf}
   \end{tabular}
   %
-	\caption{ Spherical-spheroidal harmonic mixing coefficients. Percentage residual errors for spherical-spheroidal harmonic mixing coefficient models. }
+	\caption{ Spherical-spheroidal harmonic mixing coefficients. Percentage residual errors for spherical-spheroidal harmonic mixing coefficient models. (Top Left) Mixing coefficients for cases where $(\bar{\ell},\bar{m})=(\ell,m)$. The dashed horizontal intersects each curve at the Schwarzschild limit where $\jf=0$. (Top Right) Mixing coefficients where $(\bar{\ell},\bar{m})\neq(\ell,m)$. (Bottom Left and Right) Factional residuals for mixing coefficient fits. }
   %
   \label{fig:ys}
   %
