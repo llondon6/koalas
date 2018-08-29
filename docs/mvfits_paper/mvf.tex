@@ -93,9 +93,7 @@ superscriptaddress,10pt]{revtex4-1}
   %
   Here, we summarize recent methods and models for the analytically understood gravitational wave spectra (quasi-normal mode frequencies), and harmonic structure of Kerr black holes (mixing coefficients between spherical and spheroidal harmonics).
   %
-  Towards the construction of these models, two algorithms are presented.
-  %
-  A greedy-multivariate-polynomial (GMVP) regression method and greedy-multivariate-rational (GMVR) regression method are presented for the automated modeling of polynomial and rational functions respectively.
+  Towards the construction of these models we present a greedy-multivariate-polynomial (GMVP) regression method and greedy-multivariate-rational (GMVR) regression method for the automated modeling of polynomial and rational functions respectively.
   %
   GMVR is a quasi-linear numerical method for interpolating rational functions. It therefore represents a solution to Runge's phenomenon.
 	%
@@ -198,7 +196,7 @@ In \eqn{sigma}, $*$ denotes complex conjugation, and $\Omega$ is the standard so
 %
 Whereas the calculation of each ${_{-2}S}\lmn$ involves a series solution which slowly converges for $\jf$ near unity, the calculation of each ${_{-2}Y}\LM$ is achieved using closed form expressions.
 %
-It is therefore efficient to avoid convergence issues by using accurate models for $\sigma\LMlmn$, which can then be used directly to calculate $h\LM$ via \eqn{hlm}, and thereby the \gw{} polarizations via \eqn{hrd}.
+It is therefore efficient to use accurate models for $\sigma\LMlmn$ which avoids convergence issues. These can then be used directly to calculate $h\LM$ via \eqn{hlm}, and thereby the \gw{} polarizations via \eqn{hrd}.
 %
 %
 \par In this combined context, it is clear that the modeling of \qnm{} frequencies, $\cw\lmn$, and spherical-spheroidal mixing coefficients, $\sigma\LMlmn$, are relevant for a range of \gw{} signal models.
@@ -217,7 +215,7 @@ As the most advanced signal models include at least $\ell$ or $\bar{\ell}$ of 3,
 %
 In particular, it is well known that $\sigma_{43330}$ can have a significant impact on the $(4,3)$ spherical multipole (See \ceqn{hlm}).
 %
-For consistency with the multipolar content of current ringdown models, here, we extend previous results to include the most significant multipoles with $\ell \leq 5$.
+For consistency with the multipolar content of current ringdown models, we extend previous results to include the most significant multipoles with $\ell \leq 5$.
 %
 %
 \par In parallel, the methods for modeling $\cw\lmn$ and $\sigma\LMlmn$ have been dispersed: different phenomenological techniques have been used under no coherent framework.
@@ -261,11 +259,11 @@ Perhaps most intriguingly, the formal series expansions of smooth functions supp
 %
 With this in mind, here, we will develop algorithms for the linear (polynomial and rational) modeling of scalar functions (real or complex valued) of many variables.
 %
-\par If we consider a scalar function, $f$, of $N$ variables sampled in $j$, $\vec{x}_j = \{x_{\alpha j}\}_{\alpha=0}^{N}$, then $f(\vec{x})_j$ can be represented (possibly inaccurately) as a sum over $K$ linearly independent basis functions, $\phi_k(\vec{x}_j)$:
+\par If we consider a scalar function, $f$, of $N$ variables sampled in $j$, $\vec{x}_j = \{x_{\alpha j}\}_{\alpha=0}^{N}$, then $f(\vec{x}_j)$ can be represented (possibly inaccurately) as a sum over $K$ linearly independent basis functions, $\phi_k(\vec{x}_j)$:
 %
 \begin{align}
   \label{lin1}
-  f({\vec{x}})_j \; = \; \sum_{k=0}^{K} \; \mu_{k} \, \phi_{kj}\; .
+  f({\vec{x}}_j) \; = \; \sum_{k=0}^{K} \; \mu_{k} \, \phi_k(\vec{x}_j)\; .
 \end{align}
 %
 The central player is \eqn{lin1} is the set of basis coefficients $\mu_{k}$.
@@ -281,7 +279,7 @@ With $\phi_{k}(\vec{x}_j)$ assumed to be known, the linear representation (namel
 %
 \par From here it is useful to note that \eqn{lin1} has a linear homogeneous matrix form.
 %
-In particular, defining $\hat{U} = \{\phi_{kj}\}$, and $\vec{f} = \{f_j\}$, then $\vec{f} = \hat{U} \; \vec{\mu}$, implies that
+In particular, defining ${U}_{jk} = \phi_k(\vec{x}_j)$, $f_j = f(\vec{x}_j)$ then $\vec{f} = \hat{U} \; \vec{\mu}$, implies that
 %
 \begin{align}
   \label{eq:linsol1}
@@ -380,7 +378,6 @@ This rough algorithmic picture is encapsulated by Alg. \ref{alg:pgreedy}.
 %
 \par The very similar ``negative'' greedy algorithm removes model symbols until representation error increases beyond a specified threshold.
 %
-\par Note that we will use the terms ``basis vector'' and ``model symbol'' interchangeably. However, in practice, it can be useful to represent basis vectors symbolically (e.g. with strings), and have a way of bijectively mapping between symbols and numerical basis vectors.
 %
 % \par
 %
@@ -465,7 +462,7 @@ In this setting, the uncertainty of which and how many basis terms to include ma
 %
 Each term is an element of the $n$-fold cartesian inner-product of the power-sets of each model dimension. That is $\mlam_{bulk} = \{x_0,x_1 .. x_N, ... x_0^1, x_0^2, x_0^3, ...  , (x_0^K x_1^K ... x_N^K) \}$.
 %
-Note that in practice it may be useful to encode elements of $\mlam_{bulk}$ with strings representing their constituents (e.g. $x_0 x_0 x_1 x_2 x_2 x_4$ could be represented by the string ``001224'').
+Note that in practice it may be useful to encode elements of $\mlam_{bulk}$ with strings representing their constituents (e.g. $x_0 x_0 x_1 x_2 x_2 x_4$ could be represented by the string ``001224''). This provides a way of bijectively mapping between symbols and numerical basis vectors.
 %
 \par The action, $\mathcal{A}(\mlam_{trial})$, required by Alg. (\ref{alg:pgreedy}) encompasses the evaluation of \eqn{eq:linsol1} to solve for the basis coefficients, $\mu_k$, and the calculation of the modeling error.
 %
@@ -568,9 +565,9 @@ and
 %
 where, $\hat{P}$ is the pseudo-inverse of the matrix whose elements are $\psi_k(\vec{x}_j)$, $\vec\alpha = ( z_0, z_1, ... z_{R+V-1},z_{R+V} )$, and $\vec{g} = ( g_0, g_1, ... g_{R+V-1},g_{R+V} )$.
 %
-\par However, we note that $\hat{P}$'s depending on $g$ signals that there is more to be done.
+\par However, we note that $\hat{P}$ depends on $g$ signals.
 %
-In particular, let us briefly consider the effect of zero-mean noise on $g$, e.g. $g \rightarrow g+n$.
+Let us briefly consider the effect of zero-mean noise on $g$, e.g. $g \rightarrow g+n$.
 %
 In this, it may be that shown that $n$ may be entirely regelated to $\hat{P}$.
 %
@@ -622,7 +619,7 @@ The refinement process is to terminate when a measure of model error (e.g. $||g^
 \end{algorithm}
 }
 %
-\par Much as in the case of multivariate polynomial fitting, we are left with an un unknown number and content of basis symbols.
+\par Much as in the case of multivariate polynomial fitting, we are left with an unknown number and content of basis symbols.
 %
 In principle, the existence of $a_r$ and $b_v$ makes the problem more complicated, as one might imagine optimizing over each symbol space independently.
 %
@@ -702,7 +699,7 @@ We see that this is not the case here, and that the uniformly random noise distr
 %
 Specifically, when considering many noise realizations, we find that sample noise and residuals have an average correlation of $99.46\%$.
 %
-\par \fig{fig:gmvrtoy}'s left top and bottom panels show the convergence of Alg. (\ref{alg:A_gmvr})'s iterative refinement stage (i.e. its while-loop).
+\par \fig{fig:gmvrtoy}'s right top and bottom panels show the convergence of Alg. (\ref{alg:A_gmvr})'s iterative refinement stage (i.e. its while-loop).
 %
 Here it is demonstrated that \gmvr{} converges in a way that is approximately exponential, owing to the underlying analytic nature of the training data.
 %
@@ -776,7 +773,7 @@ In seeking to apply \gmvp{} to select \qnm{} frequencies, we wish to account for
 %
 Namely, we will impose a zero-damping constraint: some frequencies are real as $\jf \rightarrow 1$ \cite{Zimmerman:2015trm}.
 %
-We also wish the impose a domain transformation, $\kappa(\jf,\ell,m)$, such that $0 \leq \kappa \leq 1$ and the individual \qnm{} frequencies are made approx. polynomial in $\kappa$.
+We also wish to impose a domain transformation, $\kappa(\jf,\ell,m)$, such that $0 \leq \kappa \leq 1$ and the individual \qnm{} frequencies are made approx. polynomial in $\kappa$.
 %
 \par For the domain transformation, inspection of \qnm{} frequencies with $\ell \leq 5$ suggest that
 %
@@ -807,7 +804,7 @@ In the case of the non-zero damped \qnm{s}, (e.g. $(\ell,m)=(3,2)$), a more gene
 %
 \eqns{eq:cw_fit_1}{eq:cw_fit_9} display the resulting polynomial models.
 %
-In particular, the domain map allows most \qnm frequencies to be well modeled by 4th order polynomials which include all lower degree terms; concurrently, the real and imaginary parts of each $\cw\lmn$ are modeled simultaneously.
+In particular, the domain map allows most \qnm{} frequencies to be well modeled by 4th order polynomials which include all lower degree terms; concurrently, the real and imaginary parts of each $\cw\lmn$ are modeled simultaneously.
 %
 \par \fig{fig:qnm} displays select training points, as well as model fits for $\cw\lmn$'s real and imaginary parts.
 %
@@ -860,7 +857,7 @@ In allowing \eqns{eq:cw_fit_1}{eq:cw_fit_9} to extrapolate to $\jf=1$, we do not
 %
 \par Lastly, \fig{fig:qnm}'s bottom two panels show fractional residual errors.
 %
-Although each model's fractional error is within 2\%, each is error is dominated by well known nonlinear oscillations which are considered to be outside of the experimental accuracy of current 2nd generation \gw{} efforts.
+Although each model's fractional error is within 2\%, each error is dominated by well known nonlinear oscillations which are considered to be outside of the experimental accuracy of current 2nd generation \gw{} efforts.
 %
 \par Together, \eqns{eq:cw_fit_1}{eq:cw_fit_9} along with \fig{fig:qnm} present precise and accurate fits for the real and imaginary parts of \qnm{} frequencies for gravitational perturbations of Kerr \qnm{s}.
 %
@@ -910,7 +907,7 @@ In particular, the \gmvp{} algorithm performs multivariate polynomial modeling o
 %
 The \gmvr{} algorithm does the same with multivariate rational functions.
 %
-When applied to the modeling of analytically computed quantities, both algorithms perform extremely well in producing accurate and precise representations of training data, suggesting extended applicability of \gmvr{} and \gmvp{} similar problems.
+When applied to the modeling of analytically computed quantities, both algorithms perform extremely well in producing accurate and precise representations of training data, suggesting extended applicability of \gmvr{} and \gmvp{} to similar problems.
 %
 \par Treating a toy problem with \gmvr{} demonstrates its ability to faithfully recover underlying model parameters for a plausible dataset.
 %
@@ -955,9 +952,9 @@ An alternative use strategy is to use either \gmvp{} or \gmvr{} to determine a f
 This is what as been done for the modeling of \qnm{} frequencies and spherical-spheroidal mixing coefficients.
 %
 %
-\par \gmvp{} has been applied to the modeling \qnm{} frequencies. The resulting models have been constrained in the extremal Kerr limit.
+\par \gmvp{} has been applied to the modeling of \qnm{} frequencies. The resulting models have been constrained in the extremal Kerr limit.
 %
-The fits presented are of direct use in Ref. \cite{London:2017bcn}, where efficiently evaluable \qnm{} frequencies are required to general template waveforms for \gw{} searches and parameter estimation.
+The fits presented are of direct use in Ref. \cite{London:2017bcn}, where efficiently evaluable \qnm{} frequencies are required to generate template waveforms for \gw{} searches and parameter estimation.
 %
 The fits presented may find future use in Phenom or EOB based \gw{} models.
 %
