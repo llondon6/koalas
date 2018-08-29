@@ -126,13 +126,14 @@ As the merger of isolated \bh{s} is expected to result in a perturbed Kerr \bh{}
 $%\begin{align}
 	\cw\lmn = \omega\lmn + i/\tau\lmn
 $%\end{align}
+, where $\omega\lmn$ is the central frequency of the ringing, and $1/\tau\lmn$ is the damping rate.
 .
 %
 These discrete frequencies have associated radial and spatial functions which are \textit{spheroidal} harmonic in nature \cite{Leaver85,London:2014cma}.
 %
-These frequencies and harmonic functions are the so-called \qnm{s}.
+Together, these harmonic functions and frequencies constitute the \qnm{} solutions to \ee{}.
 %
-They are the eigen-solutions of the source free linearized \ee{} (i.e. \tk{'s} equations \cite{PhysRevLett.29.1114}) for a perturbed \bh{} with final mass, $\mf$, and dimensionless final spin, $\jf$.
+Specifically, they are the eigen-solutions of the source free linearized \ee{} (i.e. \tk{'s} equations \cite{PhysRevLett.29.1114}) for a perturbed \bh{} with final mass, $\mf$, and dimensionless final spin, $\jf$.
 %
 The well known and effective completeness of these solutions allows \grad{} from generic perturbations to be well approximated by a spectral (multipolar) sum which combines the complex \qnm{} amplitude, $A\lmn$, with the spin weight -2 spheroidal harmonics, $_{-2}S\lmn$.
 %
@@ -201,7 +202,7 @@ It is therefore efficient to use accurate models for $\sigma\LMlmn$ which avoids
 %
 \par In this combined context, it is clear that the modeling of \qnm{} frequencies, $\cw\lmn$, and spherical-spheroidal mixing coefficients, $\sigma\LMlmn$, are relevant for a range of \gw{} signal models.
 %
-While models for $\cw\lmn$ and $\sigma\LMlmn$ are present in the literature, there exist minor shortcomings which we wish to address here \cite{Berti:2005ys,Berti:2014fga}.
+While models for $\cw\lmn$ and $\sigma\LMlmn$ are present in the literature (e.g. \cite{Berti:2005ys,Berti:2014fga}), there exist minor shortcomings which we wish to address here.
 %
 \par For the \qnm{} frequencies, it is well known that for nearly extremal \bh{s} (i.e. $\jf \rightarrow 1$) some of the frequencies have zero-damping (i.e. $\tau\lmn \rightarrow \infty$) \cite{Zimmerman:2015trm}.
 %
@@ -213,7 +214,7 @@ Here, we present the first models for $\cw\lmn$ that explicitly account for zero
 %
 As the most advanced signal models include at least $\ell$ or $\bar{\ell}$ of 3, there is use in extending current results.
 %
-In particular, it is well known that $\sigma_{43330}$ can have a significant impact on the $(4,3)$ spherical multipole (See \ceqn{hlm}).
+In particular, it is well known that $\sigma_{43330}$ can have a significant impact on the $(4,3)$ spherical multipole (via \ceqn{hlm}).
 %
 For consistency with the multipolar content of current ringdown models, we extend previous results to include the most significant multipoles with $\ell \leq 5$.
 %
@@ -233,6 +234,8 @@ As the underlying process for \gmvp{} and \gmvr{} is stepwise regression, highly
 It will be demonstrated that these approaches are readily capable of modeling the complex valued $\cw\lmn$ and $\sigma\LMlmn$.
 %
 Results suggest that the versions of \gmvp{} and \gmvr{} presented here may have broad application in instances where training data are approximately noiseless, and an initial guess is difficult to obtain.
+%
+Both algorithms are publicly available in \texttt{Python} via Ref. \cite{lionel_london_2018_1402516}.
 %
 %
 \par The plan of the paper is as follows.
@@ -257,7 +260,7 @@ Its matrix based formulation can be computationally efficient, and it does not r
 %
 Perhaps most intriguingly, the formal series expansions of smooth functions support linear and rational models (e.g. Pad\'e approximants) that have application to many datasets.
 %
-With this in mind, here, we will develop algorithms for the linear (polynomial and rational) modeling of scalar functions (real or complex valued) of many variables.
+With this in mind, here, we will develop algorithms for the linear (polynomial and rational) modeling of scalar functions (real or complex) of many variables.
 %
 \par If we consider a scalar function, $f$, of $N$ variables sampled in $j$, $\vec{x}_j = \{x_{\alpha j}\}_{\alpha=0}^{N}$, then $f(\vec{x}_j)$ can be represented (possibly inaccurately) as a sum over $K$ linearly independent basis functions, $\phi_k(\vec{x}_j)$:
 %
@@ -279,7 +282,7 @@ With $\phi_{k}(\vec{x}_j)$ assumed to be known, the linear representation (namel
 %
 \par From here it is useful to note that \eqn{lin1} has a linear homogeneous matrix form.
 %
-In particular, defining ${U}_{jk} = \phi_k(\vec{x}_j)$, $f_j = f(\vec{x}_j)$ then $\vec{f} = \hat{U} \; \vec{\mu}$, implies that
+In particular, defining ${U}_{jk} = \phi_k(\vec{x}_j)$, $f_j = f(\vec{x}_j)$ and $\vec{f} = \hat{U} \; \vec{\mu}$, implies that
 %
 \begin{align}
   \label{eq:linsol1}
