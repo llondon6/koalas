@@ -378,7 +378,6 @@ This rough algorithmic picture is encapsulated by Alg. \ref{alg:pgreedy}.
 %
 \par The very similar ``negative'' greedy algorithm removes model symbols until representation error increases beyond a specified threshold.
 %
-\par Note that we will use the terms ``basis vector'' and ``model symbol'' interchangeably. However, in practice, it can be useful to represent basis vectors symbolically (e.g. with strings), and have a way of bijectively mapping between symbols and numerical basis vectors.
 %
 % \par
 %
@@ -463,7 +462,7 @@ In this setting, the uncertainty of which and how many basis terms to include ma
 %
 Each term is an element of the $n$-fold cartesian inner-product of the power-sets of each model dimension. That is $\mlam_{bulk} = \{x_0,x_1 .. x_N, ... x_0^1, x_0^2, x_0^3, ...  , (x_0^K x_1^K ... x_N^K) \}$.
 %
-Note that in practice it may be useful to encode elements of $\mlam_{bulk}$ with strings representing their constituents (e.g. $x_0 x_0 x_1 x_2 x_2 x_4$ could be represented by the string ``001224'').
+Note that in practice it may be useful to encode elements of $\mlam_{bulk}$ with strings representing their constituents (e.g. $x_0 x_0 x_1 x_2 x_2 x_4$ could be represented by the string ``001224''). This provides a way of bijectively mapping between symbols and numerical basis vectors.
 %
 \par The action, $\mathcal{A}(\mlam_{trial})$, required by Alg. (\ref{alg:pgreedy}) encompasses the evaluation of \eqn{eq:linsol1} to solve for the basis coefficients, $\mu_k$, and the calculation of the modeling error.
 %
