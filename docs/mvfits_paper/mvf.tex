@@ -259,11 +259,11 @@ Perhaps most intriguingly, the formal series expansions of smooth functions supp
 %
 With this in mind, here, we will develop algorithms for the linear (polynomial and rational) modeling of scalar functions (real or complex valued) of many variables.
 %
-\par If we consider a scalar function, $f$, of $N$ variables sampled in $j$, $\vec{x}_j = \{x_{\alpha j}\}_{\alpha=0}^{N}$, then $f(\vec{x})_j$ can be represented (possibly inaccurately) as a sum over $K$ linearly independent basis functions, $\phi_k(\vec{x}_j)$:
+\par If we consider a scalar function, $f$, of $N$ variables sampled in $j$, $\vec{x}_j = \{x_{\alpha j}\}_{\alpha=0}^{N}$, then $f(\vec{x}_j)$ can be represented (possibly inaccurately) as a sum over $K$ linearly independent basis functions, $\phi_k(\vec{x}_j)$:
 %
 \begin{align}
   \label{lin1}
-  f({\vec{x}})_j \; = \; \sum_{k=0}^{K} \; \mu_{k} \, \phi_{kj}\; .
+  f({\vec{x}}_j) \; = \; \sum_{k=0}^{K} \; \mu_{k} \, \phi_k(\vec{x}_j)\; .
 \end{align}
 %
 The central player is \eqn{lin1} is the set of basis coefficients $\mu_{k}$.
@@ -279,7 +279,7 @@ With $\phi_{k}(\vec{x}_j)$ assumed to be known, the linear representation (namel
 %
 \par From here it is useful to note that \eqn{lin1} has a linear homogeneous matrix form.
 %
-In particular, defining $\hat{U} = \{\phi_{kj}\}$, and $\vec{f} = \{f_j\}$, then $\vec{f} = \hat{U} \; \vec{\mu}$, implies that
+In particular, defining ${U}_{jk} = \phi_k(\vec{x}_j)$, $f_j = f(\vec{x}_j)$ then $\vec{f} = \hat{U} \; \vec{\mu}$, implies that
 %
 \begin{align}
   \label{eq:linsol1}
@@ -308,7 +308,7 @@ This will encompass the \gmvp{} algorithm.
 %
 Second, we will build upon the \gmvp{} approach by considering models of rational functions (polynomials divided by polynomials).
 %
-To consider these two approaches in a largely automated way (i.e. where the set of possible basis functions is known, but the select basis functions ultimately used are \textit{learned}), we will make use of the \textit{greedy} algorithm approach \cite{Field:2011mf}.
+To consider these two approaches in a largely automated way (i.e. where the set of possible basis functions is known, but the selected basis functions ultimately used are \textit{learned}), we will make use of the \textit{greedy} algorithm approach \cite{Field:2011mf}.
 %
 \subsection{A Generic Greedy Algorithm}
 %
