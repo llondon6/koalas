@@ -565,9 +565,9 @@ and
 %
 where, $\hat{P}$ is the pseudo-inverse of the matrix whose elements are $\psi_k(\vec{x}_j)$, $\vec\alpha = ( z_0, z_1, ... z_{R+V-1},z_{R+V} )$, and $\vec{g} = ( g_0, g_1, ... g_{R+V-1},g_{R+V} )$.
 %
-\par However, we note that $\hat{P}$'s depending on $g$ signals that there is more to be done.
+\par However, we note that $\hat{P}$ depends on $g$ signals.
 %
-In particular, let us briefly consider the effect of zero-mean noise on $g$, e.g. $g \rightarrow g+n$.
+Let us briefly consider the effect of zero-mean noise on $g$, e.g. $g \rightarrow g+n$.
 %
 In this, it may be that shown that $n$ may be entirely regelated to $\hat{P}$.
 %
@@ -619,7 +619,7 @@ The refinement process is to terminate when a measure of model error (e.g. $||g^
 \end{algorithm}
 }
 %
-\par Much as in the case of multivariate polynomial fitting, we are left with an un unknown number and content of basis symbols.
+\par Much as in the case of multivariate polynomial fitting, we are left with an unknown number and content of basis symbols.
 %
 In principle, the existence of $a_r$ and $b_v$ makes the problem more complicated, as one might imagine optimizing over each symbol space independently.
 %
