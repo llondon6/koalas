@@ -37,6 +37,7 @@ superscriptaddress,10pt]{revtex4-1}
 
 \input{src/definitions}
 \def\check#1{\red{#1}}
+\def\new#1{\blue{#1}}
 \def\remove#1{\hlred{#1}}
 \newcommand{\cw}{\tilde{\omega}}
 \newcommand{\CW}{\tilde{\Omega}}
@@ -89,13 +90,19 @@ superscriptaddress,10pt]{revtex4-1}
   %
   Models of black hole properties play an important role in the ongoing direct detection of gravitational waves from black hole binaries.
   %
-  In particular, model based gravitational wave detection, and subsequent estimation of source parameters are supported by the low level modeling of information related to perturbed Kerr black holes.
+  On important aspect of model based gravitational wave detection, and subsequent estimation of source parameters, are the low level modeling of information related to perturbed Kerr black holes.
   %
-  Here, we summarize recent methods and models for the analytically understood gravitational wave spectra (quasi-normal mode frequencies), and harmonic structure of Kerr black holes (mixing coefficients between spherical and spheroidal harmonics).
+  Here, we present new methods and models for the analytically understood gravitational wave spectra (quasi-normal mode frequencies), and harmonic structure of Kerr black holes (mixing coefficients between spherical and spheroidal harmonics).
   %
-  Towards the construction of these models we present a greedy-multivariate-polynomial (GMVP) regression method and greedy-multivariate-rational (GMVR) regression method for the automated modeling of polynomial and rational functions respectively.
+  In particular, we present a greedy-multivariate-polynomial (GMVP) regression method and greedy-multivariate-rational (GMVR) regression method for the automated modeling of polynomial and rational functions respectively.
   %
   GMVR is a quasi-linear numerical method for interpolating rational functions. It therefore represents a solution to Runge's phenomenon.
+  %
+  GMVP is used to develop the first model for QNM frequencies explicitly enforces consistency with the extremal Kerr limit.
+  %
+  GMVR is used to develop a model for harmonic mixing coefficients that extends previous results to dominant multipoles with $\ell \le 5$.
+  %
+  We discuss the use of these models in current and future gravitational wave signal modeling.
 	%
 \end{abstract}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -111,7 +118,7 @@ superscriptaddress,10pt]{revtex4-1}
 %
 In the coming years, expectations for frequent \gw{} detections of increasing \snr{} are high \cite{TheLIGOScientific:2016pea,Abbott:2016nhf}.
 %
-Concurrent with \virgo{}, the \aligo{} detectors will enter their third observing run in approximately late 2018.
+Concurrent with \virgo{}, the \aligo{} detectors will enter their third observing run in approximately early 2019.
 %
 During this period, a few to dozens of \bbh{} signals are likely to be detected \cite{Abbott:2016nhf}.
 %
@@ -127,7 +134,6 @@ $%\begin{align}
 	\cw\lmn = \omega\lmn + i/\tau\lmn
 $%\end{align}
 , where $\omega\lmn$ is the central frequency of the ringing, and $1/\tau\lmn$ is the damping rate.
-.
 %
 These discrete frequencies have associated radial and spatial functions which are \textit{spheroidal} harmonic in nature \cite{Leaver85,London:2014cma}.
 %
@@ -583,7 +589,7 @@ Specifically, we note that \eqn{eq:rat2} may be modified to iteratively minimize
 %
 That is, to reduce the impact of noise on $\hat{P}$, we are free to calculate it using model evaluations of $g$ rather than the original (noisy) training data.
 %
-To this end, if we define $g^{(0)}=g$ (i.e. $g$ is the training data), with $\hat{P} = \hat{P}( \vec{g}^{\,(n)} )$, then \eqn{eq:pinv2} generalizes to
+If we define $g^{(0)}=g$ (i.e. $g$ is the training data), with $\hat{P} = \hat{P}( \vec{g}^{\,(n)} )$, then \eqn{eq:pinv2} generalizes to
 %
 \begin{align}
   \label{eq:pinv3}

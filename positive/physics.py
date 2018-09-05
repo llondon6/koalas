@@ -328,8 +328,108 @@ def jf161100332(m1,m2,chi1,chi2):
     # Return answer
     return jf
 
+
+# Remnant Spin
+# https://arxiv.org/abs/1605.01938
+# Fabian Hofmann, Enrico Barausse, Luciano Rezzolla
+def jf160501938(m1,m2,chi1_vec,chi2_vec,L_vec=None):
+
+    '''
+    Remnant Spin
+    https://arxiv.org/abs/1605.01938
+    Fabian Hofmann, Enrico Barausse, Luciano Rezzolla
+    '''
+
+    # Import usefuls
+    from numpy import sqrt,pow,dot,array,cos,tan,arccos,arctan
+    from numpy.linalg import norm
+
+    # Handle inputs
+    if L_vec is None:
+        warning('No initial orbital angular momentum vevtor given. We will assume it is z-ligned.')
+        L_vec = array([0,0,1])
+    #
+    m1 = float(m1); m2 = float(m2)
+
+    # Table 1 (numbers copied from arxiv tex file: https://arxiv.org/format/1605.01938)
+    # bottom block
+    n_M = 3; n_J = 4
+    k = zeros( (n_M,n_N) )
+    k[0,1] = 3.39221;   k[0,2] = 4.48865;  k[0,3] = -5.77101
+    k[0,4] = -13.0459;  k[1,0] = 35.1278;  k[1,1] = -72.9336
+    k[1,2] = -86.0036;  k[1,3] = 93.7371;  k[1,4] = 200.975
+    k[2,0] = -146.822;  k[2,1] = 387.184;  k[2,2] = 447.009
+    k[2,3] = -467.383;  k[2,4] = -884.339; k[3,0] = 223.911
+    k[3,1] = -648.502;  k[3,2] = -697.177; k[3,3] = 753.738
+    k[3,4] = 1166.89;   xi = 0.474046
+
+    # Eq. 5
+    p = 1.0/3
+    Z1 = lambda a: 1 + (1-a*a)**p * (  (1+a)**p + (1-a)**p  )
+
+    # Eq. 6
+    Z2 = lambda a: sqrt( 3*a*a + Z1(a)**2 )
+
+    # Eq. 4
+    r_ISCO = lambda a: 3.0 + Z2(a) - ( a / abs(a) ) * sqrt( (3-Z1(a))*(3+Z1(a)+2*Z2(a)) )
+
+    # Eq. 2
+    E_ISCO = lambda a: sqrt( 1 - 2.0 / ( 3 * r_ISCO(a) ) )
+
+    # Eq. 3
+    p = 0.38490017945975052 # this is 2.0 / (3*sqrt(3))
+    L_ISCO = lambda a: p * (  1 + 2*sqrt( 3*r_ISCO(a)-2 )  )
+
+    ## Amplitude of final spin
+
+    # Define low level physical parameters
+    a1z = chi1_vec[-1]
+    a2z = chi2_vec[-1]
+    a1 = norm(chi1_vec)
+    a2 = norm(chi2_vec)
+    eta = m1*m2 / (m1+m2)**2
+    q = m2/m1; if q>1: q = 1.0/q # as seen above Eq 1
+
+    # Eq. 17
+    ll = L / norm(L)
+    x1 = chi1_vec / norm(chi1_vec)
+    x2 = chi2_vec / norm(chi2_vec)
+    __alpha__ = arccos( dot(x1, x2) )
+    __beta__  = arccos( dot(ll, x1) )
+    __gamma__ = arccos( dot(ll, x2) )
+
+    # Eq. 18 for alpha
+    eps_alpha = 0
+    alpha = 2 * arctan( (1+eps_alpha)     *tan(__alpha__/2) )
+
+    # Eq. 18 for beta
+    eps_beta_gamma = 0.024
+    beta  = 2 * arctan( (1+eps_beta_gamma)*tan( __beta__/2) )
+
+    # Eq. 18 for gamma
+    gamma = 2 * arctan( (1+eps_beta_gamma)*tan(__gamma__/2) )
+
+    # Eq. 14
+    a_tot = (  a1*cos(beta) + a2*cos(gamma)*q  ) / (1.0+q)**2
+    a_eff = a_tot + xi*eta*( a1z*cos(beta) + a2z*cos(gamma) )
+
+    # Eq. 13 -- Double sum part
+    double_sum_part = 0
+    for i in range(n_M+1):
+        for j in range(n_J+1):
+            double_sum_part += (k[i,j] * eta**(1+i) * a_eff ** j) if k[i,j] else 0
+
+    # Eq. 13
+    absl = abs( L_ISCO(a_eff) - 2*a_tot*(E_ISCO(a_eff)-1) + double_sum_part )
+
+    # Eq. 16
+    afin = (1.0/(1+q)**2) * sqrt(  a1**2 + a2**2 * q**4 + 2*a1*a2*q*q*cos(alpha) + 2*(a1*cos(beta)+a2*q*q*cos(gamma))*absl*q + absl*absl*q*q  )
+
+    #
+    return afin
+
 # High level function for calculating remant mass and spin
-def remnant(m1,m2,chi1,chi2,arxiv=None,verbose=False):
+def remnant(m1,m2,chi1,chi2,arxiv=None,verbose=False,L_vec=None):
     '''
     High level function for calculating remant mass and spin for nonprecessing BBH systems.
 
@@ -343,10 +443,18 @@ def remnant(m1,m2,chi1,chi2,arxiv=None,verbose=False):
     '''
 
     #
+    if not isinstance(chi1,float):
+        arxiv = '1605.01938'
+        warning('spin vectors found; we will use a precessing spin formula from 1605.01938 for the final spin and a non-precessing formula from 1611.00332')
+
+    #
     if arxiv in ('1611.00332',161100332,None):
         if verbose: alert('Using method from arxiv:1611.00332 by Jimenez et. al.')
         Mf = Mf161100332(m1,m2,chi1,chi2)
         jf = jf161100332(m1,m2,chi1,chi2)
+    if arxiv in ('1605.01938',160501938):
+        Mf = Mf161100332(m1,m2,chi1,chi2)
+        jf = jf160501938(m1,m2,chi1,chi2,L_vec=L_vec)
     else:
         if verbose:
             alert('Using method from arxiv:1406.7295 by Healy et. al.')
@@ -1235,7 +1343,7 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     fstart,             Units: Mf/(2*pi)
     N,                  Number of samples for output (use an NR waveform for reference!). NOTE that this input may be overwrridden by an internal check on waveform length.
     dt,                 Time step of output (use an NR waveform for reference!)
-    model_data,         [Mx3] shaped numpy array
+    model_data,         [Mx3] shaped numpy array in GEOMETRIC UNITS
     plot=False,         Toggle for plotting output
     verbose=False,      Toggle for verbose
     force_t=False       Force the total time duration of the output based on inputs
