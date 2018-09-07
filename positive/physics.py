@@ -341,7 +341,7 @@ def jf160501938(m1,m2,chi1_vec,chi2_vec,L_vec=None):
     '''
 
     # Import usefuls
-    from numpy import sqrt,pow,dot,array,cos,tan,arccos,arctan
+    from numpy import sqrt,dot,array,cos,tan,arccos,arctan,zeros,sign
     from numpy.linalg import norm
 
     # Handle inputs
@@ -352,16 +352,25 @@ def jf160501938(m1,m2,chi1_vec,chi2_vec,L_vec=None):
     m1 = float(m1); m2 = float(m2)
 
     # Table 1 (numbers copied from arxiv tex file: https://arxiv.org/format/1605.01938)
-    # bottom block
-    n_M = 3; n_J = 4
-    k = zeros( (n_M,n_N) )
-    k[0,1] = 3.39221;   k[0,2] = 4.48865;  k[0,3] = -5.77101
-    k[0,4] = -13.0459;  k[1,0] = 35.1278;  k[1,1] = -72.9336
-    k[1,2] = -86.0036;  k[1,3] = 93.7371;  k[1,4] = 200.975
-    k[2,0] = -146.822;  k[2,1] = 387.184;  k[2,2] = 447.009
-    k[2,3] = -467.383;  k[2,4] = -884.339; k[3,0] = 223.911
-    k[3,1] = -648.502;  k[3,2] = -697.177; k[3,3] = 753.738
-    k[3,4] = 1166.89;   xi = 0.474046
+
+    # # bottom block -- doesnt work
+    # n_M = 3; n_J = 4
+    # k = zeros( (n_M+1,n_J+1) )
+    # k[0,1] = 3.39221;   k[0,2] = 4.48865;  k[0,3] = -5.77101
+    # k[0,4] = -13.0459;  k[1,0] = 35.1278;  k[1,1] = -72.9336
+    # k[1,2] = -86.0036;  k[1,3] = 93.7371;  k[1,4] = 200.975
+    # k[2,0] = -146.822;  k[2,1] = 387.184;  k[2,2] = 447.009
+    # k[2,3] = -467.383;  k[2,4] = -884.339; k[3,0] = 223.911
+    # k[3,1] = -648.502;  k[3,2] = -697.177; k[3,3] = 753.738
+    # k[3,4] = 1166.89;   xi = 0.474046
+    # k[0,0] = -3.82
+
+    # top block -- works
+    n_M = 1; n_J = 2
+    k = zeros( (n_M+1,n_J+1) )
+    k[0,1] = -1.2019; k[0,2] = -1.20764; k[1,0] = 3.79245; k[1,1] = 1.18385
+    k[1,2] = 4.90494; xi = 0.41616
+    k[0,0] = -3.82
 
     # Eq. 5
     p = 1.0/3
@@ -371,7 +380,8 @@ def jf160501938(m1,m2,chi1_vec,chi2_vec,L_vec=None):
     Z2 = lambda a: sqrt( 3*a*a + Z1(a)**2 )
 
     # Eq. 4
-    r_ISCO = lambda a: 3.0 + Z2(a) - ( a / abs(a) ) * sqrt( (3-Z1(a))*(3+Z1(a)+2*Z2(a)) )
+    r_ISCO = lambda a: 3.0 + Z2(a) - sign(a) * sqrt( (3-Z1(a))*(3+Z1(a)+2*Z2(a)) )
+    # r_ISCO = lambda a: 3.0 + Z2(a) - ( a / abs(a) ) * sqrt( (3-Z1(a))*(3+Z1(a)+2*Z2(a)) )
 
     # Eq. 2
     E_ISCO = lambda a: sqrt( 1 - 2.0 / ( 3 * r_ISCO(a) ) )
@@ -383,20 +393,20 @@ def jf160501938(m1,m2,chi1_vec,chi2_vec,L_vec=None):
     ## Amplitude of final spin
 
     # Define low level physical parameters
-    a1z = chi1_vec[-1]
-    a2z = chi2_vec[-1]
+    L_hat = L_vec / norm(L_vec)
+    a1z = dot(L_hat,chi1_vec) # chi1_vec[-1]
+    a2z = dot(L_hat,chi2_vec) # chi2_vec[-1]
     a1 = norm(chi1_vec)
     a2 = norm(chi2_vec)
     eta = m1*m2 / (m1+m2)**2
-    q = m2/m1; if q>1: q = 1.0/q # as seen above Eq 1
+    q = m2/m1 if m2<m1 else m1/m2 # convention as seen above Eq 1
 
     # Eq. 17
-    ll = L / norm(L)
-    x1 = chi1_vec / norm(chi1_vec)
-    x2 = chi2_vec / norm(chi2_vec)
+    x1 = (chi1_vec / norm(chi1_vec)) if norm(chi1_vec) else zeros(3)
+    x2 = (chi2_vec / norm(chi2_vec)) if norm(chi2_vec) else zeros(3)
     __alpha__ = arccos( dot(x1, x2) )
-    __beta__  = arccos( dot(ll, x1) )
-    __gamma__ = arccos( dot(ll, x2) )
+    __beta__  = arccos( dot(L_hat, x1) )
+    __gamma__ = arccos( dot(L_hat, x2) )
 
     # Eq. 18 for alpha
     eps_alpha = 0
@@ -408,6 +418,10 @@ def jf160501938(m1,m2,chi1_vec,chi2_vec,L_vec=None):
 
     # Eq. 18 for gamma
     gamma = 2 * arctan( (1+eps_beta_gamma)*tan(__gamma__/2) )
+
+    # alpha = __alpha__
+    # beta = __beta__
+    # gamma = __gamma__
 
     # Eq. 14
     a_tot = (  a1*cos(beta) + a2*cos(gamma)*q  ) / (1.0+q)**2
@@ -426,6 +440,9 @@ def jf160501938(m1,m2,chi1_vec,chi2_vec,L_vec=None):
     afin = (1.0/(1+q)**2) * sqrt(  a1**2 + a2**2 * q**4 + 2*a1*a2*q*q*cos(alpha) + 2*(a1*cos(beta)+a2*q*q*cos(gamma))*absl*q + absl*absl*q*q  )
 
     #
+    # b = dir()
+    # for k in b:
+    #     print k+'\t=\t',eval(k)
     return afin
 
 # High level function for calculating remant mass and spin
@@ -452,7 +469,7 @@ def remnant(m1,m2,chi1,chi2,arxiv=None,verbose=False,L_vec=None):
         if verbose: alert('Using method from arxiv:1611.00332 by Jimenez et. al.')
         Mf = Mf161100332(m1,m2,chi1,chi2)
         jf = jf161100332(m1,m2,chi1,chi2)
-    if arxiv in ('1605.01938',160501938):
+    if arxiv in ('1605.01938',160501938,'precessing','p'):
         Mf = Mf161100332(m1,m2,chi1,chi2)
         jf = jf160501938(m1,m2,chi1,chi2,L_vec=L_vec)
     else:
