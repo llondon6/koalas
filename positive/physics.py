@@ -1606,3 +1606,90 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
 
     #
     return ht,t,time_shift
+
+
+###
+
+
+'''
+Method to load tabulated QNM data, interpolate and then output for input final spin
+'''
+def leaver( jf,                     # Dimensionless BH Spin
+            l,                      # Polar Index
+            m,                      # Azimuthal index
+            n =  0,                 # Overtone Number
+            p = None,               # Parity Number for explicit selection of prograde (p=1) or retrograde (p=-1) solutions.
+            s = -2,                 # Spin weight
+            Mf = 1.0,               # BH mass. NOTE that the default value of 1 is consistent with the tabulated data. (Geometric units ~ M_bare / M_ADM )
+            verbose = False ):      # Toggle to be verbose
+
+    # Import useful things
+    import os
+    from scipy.interpolate import InterpolatedUnivariateSpline as spline
+    from numpy import loadtxt,exp,sign,abs
+    from numpy.linalg import norm
+
+    # Validate jf input: case of int given, make float. NOTE that there is further validation below.
+    if isinstance(jf,int): jf = float(jf)
+    # Valudate s input
+    if abs(s) != 2: raise ValueError('This function currently handles on cases with |s|=2, but s=%i was given.'%s)
+    # Validate l input
+    # Validate m input
+
+    #%%%%%%%%%%%%%%%%%%%%%%%%%# NEGATIVE SPIN HANDLING #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+    # Define a parity value to be used later:
+    # NOTE that is p>0, then the corotating branch will be loaded, else if p<0, then the counter-rotating solution branch will be loaded.
+    if p is None:
+        p = sign(jf) + int( jf==0 )
+    # NOTE that the norm of the spin input will be used to interpolate the data as the numerical data was mapped according to jf>=0
+    # Given l,m,n,sign(jf) create a RELATIVE file string from which to load the data
+    cmd = parent(  parent(os.path.realpath(__file__))  )
+    #********************************************************************************#
+    m_label = 'm%i'%abs(m) if (p>=0) or (abs(m)==0) else 'mm%i'%abs(m)
+    #********************************************************************************#
+    data_location = '%s/data/kerr/l%i/n%il%i%s.dat' % (cmd,l,n,l,m_label)
+    #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+
+    # Validate data location
+    if not os.path.isfile(data_location): raise ValueError('The OS reports that "%s" is not a file or does not exist. Either the input QNM data is out of bounds (not currently stored in this repo), or there was an input error by the user.' % green(data_location) )
+
+    # Load the QNM data
+    data = loadtxt( data_location )
+
+    # Extract spin, frequencies and separation constants
+    JF = data[:,0]
+    CW = data[:,1] - 1j*data[:,2] # NOTE: The minus sign here sets a phase convention
+                                  # where exp(+1j*cw*t) rather than exp(-1j*cw*t)
+    CS = data[:,3] - 1j*data[:,4] # NOTE: There is a minus sign here to be consistent with the line above
+
+    # Validate the jf input
+    njf = norm(jf) # NOTE that the calculations were done using the jf>=0 convention
+    if njf<min(JF) or njf>max(JF):
+        warning('The input value of |jf|=%1.4f is outside the domain of numerical values [%1.4f,%1.4f]. Note that the tabulated values were computed on jf>0.' % (njf,min(JF),max(JF)) )
+
+    # Here we rescale to a unit mass. This is needed because leaver's convention was used to perform the initial calculations.
+    M_leaver = 0.5
+    CW *= M_leaver
+
+    # Interpolate/Extrapolate to estimate outputs
+    cw = spline( JF, CW.real )(njf) + 1j*spline( JF, CW.imag )( njf )
+    cs = spline( JF, CS.real )(njf) + 1j*spline( JF, CS.imag )( njf )
+
+    # If needed, use symmetry relationships to get correct output.
+    def qnmflip(CW,CS):
+        return -cw.conj(),cs.conj()
+    if m<0:
+        cw,cs =  qnmflip(cw,cs)
+    if p<0:
+        cw,cs =  qnmflip(cw,cs)
+
+    # NOTE that the signs must be flipped one last time so that output is
+    # directly consistent with the argmin of leaver's equations at the requested spin values
+    cw = cw.conj()
+    cs = cs.conj()
+
+    # Here we scale the frequency by the BH mass according to the optional Mf input
+    cw /= Mf
+
+    #
+    return cw,cs
