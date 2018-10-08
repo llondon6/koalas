@@ -275,7 +275,7 @@ With this in mind, here, we will develop algorithms for the linear (polynomial a
   f({\vec{x}}_j) \; = \; \sum_{k=0}^{K} \; \mu_{k} \, \phi_k(\vec{x}_j)\; .
 \end{align}
 %
-The central player is \eqn{lin1} is the set of basis coefficients $\mu_{k}$.
+The central player in \eqn{lin1} is the set of basis coefficients $\mu_{k}$.
 %
 Typically, one chooses or derives $\phi_{k}(\vec{x}_j)$ to capture inherent features of $f(\vec{x}_j)$.
 %
@@ -300,7 +300,7 @@ where
 \begin{align}
   %
   \label{pinv1}
-  \hatP = \left( \left( \hatU^{-1} \right)^T \hatU^{-1} \right)^{-1}
+  \hatP = \left( \hatU^{*} \hatU \right)^{-1}\hatU^{*}
 \end{align}
 %
 is the \textit{pseudo-inverse} \cite{Moore1920,Penrose:1955} of $\hatU$.
