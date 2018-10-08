@@ -335,7 +335,7 @@ That encompasses the first iteration of a process in which we will greedily add 
 %
 In each subsequent iteration, remaining symbols are added to the model one at a time, resulting in many trial models, each with its own representation error.
 %
-The the trial model with smallest representation error is kept for the next greedy iteration.
+The trial model with smallest representation error is kept for the next greedy iteration.
 %
 In this way, a list of optimal model symbols is learned.
 %
@@ -348,7 +348,7 @@ This rough algorithmic picture is encapsulated by Alg. \ref{alg:pgreedy}.
 {\scriptsize
 \begin{algorithm}[H]
   %
-  \caption{A positive (forward) greedy algorithm, \pgreedy{}, \texttt{PGREEDY}. Note that a required input, $\mathcal{A}$, is a function that takes in a list of basis symbols, and outputs an estimator of fit error. In this setting, $\mathcal{A}$ is assumed to have access to peripheral information, such as the training data.}
+  \caption{A positive (forward) greedy algorithm, \pgreedy{}. Note that a required input, $\mathcal{A}$, is a function that takes in a list of basis symbols, and outputs an estimator of fit error. In this setting, $\mathcal{A}$ is assumed to have access to peripheral information, such as the training data.}
   \label{alg:pgreedy}
   %
   \begin{algorithmic}[1]
