@@ -124,7 +124,7 @@ During this period, a few to dozens of \bbh{} signals are likely to be detected 
 %
 In this context, signal detection and subsequent inference of physical parameters hinges upon efficient models for source properties and dynamics \cite{Abbott:2016wiq}.
 %
-Most prominently, there is ongoing interest in signal models for \bbh{} \imr{} \cite{Blackman:2017dfb, London:2017bcn, Hannam:2013oca}.
+Most prominently, there is ongoing interest in efficient and accurate signal models for \bbh{} \imr{} \cite{Blackman:2017dfb, London:2017bcn, Hannam:2013oca}.
 %
 As the merger of isolated \bh{s} is expected to result in a perturbed Kerr \bh{}, there is related interest in having computationally efficient models for perturbative parameters, namely those that enable evaluation of the related \rd{} radiation \cite{Berti:2005ys}.
 %
@@ -166,7 +166,7 @@ This latter form is ubiquitous for the development and implementation of \imr{} 
 %
 \par Towards the development of these models, \eqn{hrd} enters in many incarnations.
 %
-In the \eob{} formalism, $h\LM$ is modeled such that, after its peak (near merger), the effective functional form reduces (asymptotically) to \eqn{hrd}'s second line.
+In the \eob{} formalism, $h\LM$ is modeled such that, after its peak (near merger), the effective functional form reduces (asymptotically) to \eqn{hrd}'s second line \cite{Cotesta:2018fcv, Buonanno:2000ef, Bohe:2016gbl}.
 %
 This view currently comes with the added assumption that ${_{-2}}S_{\ell m n} = {_{-2}}Y_{\ell m}$, where only $n=0$ is explicitly considered, and ${_{-2}}Y_{\ell m}$ are the spins weighted -2 spherical harmonics.
 %
@@ -174,11 +174,11 @@ Only where $\jf \cw\lmn=0$ do $_{-2}S\lmn( 0,\theta,\phi) = {_{-2}}Y_{\ell m}\th
 %
 The consequences of that approximation, in particular the mixing between spherical and spheroidal harmonics, are discussed in reference \cite{London:2014cma,Berti:2014fga,London:2018gaq}.
 %
-This approximation also applies to many of the so-called \textit{Phenom} models, where the frequency domain multipoles, $\tilde{h}\LM(f)$, are constructed such that their high frequency behavior is consistent with \eqn{hrd} in the time domain \cite{Hannam:2013oca,London:2017bcn,Khan:2015jqa,Schmidt:2014iyl}.
+This approximation also applies to many of the \textit{Phenom} models, where the frequency domain multipoles, $\tilde{h}\LM(f)$, are constructed such that their high frequency behavior is consistent with \eqn{hrd} in the time domain \cite{Hannam:2013oca,London:2017bcn,Khan:2015jqa,Schmidt:2014iyl}.
 %
 \par Both Phenom and \eob{} approaches directly use phenomenological models for the \qnm{} frequencies, as these fits are more computationally efficient than the underlying analytic calculations, which involve the solving of continued fraction equations \cite{Leaver85}.
 %
-In the case of \texttt{PhenomHM} and derivative models, fits for the \qnm{} frequencies are used in the process of mapping $\tilde{h}_{22}(f)$ into other $\tilde{h}\LM(f)$ \cite{London:2017bcn}.
+In the case of the higher multipole model \texttt{PhenomHM} and its derivative models, fits for the \qnm{} frequencies are used in the process of mapping $\tilde{h}_{22}(f)$ into other $\tilde{h}\LM(f)$ \cite{London:2017bcn}.
 %
 In that setting, it is demonstrated that \qnm{} frequencies correlate with the morphology of each $h\LM$ in not only \rd{}, but also merger and late inspiral, as is implied by the source's causal connectedness pre and post merger.
 %
@@ -212,7 +212,7 @@ While models for $\cw\lmn$ and $\sigma\LMlmn$ are present in the literature (e.g
 %
 \par For the \qnm{} frequencies, it is well known that for nearly extremal \bh{s} (i.e. $\jf \rightarrow 1$) some of the frequencies have zero-damping (i.e. $\tau\lmn \rightarrow \infty$) \cite{Zimmerman:2015trm}.
 %
-In the context of \aligo{} \da{}, where source parameters are estimated using routines which sample over the space of possible \bh{} masses and spins, it is useful to have accurate physical behavior in the extremal limit \cite{TheLIGOScientific:2016wfe}.
+In the context of \aligo{} \da{}, where source parameters are estimated using routines which sample over the space of all possible \bh{} masses and spins, it is useful to have accurate physical behavior in the extremal limit \cite{TheLIGOScientific:2016wfe}.
 %
 Here, we present the first models for $\cw\lmn$ that explicitly account for zero-damping in the extremal Kerr limit.
 %
@@ -222,14 +222,14 @@ As the most advanced signal models include at least $\ell$ or $\bar{\ell}$ of 3,
 %
 In particular, it is well known that $\sigma_{43330}$ can have a significant impact on the $(4,3)$ spherical multipole (via \ceqn{hlm}).
 %
-For consistency with the multipolar content of current ringdown models, we extend previous results to include the most significant multipoles with $\ell \leq 5$.
+For consistency with the multipolar content of current ringdown models, we extend previous results to include the most significant multipoles with $\ell \leq 5$ \cite{London:2018gaq,London:2014cma}.
 %
 %
 \par In parallel, the methods for modeling $\cw\lmn$ and $\sigma\LMlmn$ have been dispersed: different phenomenological techniques have been used under no coherent framework.
 %
 Here we will present linear modeling techniques, namely the \gmvp{} and \gmvr{} algorithms, in which model terms are iteratively learned with no initial guess.
 %
-The description of \gmvp{} given here is complementary to similar algorithms used to model \qnm{} excitation amplitudes, $A\lmn$, as present in reference \cite{London:2018gaq,London:2014cma}.
+The description of \gmvp{} given here is complementary to similar algorithms used to model \qnm{} excitation amplitudes, $A\lmn$, as present in reference \cite{Carullo:2018sfu,London:2018gaq,London:2014cma}.
 %
 As we will discuss, the \gmvr{} algorithm is an iterative approach to the (pseudo) linear modeling of multivariate rational functions, wherein iterations of linear inversions are used to refine the ultimately non-linear model.
 %
@@ -275,7 +275,7 @@ With this in mind, here, we will develop algorithms for the linear (polynomial a
   f({\vec{x}}_j) \; = \; \sum_{k=0}^{K} \; \mu_{k} \, \phi_k(\vec{x}_j)\; .
 \end{align}
 %
-The central player is \eqn{lin1} is the set of basis coefficients $\mu_{k}$.
+The central player in \eqn{lin1} is the set of basis coefficients $\mu_{k}$.
 %
 Typically, one chooses or derives $\phi_{k}(\vec{x}_j)$ to capture inherent features of $f(\vec{x}_j)$.
 %
@@ -788,7 +788,7 @@ We also wish to impose a domain transformation, $\kappa(\jf,\ell,m)$, such that 
 %
 \begin{align}
   \label{eq:kappa}
-  \kappa(\jf,\ell,m) = \left( \log_3( 2 - \jf ) \right)^{1/(2-\ell+|m|)}
+  \kappa(\jf,\ell,m) = \left( \log_3( 2 - \jf ) \right)^{1/(2+\ell-|m|)}
 \end{align}
 %
 appropriately linearizes the sharp behavior of each frequency near $\jf=1$ while also mapping $-1 \le \jf \le 1$ onto $0 \le \kappa \le 1$.
