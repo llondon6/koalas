@@ -35,7 +35,7 @@ superscriptaddress,10pt]{revtex4-1}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Useful Definitions %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\input{src/definitions}
+\input{definitions}
 \def\check#1{\red{#1}}
 \def\new#1{\blue{#1}}
 \def\remove#1{\hlred{#1}}
@@ -452,9 +452,9 @@ In this setting, the uncertainty of which and how many basis terms to include ma
 \begin{figure*}[htb]
   %
   \begin{tabular}{lr}
-    \includegraphics[width=0.49\textwidth]{fig/fits_w.pdf} & \includegraphics[width=0.49\textwidth]{fig/fits_tau.pdf}
+    \includegraphics[width=0.49\textwidth]{fits_w.pdf} & \includegraphics[width=0.49\textwidth]{fits_tau.pdf}
     \\
-    \includegraphics[width=0.49\textwidth]{fig/res_w.pdf} & \includegraphics[width=0.49\textwidth]{fig/res_tau.pdf}
+    \includegraphics[width=0.49\textwidth]{res_w.pdf} & \includegraphics[width=0.49\textwidth]{res_tau.pdf}
   \end{tabular}
   %
 	\caption{ Fits of dimensionless \qnm{} central frequencies (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}.
@@ -493,7 +493,7 @@ The degree tempering process halts when increasing the maximum allowed degree ha
 %
 \par Despite the apparent universality of of \eqn{eq:mvt}, there are many cases where $K$ must be orders of magnitude greater than 1 in order for $\vec{f}$ to be accurately represented by a multinomial.
 %
-Worst, in cases where the underlying dataset is best described by a rational function, no polynomial order will yield satisfactory results (i.e. the well known ``Runge's phenomenon'').
+Worst, in cases where the underlying dataset is best described by a rational function, no polynomial order will yield satisfactory results (i.e. the well known ``Runge's phenomenon'' \cite{10.2307/2323093}).
 %
 \par Of the simplest examples are rational functions of the form
 %
@@ -530,7 +530,7 @@ At this stage, we will also explicitly consider the $j^\mathrm{th}$ samples of t
 %
 \begin{figure*}[htb]
   %
-  \includegraphics[width=\textwidth]{fig/issue3_summary.pdf}
+  \includegraphics[width=\textwidth]{issue3_summary.pdf}
   %
 	\caption{ Standard summary plot for Greedy Multivariate Rational fitting algorithm (\gmvr) as implemented in \cite{lionel_london_2018_1402516}. (\textit{left}) 3D plot of training data (black dots) and final fit (red mesh). (\textit{center top}) Same as left most panel, but in index space. (\textit{center bottom}) Fractional residual error (grey blocks) along with uniform (black) and gaussian (red) fits to error. (\textit{top right}) convergence of the L2 norm during iterative refinement. (\textit{bottom right}) Same as top right, but on log scale, where $\epsilon_0$ is the value of $\epsilon$ at the final $k^{\mathrm{th}}$ iteration of refinement. }
   %
@@ -764,7 +764,7 @@ However, we have demonstrated the utility of \gmvr{} in a relatively ideal usage
 %
 \begin{figure}[htb]
   %
-  \includegraphics[width=0.45\textwidth]{fig/issue3_pgreedy.pdf}
+  \includegraphics[width=0.45\textwidth]{issue3_pgreedy.pdf}
 	\caption{ Convergence of greedy process for \gmvr{} toy problem. }
   %
 \end{figure}
@@ -823,7 +823,7 @@ In the top left panel, we have scaled $1/\tau\lmn$ by factors for $m/(n+1/2)$ to
 %
 % Equations for QNM frequency fits
 \begin{widetext}
-	\input{src/cwfit_eqns}
+	\input{cwfit_eqns}
 \end{widetext}
 %
 \par \fig{fig:qnm}'s top left and right panels' upper axes demonstrate the effect of mapping $\jf$ onto $\kappa$.
@@ -891,8 +891,8 @@ For efficiency of presentation, each $\sigma_{\LMlmn}$ is plotted via its real a
 \begin{figure*}[htb]
   %
   \begin{tabular}{lr}
-    \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_1.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_2.pdf} \\
-    \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_3.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_4.pdf}
+    \includegraphics[width=\figfactor\textwidth]{issue2_ysprod_1.pdf} & \includegraphics[width=\figfactor\textwidth]{issue2_ysprod_2.pdf} \\
+    \includegraphics[width=\figfactor\textwidth]{issue2_ysprod_3.pdf} & \includegraphics[width=\figfactor\textwidth]{issue2_ysprod_4.pdf}
   \end{tabular}
   %
 	\caption{ Spherical-spheroidal harmonic mixing coefficients and percentage residual errors for spherical-spheroidal harmonic mixing coefficient fits. (\textit{Top Left}) Mixing coefficients for cases where $(\bar{\ell},\bar{m})=(\ell,m)$. The dashed horizontal intersects each curve at the Schwarzschild limit where $\jf=0$. (\textit{Top Right}) Mixing coefficients where $(\bar{\ell},\bar{m})\neq(\ell,m)$. (\textit{Bottom Left and Right}) Factional residuals for mixing coefficient fits. }
@@ -1000,38 +1000,7 @@ grant ST/L000962/1, and European Research Council Consolidator Grant 647839.
 \appendix
 
 
-% \section{Algorithms}
-% \label{app:algos}
-% % \begin{widetext}
-% %
-% \hspace{1cm}
-% {\scriptsize
-% \begin{algorithm}[H]
-%   %
-%   \caption{$\mathcal{A}_{\gmvr}$, the action for \gmvr. Model calculation given basis symbols, and output of model error estimate.}
-%   %
-%   \label{alg:A_gmvr}
-%   \begin{algorithmic}[1]
-%     %
-%     \State {\bf Input:} \{ $\mlam_{trial}$, $tol=10^{-3}$ \}
-%     \vskip 10pt
-%     \State Calculate $\alpha^{(1)}_k$ via \eqn{eq:pinv3}. Implicitly, $n=1$.
-%     \State Calculate the current model prediction $g^{(1)}$ via \eqn{eq:rat4}.
-%     \State Calculate the model representation error, e.g.: $\epsilon^{(1)}  = ||var(g^{(n)} - g^{(0)})||/||g^{(0)}||$.
-%     \State $done = False$
-%     \While { not $done$ }
-%       \State Calculate $\alpha^{n+1}_{k}$  via \eqn{eq:pinv3}.
-%       \State Calculate the current model prediction $g^{(n)}$ via \eqn{eq:rat4}.
-%       \State Calculate the model representation error, e.g. $\epsilon^{(n)} = ||g^{(n)} - g^{(0)}||/||g^{(0)}||$.
-%       \State $done = \epsilon^{(n-1)}-\epsilon^{(n)} < tol$
-%       \State (Implicitly, $n = n+1$)
-%     \EndWhile
-%     \vskip 10pt
-%     \State {\bf Output:} $\epsilon^{(n)}$
-%   \end{algorithmic}
-% \end{algorithm}
-% }
-% % \end{widetext}
+% 
 \newpage
 \section{Additional Equations}
 \label{app:eqns}
@@ -1042,51 +1011,18 @@ grant ST/L000962/1, and European Research Council Consolidator Grant 647839.
 % Equations for mixing coefficients
 %
 \begin{widetext}
-  \input{src/ysprod_eqns}
+  \input{ysprod_eqns}
 \end{widetext}
 
 % \section{Figures}
 % \label{app:figs}
 
 
-% %
-% % Plots of QNM frequencies
-% \begin{figure*}[htb]
-%   %
-%   \begin{tabular}{lr}
-%     \includegraphics[width=\figfactor\textwidth]{fig/fits_w.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/fits_tau.pdf}
-%     \\
-%     \includegraphics[width=\figfactor\textwidth]{fig/res_w.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/res_tau.pdf}
-%   \end{tabular}
-%   %
-% 	\caption{ Fits of dimensionless \qnm{} central frequencies (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}.
-%   %
-%   Before the application of $\kappa(\j{})$, points are spaced between -\CwFitCalibrationRegion and \CwFitCalibrationRegion according to \CwFitCalibrationRegion times the $\sin$ of a fiducial angle which is uniformly spaced between $-\pi/2$ and $\pi/2$. Values of $\j{}$ are shown in the upper axis for $\kappa$ at $l=m$.
-%   %
-%   The grey dashed line marks the value of $\kappa$ where $\j{}=0$. Fits of dimensionless \qnm{} decay rates (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. (Bottom) Percentage residual errors for fits of dimensionless \qnm{} central frequencies and decay times (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. }
-%   %
-%   \label{fig:qnm}
-%   %
-% \end{figure*}
-%
-% % Plots of mixing coefficients
-% \begin{figure*}[htb]
-%   %
-%   \begin{tabular}{lr}
-%     \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_1.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_2.pdf} \\
-%     \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_3.pdf} & \includegraphics[width=\figfactor\textwidth]{fig/issue2_ysprod_4.pdf}
-%   \end{tabular}
-%   %
-% 	\caption{ Spherical-spheroidal harmonic mixing coefficients. Percentage residual errors for spherical-spheroidal harmonic mixing coefficient models. }
-%   %
-%   \label{fig:ys}
-%   %
-% \end{figure*}
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% %
 \newpage
 % \bibliographystyle{ieeetr}
 \bibliographystyle{mnras}
-\bibliography{src/mvf.bib}
+\bibliography{mvf.bib}
 \end{document}
