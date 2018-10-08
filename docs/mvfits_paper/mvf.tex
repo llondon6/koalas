@@ -90,7 +90,7 @@ superscriptaddress,10pt]{revtex4-1}
   %
   Models of black hole properties play an important role in the ongoing direct detection of gravitational waves from black hole binaries.
   %
-  On important aspect of model based gravitational wave detection, and subsequent estimation of source parameters, are the low level modeling of information related to perturbed Kerr black holes.
+  One important aspect of model based gravitational wave detection, and subsequent estimation of source parameters, are the low level modeling of information related to perturbed Kerr black holes.
   %
   Here, we present new methods and models for the analytically understood gravitational wave spectra (quasi-normal mode frequencies), and harmonic structure of Kerr black holes (mixing coefficients between spherical and spheroidal harmonics).
   %
@@ -166,7 +166,7 @@ This latter form is ubiquitous for the development and implementation of \imr{} 
 %
 \par Towards the development of these models, \eqn{hrd} enters in many incarnations.
 %
-In the \eob{} formalism, $h\LM$ is modeled such that, after its peak (near merger), the effective functional form reduces (asymptotically) to \eqn{hrd}'s second line \cite{Cotesta:2018fcv, Buonanno:2000ef, Bohe:2016gbl}.
+In the \eob{} formalism, $h\LM$ is modeled such that, after its peak (near merger), the effective functional form reduces (asymptotically) to \eqn{hrd}'s second line \cite{Cotesta:2018fcv, Buonanno:2000ef, Bohe:2016gbl,Pan:2013rra, Bohe:2016gbl, Nagar:2018zoe}.
 %
 This view currently comes with the added assumption that ${_{-2}}S_{\ell m n} = {_{-2}}Y_{\ell m}$, where only $n=0$ is explicitly considered, and ${_{-2}}Y_{\ell m}$ are the spins weighted -2 spherical harmonics.
 %
@@ -300,7 +300,7 @@ where
 \begin{align}
   %
   \label{pinv1}
-  \hatP = \left( \left( \hatU^{-1} \right)^T \hatU^{-1} \right)^{-1}
+  \hatP = \left( \hatU^{*} \hatU \right)^{-1}\hatU^{*}
 \end{align}
 %
 is the \textit{pseudo-inverse} \cite{Moore1920,Penrose:1955} of $\hatU$.
@@ -335,7 +335,7 @@ That encompasses the first iteration of a process in which we will greedily add 
 %
 In each subsequent iteration, remaining symbols are added to the model one at a time, resulting in many trial models, each with its own representation error.
 %
-The the trial model with smallest representation error is kept for the next greedy iteration.
+The trial model with smallest representation error is kept for the next greedy iteration.
 %
 In this way, a list of optimal model symbols is learned.
 %
@@ -348,7 +348,7 @@ This rough algorithmic picture is encapsulated by Alg. \ref{alg:pgreedy}.
 {\scriptsize
 \begin{algorithm}[H]
   %
-  \caption{A positive (forward) greedy algorithm, \pgreedy{}, \texttt{PGREEDY}. Note that a required input, $\mathcal{A}$, is a function that takes in a list of basis symbols, and outputs an estimator of fit error. In this setting, $\mathcal{A}$ is assumed to have access to peripheral information, such as the training data.}
+  \caption{A positive (forward) greedy algorithm, \pgreedy{}. Note that a required input, $\mathcal{A}$, is a function that takes in a list of basis symbols, and outputs an estimator of fit error. In this setting, $\mathcal{A}$ is assumed to have access to peripheral information, such as the training data.}
   \label{alg:pgreedy}
   %
   \begin{algorithmic}[1]
