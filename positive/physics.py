@@ -1,5 +1,6 @@
 #
 from positive import *
+from positive.plotting import *
 from positive.learning import *
 
 #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
