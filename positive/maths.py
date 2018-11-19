@@ -927,7 +927,7 @@ def ishift( h, di ):
 
 
 # Find the interpolated global max location of a data series
-def intrp_max( y, domain=None, verbose=False, return_argmax=False, plot = False, pad = 3 ):
+def intrp_max( y, domain=None, verbose=False, return_argmax=False, plot = False, pad = 3, ref_index=None ):
 
     #
     from scipy.interpolate import UnivariateSpline as spline
@@ -975,6 +975,7 @@ def intrp_max( y, domain=None, verbose=False, return_argmax=False, plot = False,
 
         #
         k_max = argmax( y )
+        if ref_index: k_max = ref_index
         t_max = t[k_max]
         y_max = y[k_max]
 
@@ -1100,6 +1101,7 @@ def intrp_max( y, domain=None, verbose=False, return_argmax=False, plot = False,
         #
         if verbose: warning('Input is determined to be flat. A simple numerical mex will be used.')
         arg_max_dex = argmax( y )
+        if ref_index: arg_max_dex = ref_index
         arg_max = t[ arg_max_dex ]
         max_val = y[ arg_max_dex ]
 
@@ -1119,10 +1121,11 @@ def intrp_max( y, domain=None, verbose=False, return_argmax=False, plot = False,
 def intrp_argmax( y,
                   domain=None,
                   plot=False,
+                  ref_index = None,
                   verbose=False ):
 
     #
-    max_val,arg_max = intrp_max( y,domain=domain,verbose=verbose,return_argmax=True,plot=plot )
+    max_val,arg_max = intrp_max( y,domain=domain,verbose=verbose,return_argmax=True,plot=plot,ref_index=ref_index )
 
     #
     ans = arg_max
@@ -2077,6 +2080,47 @@ def reflect_unwrap( vec ):
 
                 #
                 ans[k] *= -1
+
+    #
+    return ans
+
+# Look for reflections in vector and correct
+def reflect_unwrap2( VEC, tol=0.1, domain = None ):
+    '''Look for point reflections in vector and correct'''
+
+    #
+    from numpy import array,sign,zeros_like,arange,hstack
+
+    #
+    def ru2(vec):
+
+        #
+        ans = array(vec)
+
+        #
+        for k,v in enumerate(vec):
+
+            #
+            if (k>0):
+
+                #
+                l = ans[k-1]
+                c = ans[k]
+
+                #
+                apply_reflection = abs(l+c) < tol*abs(l)
+                if apply_reflection:
+
+                    #
+                    ans[k:] *= -1
+        #
+        return ans
+
+    #
+    if domain is None: domain = arange(len(VEC))
+    mask_ = domain  > 0
+    _mask = domain <= 0
+    ans = hstack( [ ru2(VEC[_mask][::-1])[::-1], ru2(VEC[mask_]) ] )
 
     #
     return ans

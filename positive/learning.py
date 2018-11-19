@@ -1274,6 +1274,7 @@ class mvpolyfit:
                   range_map = None,    # Operation to apply to range before fitting, and inverse. EXAMPLE: range_map = { 'forward': lambda domain,range: ..., 'backward': lambda domain,forward_range: ... }
                   plot = False,
                   data_label = None,
+                  center = False,
                   verbose = False ):   # Let the people know
 
 
@@ -1285,7 +1286,7 @@ class mvpolyfit:
         #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
         ''' Validate Inputs '''
         #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
-        this.__validate_inputs__(domain,scalar_range,basis_symbols,labels,range_map,data_label)
+        this.__validate_inputs__(domain,scalar_range,basis_symbols,labels,range_map,data_label,center)
 
         #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
         ''' Perform the fit '''
@@ -1353,15 +1354,34 @@ class mvpolyfit:
         # Center and adjust range values
         mapped_range = U(this.domain,this.range)
 
+        #
+        if this.center:
+            mu = mean(mapped_range)
+            sigma = std(mapped_range)
+            center_mapped_range = (mapped_range-mu)/sigma
+        else:
+            center_mapped_range = mapped_range
+
         # Estimate the coefficients of the basis symbols
-        a = dot( Q, mapped_range )
+        a = dot( Q, center_mapped_range )
+
+        #
+        if this.center:
+            a *= sigma
+            a[0] += mu
 
         # Store the fit coefficients
         this.coeffs = a
 
+
     # Create a functional representation of the fit
     def eval( this, vec ):
         '''A functional representation of the fit'''
+
+        # rc = vec.shape
+        # print '** ',rc
+        # print '** ',this.domain_dimension
+
         #
         ans_ = 0
         for k,b in enumerate(this.coeffs):
@@ -1652,9 +1672,11 @@ class mvpolyfit:
         # Plot the raw data points
         ax.scatter(this.domain[:,0],this.domain[:,1],_map(this.range),marker='o',color='k',label='Data',zorder=1, facecolors='none')
 
-        xlabel( '$x_0$' )
-        ylabel( '$x_1$' )
+        xlabel( '$%s$'%this.labels['latex'][1][0] if len(this.labels.keys()) else '$x_0$' )
+        ylabel( '$%s$'%this.labels['latex'][1][1] if len(this.labels.keys()) else '$x_1$' )
+        # ylabel( '$x_1$' )
         ax.set_zlabel( '$f(x_0,x_1)$' )
+        ax.set_zlabel( '$%s$'%this.labels['latex'][0] if len(this.labels.keys()) else '$f(x_0,x_1)$' )
         dz = (-amin(_map(this.range))+amax(_map(this.range)))*0.05
         ax.set_zlim( amin(_map(this.range))-dz, amax(_map(this.range))+dz )
         # title('$%s$'%this)
@@ -1753,7 +1775,8 @@ class mvpolyfit:
 
         #
         xlabel('Domain Index')
-        ylabel(r'$f( \vec{x} )$')
+        ylabel(r'$%s$'%this.labels['latex'][0] if len(this.labels.keys()) else r'$f(\vec{x})$')
+
 
     # High level plotting function
     def plot(this,show=False,fit_xmin=None):
@@ -1858,7 +1881,7 @@ class mvpolyfit:
         return fig
 
     # Validate inputs and store important low-level fields
-    def __validate_inputs__(this,domain,scalar_range,basis_symbols,labels,range_map,data_label):
+    def __validate_inputs__(this,domain,scalar_range,basis_symbols,labels,range_map,data_label,center):
 
         # Import usefuls
         from numpy import ndarray,isfinite,complex256,float128,double,mean,std
@@ -1952,6 +1975,7 @@ class mvpolyfit:
         this.basis_symbols = basis_symbols
         this.labels = {} if labels is None else labels
         this.range_map = range_map
+        this.center = center
 
         #
         this.data_label = None
@@ -2519,6 +2543,7 @@ def positive_romline(   domain,           # Domain of Map
     if len(d) != len(R):
         raise ValueError('length of domain (of len %i) and range (of len %i) mus be equal'%(len(d),len(R)))
     if len(d)<3:
+        print domain.shape, range_.shape
         raise ValueError('domain length is less than 3. it must be longer for a romline porcess to apply. domain is %s'%domain)
 
     # Normalize Data
