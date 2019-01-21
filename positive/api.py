@@ -134,7 +134,7 @@ def thisline():
     return inspect.currentframe().f_back.f_lineno
 
 # Alert wrapper
-def alert(msg,fname=None,say=False,output_string=False,heading=None,header=None,pattern=None,verbose=True):
+def alert(msg,fname=None,say=False,output_string=False,heading=None,header=None,pattern=None,verbose=True,fname_color=None):
     if verbose:
         import os
         if fname is None:
@@ -142,7 +142,8 @@ def alert(msg,fname=None,say=False,output_string=False,heading=None,header=None,
             if fname == "<module>": fname = 'notebook'
             if fname == "__main__": fname = 'script'
         if say: os.system( 'say "%s"' % msg )
-        _msg = '('+cyan(fname)+')>> '+msg
+        fname_color_fun = eval( 'cyan' if (fname_color is None) else fname_color )
+        _msg = '('+fname_color_fun(fname)+')>> '+msg
         if heading or header:
             hl = ('-~' if pattern is None else pattern) * int( len(_msg.replace('033','') )/2 )
             _msg = '\n# %s #\n%s\n# %s #\n'%(hl,bold(_msg),hl)

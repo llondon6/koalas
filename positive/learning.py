@@ -1230,6 +1230,11 @@ def symeval( sym, domain, verbose=False ):
     return ans
 
 
+# Function to compute frmse
+def FRMSE(FIT,DATA):
+    from numpy import std
+    return abs( std(FIT-DATA) / std(DATA) )
+
 # Multivariate polynomial fitting algorithm
 class mvpolyfit:
     '''
@@ -1652,7 +1657,7 @@ class mvpolyfit:
         ax.view_init(60,30)
 
         # Plot the fit evaluated on the domain
-        ax.scatter(this.domain[:,0],this.domain[:,1],_map(this.eval( this.domain )),marker='x',s=20,color='r')
+        ax.scatter(this.domain[:,0],this.domain[:,1],_map(this.eval( this.domain )),marker='x',s=20,color='r',label='MVP')
 
         # # Setup grid points for model
         # padf = 0
@@ -1760,9 +1765,9 @@ class mvpolyfit:
 
         #
         index = arange( len(this.range) )+1
-        plot( index, _map(this.range), 'ok', mfc=0.6*array([1,1,1]), mec='k', alpha=0.95, ms=6 )
+        plot( index, _map(this.range), 'ok', mfc=0.6*array([1,1,1]), mec='k', alpha=0.95, ms=6, label='Training Data' )
         plot( index, _map(this.eval(this.domain)), 'o', ms = 12, mfc='none', mec='r', alpha=0.95  )
-        plot( index, _map(this.eval(this.domain)), 'x', ms = 9, mfc='none', mec='r', alpha=0.95  )
+        plot( index, _map(this.eval(this.domain)), 'x', ms = 9, mfc='none', mec='r', alpha=0.95, label='MVP'  )
         ax.set_xlim( [-1,len(_map(this.range))+1] )
         dy = 0.05 * ( amax(_map(this.range)) - amin(_map(this.range)) )
         ax.set_ylim( array([amin(_map(this.range)),amax(_map(this.range))]) + dy*array([-1,1]) )
@@ -2255,6 +2260,7 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
              verbose = False,       # Let the people know
              homogeneous=False,     # Toggle for homogenous polynomials
              maxres_estimator = False, # Toggle for using abs of max residual as estimator rather then frmse
+             maxdeg_list = None,
              **kwargs ):
     """Adaptive (Greedy) Multivariate polynomial fitting
 
@@ -2455,6 +2461,7 @@ def romline(  domain,           # Domain of Map
               range_,           # Range of Map
               N,                # Number of Lines to keep for final linear interpolator
               positive=True,   # Toggle to use positive greedy algorithm ( where rom points are added rather than removed )
+              keep_ends = False,
               verbose = False ):
 
     # Use a linear interpolator, and a reverse greedy process
@@ -2513,7 +2520,7 @@ def romline(  domain,           # Domain of Map
         seed_list = [ 0, argmax(R), argmin(R), len(R)-1 ]
         min_sigma = inf
         for k in seed_list:
-            trial_knots,trial_rom,trial_sigma = positive_romline( d, R, N, seed = k )
+            trial_knots,trial_rom,trial_sigma = positive_romline( d, R, N, seed = k, keep_ends = keep_ends )
             # print trial_sigma
             if trial_sigma < min_sigma:
                 knots,rom,min_sigma = trial_knots,trial_rom,trial_sigma
@@ -2529,6 +2536,7 @@ def positive_romline(   domain,           # Domain of Map
                         range_,           # Range of Map
                         N,                # Number of Lines to keep for final linear interpolator
                         seed = None,      # First point in domain (index) to use
+                        keep_ends = False,
                         verbose = False ):
 
     # Use a linear interpolator, and a reverse greedy process
@@ -2563,7 +2571,7 @@ def positive_romline(   domain,           # Domain of Map
 
     #
     done = False
-    space = [ seed ]
+    space = [ seed ] if (not keep_ends) else sorted(list(set([0,len(r)-1,seed])))
     domain_space = list(range(len(d)))
     err = lambda x: mean( abs(x) ) # std(x) #
     min_space = list(space)
