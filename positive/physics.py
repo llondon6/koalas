@@ -1694,3 +1694,95 @@ def leaver( jf,                     # Dimensionless BH Spin
 
     #
     return cw,cs
+
+
+#
+def ysprod14081860(j_,ll,mm,lmn):
+    import positive
+    '''
+    Fits for sherical-spheroidal mixing coefficients from arxiv:1408.1860 -- Berti, Klein
+
+    * The refer to mixing coefficients as mu_mll'n'
+    * their fits are parameterized by dimensionless BH spin j=a/M
+    * They model the real and imaginary parts separately as seen in Eq. 11
+    * Fitting coefficients are listed in table I
+
+    NOTE that the input format of this function is designed to be consistent with ysprod(...)
+    NOTE that tis function explicitely loads their full fit inpf from an external file
+
+    LondonL@mit.edu 2019
+    '''
+    tbl = loadtxt(parent(positive.__path__[0])+'/data/berti_swsh_fits.dat')
+    print tbl.shape
+    MM,LL,L,N,P1,P2,P3,P4,Q1,Q2,Q3,Q4,_,_,_,_ = tbl.T
+    l,m,n = lmn
+    k = (ll==LL) & (mm==MM) & (l==L) & (n==N)
+    if sum(k)!=1:
+        error('cannot find fit from Berti+ for (L,M,l,m,n) = (%i,%i,%i,%i,%)'%(L,M,l,m,n))
+    ans = (1 if ll==l else 0) + P1[k]*j_**P2[k] + P3[k]*j_**P4[k] + 1j * ( Q1[k]*j_**Q2[k] + Q3[k]*j_**Q4[k] )
+    return ans
+
+#
+def ysprod14081860_from_paper_is_broken(j,L,M,lmn):
+    '''
+    Fits for sherical-spheroidal mixing coefficients from arxiv:1408.1860 -- Berti, Klein
+
+    * The refer to mixing coefficients as mu_mll'n'
+    * their fits are parameterized by dimensionless BH spin j=a/M
+    * They model the real and imaginary parts separately as seen in Eq. 11
+    * Fitting coefficients are listed in table I
+
+    NOTE that the input format of this function is designed to be consistent with ysprod(...)
+    NOTE that the values listed in the table are so large as they are susceptible to severe error due to truncation yielding this function fucked
+
+    LondonL@mit.edu 2019
+    '''
+
+    # Warn the user
+    warning('This function uses values listed in the paper\'s table. These values are so large as they are susceptible to severe error due to truncation yielding this function fucked.')
+
+    # Unpack spheroidal indeces
+    l,m,n = lmn
+
+    # A represenation of their Table I. NOTE that the original tex from the arxiv was used here; find-replace and multi-select was performed for dictionary formatting
+    TBL = {}
+    TBL[2,2,2,0] = {'p1':-740,'p2':2.889,'p3':-661,'p4':17.129,'q1':1530,'q2':1.219,'q3':-934,'q4':24.992}
+    TBL[2,2,2,1] = {'p1':-873,'p2':2.655,'p3':-539,'p4':15.665,'q1':4573,'q2':1.209,'q3':-2801,'q4':25.451}
+    TBL[2,2,3,0] = {'p1':14095,'p2':1.112,'p3':4395,'p4':6.144,'q1':1323,'q2':0.854,'q3':-852,'q4':7.042}
+    TBL[2,3,2,0] = {'p1':-10351,'p2':1.223,'p3':-5750,'p4':8.705,'q1':-1600,'q2':0.953,'q3':1003,'q4':14.755}
+    TBL[-2,2,2,0] = {'p1': -1437,'p2':2.118,'p3':1035,'p4':2.229,'q1':-7015,'q2':1.005,'q3':67,'q4':3.527}
+    TBL[-2,2,2,1] = {'p1': -2659,'p2':2.007,'p3':53,'p4':4.245,'q1':-21809,'q2':1.008,'q3':221,'q4':4.248}
+    TBL[-2,2,3,0] = {'p1': 14971,'p2':1.048,'p3':-5463,'p4':1.358,'q1':18467,'q2':1.015,'q3':-10753,'q4':1.876}
+    TBL[-2,3,2,0] = {'p1': -13475,'p2':1.088,'p3':7963,'p4':1.279,'q1':-1744,'q2':1.011,'q3':516,'q4':1.821}
+
+
+    if (M,L,l,n) in TBL:
+
+        # Extract relevant data from model dictionary using inputs
+        p1 = TBL[M,L,l,n]['p1']
+        p2 = TBL[M,L,l,n]['p2']
+        p3 = TBL[M,L,l,n]['p3']
+        p4 = TBL[M,L,l,n]['p4']
+        q1 = TBL[M,L,l,n]['q1']
+        q2 = TBL[M,L,l,n]['q2']
+        q3 = TBL[M,L,l,n]['q3']
+        q4 = TBL[M,L,l,n]['q4']
+
+        #
+        delta_llp = 1.0 if L==l else 0
+
+        # Evaluate Equation 11
+        if m==M:
+            re_mu = delta_llp + (p1 * (j ** (p2*1e5))) + (p3 * (j ** (p4*1e5)))
+            im_mu = (q1 * (j ** (q2*1e5))) + (q3 * (j ** (q4*1e5)))
+            ans = re_mu + 1j*im_mu
+        else:
+            ans = 0
+
+    else:
+
+        warning('Berti\'s model does not include (L,M)(l,m,n) = %s%s'%(str((L,M)),str((l,m,n))) )
+        ans = j/0
+
+    # Return answer
+    return ans
