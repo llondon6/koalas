@@ -1699,7 +1699,7 @@ def leaver( jf,                     # Dimensionless BH Spin
 # Fit for spherica-sphoidal harmonic inner-product from Berti et al
 def ysprod14081860(j,ll,mm,lmn):
     import positive
-    from numpy import loadtxt
+    from numpy import loadtxt,array,ndarray
     '''
     Fits for sherical-spheroidal mixing coefficients from arxiv:1408.1860 -- Berti, Klein
 
@@ -1718,26 +1718,22 @@ def ysprod14081860(j,ll,mm,lmn):
     def lowlevel(J,__mm__):
         MM,LL,L,N,P1,P2,P3,P4,Q1,Q2,Q3,Q4,_,_,_,_ = tbl.T
         l,m,n = lmn
+        flip = False
+        if J<0:
+            J = abs(J)
+            __mm__ *= -1
+            flip = True
         k = (ll==LL) & (__mm__==MM) & (l==L) & (n==N)
         if sum(k)!=1:
             error('cannot find fit from Berti+ for (L,M,l,m,n) = (%i,%i,%i,%i,%)'%(L,M,l,m,n))
-        lowlevel_ans = (1.0 if ll==l else 0) + P1[k]*J**P2[k] + P3[k]*J**P4[k] + 1J * ( Q1[k]*J**Q2[k] + Q3[k]*J**Q4[k] )
-        return lowlevel_ans
+        lowlevel_ans = (1.0 if ll==l else 0) + P1[k]*J**P2[k] + P3[k]*J**P4[k] + 1j * ( Q1[k]*J**Q2[k] + Q3[k]*J**Q4[k] )
+        return (lowlevel_ans if not flip else lowlevel_ans.conj()).conj()
 
-    # from numpy import array,ndarray
-    # if not isinstance( j, ndarray ):
-    #     j = array([j])
-    # ans = []
-    # for jj in j:
-    #     if jj<0:
-    #         ans.append( lowlevel(-jj,-mm) )
-    #     else:
-    #         ans.append( lowlevel(jj,mm) )
-    # ans = array(ans)
-
-    ans = lowlevel(j,mm)
-
-    return ans
+    #
+    if isinstance(j,(list,tuple,ndarray)):
+        return array( [ lowlevel(j_,mm) for j_ in j ] )
+    else:
+        return lowlevel(j,mm)
 
 
 # Fit for spherica-sphoidal harmonic inner-product from Berti et al
@@ -1807,7 +1803,7 @@ def ysprod14081860_from_paper_is_broken(j,L,M,lmn):
 
 
 #
-def CookZalutskiy14107698(jf,l,m,n,Mf=1.0):
+def CookZalutskiy14107698(jf,l,m,n):
 
     '''
     Fir for Kerr s=-2 QNM frequencies from Cook+Zalutskiy arxiv:1410.7698
@@ -1884,7 +1880,7 @@ def CookZalutskiy14107698(jf,l,m,n,Mf=1.0):
 
         # Evaluate Eq 63
         wr = 0.5*m - a1*sqrt( 0.5*eps ) + (a2 + a3*n)*eps
-        wc = -( n+0.5 ) * ( sqrt(0.5*eps) -a4 * eps )
+        wc = -( n+0.5 ) * ( sqrt(0.5*eps) - a4 * eps )
 
     elif (l,m) in TBL2:
 
@@ -1910,3 +1906,55 @@ def CookZalutskiy14107698(jf,l,m,n,Mf=1.0):
 
     #
     return cw
+
+
+# Berti+'s 2005 fit for QNM frequencies
+def Berti0512160(jf,l,m,n):
+
+    '''
+    Fit for Kerr -2 QNMs from Berti+ gr-qc/0512160.
+    external data sourced from https://pages.jh.edu/~eberti2/ringdown/
+    '''
+
+    # Import usefuls
+    from numpy import loadtxt,array,ndarray
+    import positive
+
+    # Load fit coefficients
+    data_path = positive.parent(positive.__path__[0])+'data/berti_kerrcw_fitcoeffsWEB.dat'
+    data = loadtxt(data_path)
+
+    # Unpack: l,m,n,f1,f2,f3,q1,q2,q3
+    ll,mm,nn,ff1,ff2,ff3,qq1,qq2,qq3 = data.T
+
+    #
+    def lowlevel(JF,M):
+
+        #
+        if JF<0:
+            M *= -1
+            JF *= -1
+
+        #
+        k = (ll==l) & (mm==M) & (nn==n)
+
+        #
+        if not sum(k):
+            error('this model does not include (l,m,n)=(%i,%i,%i)'%(l,m,n))
+
+        #
+        f1 = ff1[k]; f2 = ff2[k]; f3 = ff3[k]
+        q1 = qq1[k]; q2 = qq2[k]; q3 = qq3[k]
+        #
+        wr = f1 + f2 * ( 1-JF )**f3
+        Q  = q1 + q2 * ( 1-JF )**q3
+        # See eqn 2.1 here https://arxiv.org/pdf/gr-qc/0512160.pdf
+        wc = wr/(2*Q)
+        #
+        return wr+1j*wc
+
+    #
+    if isinstance(jf,(list,tuple,ndarray)):
+        return array( [ lowlevel(j,m) for j in jf ] ).T[0]
+    else:
+        return lowlevel(jf,m)
