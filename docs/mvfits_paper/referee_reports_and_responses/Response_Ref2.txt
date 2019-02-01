@@ -1,0 +1,23 @@
+
+
+Response for Referee #2
+---
+
+
+1. Thank you for this sugestions. Below Eq. 1, we have added text clarifying the use of barred indices.
+
+2. Thank you. While it may be meaningful to point out that the scaling explicitely refers to the initial mass for readers who wish to implement our models, we agree that, since M_i is not referenced elsewhere in the draft, it should be removed. We have modified the text accordingly.
+
+3. Thank you. We have corrected the equation.
+
+4. Thank you. Instead of correlate with morphology, we have used "are linked to amplitude and phase".
+
+5. We have changed the text accordingly.
+
+6. Please consider that all notation used within algorithms is defned in-place.
+
+7. The algorithm as stated applies to multiple definitions of the represenation error. We now accentualte this point by citing the L2 norm as a possible choice.
+
+8. We note in the text that this halting criteria can either be representation error, or changinges in represenation error. In the latter scenario, a maximum number of iterations need be imposed in fewer scenarios. Of course, more complicated halting criteria are possible.
+
+9.

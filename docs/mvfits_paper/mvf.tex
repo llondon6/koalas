@@ -143,20 +143,23 @@ The well known and effective completeness of these solutions allows \grad{} from
 %
 \par In the first and second lines of \eqn{hrd}, we relate the observable \gw{} polarizations, $h_+$ and $h_\times$, to the analytically understood morphology of the time domain \rd{} waveform.
 %
-Here, the labels $\ell$ and $m$ are polar and azimuthal eigenvalues of \tk{'s} angular equations, where units of $M_i=1$ (e.g. the initial mass of the \bbh{} system), and $c=1$.
+Here, the labels $\ell$ and $m$ are polar and azimuthal eigenvalues of \tk{'s} angular equations, where total mass and the speed of light are set to unity (i.e. $M=c=1$).
 %
-In the third line of \eqn{hrd}, we represent $h$ in terms of \textit{spherical} harmonic multipoles.
+Note that barred indices, namely $\bar{\ell}$ and $\bar{m}$, will refer to \textit{spherical} harmonics, leaving the unbarred indices to refer to the spheroidals.
+%
+In the third line of \eqn{hrd}, we represent $h$ in terms of {spherical} harmonic multipoles.
 %
 This latter form is ubiquitous for the development and implementation of \imr{} signal models for \bbh{s}.
 %
 %
 \par Towards the development of these models, \eqn{hrd} enters in many incarnations.
 %
-In the \eob{} formalism, $h\LM$ is modeled such that, after its peak (near merger), the effective functional form reduces (asymptotically) to \eqn{hrd}'s second line \cite{Cotesta:2018fcv, Buonanno:2000ef, Bohe:2016gbl,Pan:2013rra, Bohe:2016gbl, Nagar:2018zoe}.
+In the \eob{} formalism, $h\LM$ is modeled such that, after its peak (near merger), the effective functional form reduces (asymptotically) to \eqn{hrd}'s second line \cite{Cotesta:2018fcv, Buonanno:2000ef,
+Bohe:2016gbl,Pan:2013rra, Bohe:2016gbl, Nagar:2018zoe}.
 %
 This view currently comes with the added assumption that ${_{-2}}S_{\ell m n} = {_{-2}}Y_{\ell m}$, where only $n=0$ is explicitly considered, and ${_{-2}}Y_{\ell m}$ are the spins weighted -2 spherical harmonics.
 %
-Only where $\jf \cw\lmn=0$ do $_{-2}S\lmn( 0,\theta,\phi) = {_{-2}}Y_{\ell m}\theta,\phi)$, which makes equating the spherical and spheroidal harmonics approximate at best for general values of $\jf \cw\lmn$.
+Only where $\jf \cw\lmn=0$ do $_{-2}S\lmn( 0,\theta,\phi) = {_{-2}}Y_{\ell m}(\theta,\phi)$, which makes equating the spherical and spheroidal harmonics approximate at best for general values of $\jf \cw\lmn$.
 %
 The consequences of that approximation, in particular the mixing between spherical and spheroidal harmonics, are discussed in reference \cite{London:2014cma,Berti:2014fga,London:2018gaq}.
 %
@@ -166,7 +169,7 @@ This approximation also applies to many of the \textit{Phenom} models, where the
 %
 In the case of the higher multipole model \texttt{PhenomHM} and its derivative models, fits for the \qnm{} frequencies are used in the process of mapping $\tilde{h}_{22}(f)$ into other $\tilde{h}\LM(f)$ \cite{London:2017bcn}.
 %
-In that setting, it is demonstrated that \qnm{} frequencies correlate with the morphology of each $h\LM$ in not only \rd{}, but also merger and late inspiral, as is implied by the source's causal connectedness pre and post merger.
+In that setting, it is demonstrated that \qnm{} frequencies are linked to the amplitude and phase of each $h\LM$ in not only \rd{}, but also merger and late inspiral, as is implied by the source's causal connectedness pre and post merger.
 %
 %
 \par For models that assist tests of the \nht{} (e.g. \cite{Berti:2005ys,London:2018gaq,Carullo:2018sfu}), and thereby only include precise \rd{s}, the perspective of \eqn{hrd}'s second and third lines are used to write each spherical harmonic multipole moment as
@@ -289,7 +292,7 @@ where
   \hatP = \left( \hatU^{*} \hatU \right)^{-1}\hatU^{*}
 \end{align}
 %
-is the \textit{pseudo-inverse} \cite{Moore1920,Penrose:1955} of $\hatU$.
+is the \textit{pseudo-inverse} \cite{Moore1920,Penrose:1955} of $\hatU$, which exists if $\hatU^{*} \hatU$ is nonsingular.
 %
 \par Equations (\ref{lin1}), and related discussion through \eqn{pinv1} illustrate the most rudimentary solution to the linear modeling problem.
 %
@@ -325,7 +328,7 @@ The trial model with smallest representation error is kept for the next greedy i
 %
 In this way, a list of optimal model symbols is learned.
 %
-This forward greedy process ends when the model accuracy, or changes thereof, passes a previously specified threshold.
+This forward greedy process ends when the model accuracy, and/or changes thereof, passes a previously specified threshold.
 %
 This rough algorithmic picture is encapsulated by Alg. \ref{alg:pgreedy}.
 %
@@ -334,7 +337,7 @@ This rough algorithmic picture is encapsulated by Alg. \ref{alg:pgreedy}.
 {\scriptsize
 \begin{algorithm}[H]
   %
-  \caption{A positive (forward) greedy algorithm, \pgreedy{}. Note that a required input, $\mathcal{A}$, is a function that takes in a list of basis symbols, and outputs an estimator of fit error. In this setting, $\mathcal{A}$ is assumed to have access to peripheral information, such as the training data.}
+  \caption{A positive (forward) greedy algorithm, \pgreedy{}. Note that a required input, $\mathcal{A}$, is a function that takes in a list of basis symbols, and outputs an estimator of fit error (e.g. L2 norm). In this setting, $\mathcal{A}$ is assumed to have access to peripheral information, such as the training data.}
   \label{alg:pgreedy}
   %
   \begin{algorithmic}[1]
