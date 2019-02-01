@@ -395,7 +395,7 @@ In that instance, it is clear that any infinitely differentiable scalar function
 %
 From the first to second line of \eqn{eq:mvt}, we have used the definition of the exponential function (i.e. its series expansion).
 %
-In the second line, the equality has been replaced by an approximation as we have limited the linear representation to $K$ terms.
+In the second line, the equality has been replaced by an approximation as we have limited the linear representation to $K+1$ terms.
 %
 \par This latter point is key to the perspective of \gmvp{}:
 %
@@ -413,7 +413,7 @@ given training data thought to be related to a smooth multivariate function, it 
     %
     \State {\bf Input:} $ \{ x, f, $max\_degree = 6$, tol \}$
     \vskip 10pt
-    \State Define, $\mlam_{bulk}$, the bulk symbol space using the $n$-fold cartesian inner-product of the power set of each basis symbol
+    \State Define, $\mlam_{bulk}$, the bulk symbol space using the $n$-fold cartesian inner-product (i.e. tensor product) of the power set of each basis symbol
     \State Define $\mathcal{A}_{\gmvp{}}$ according to Alg. (\ref{alg:A_gmvp}).
     \State Given $max\_degree$, define, ${ D}$, a list of allowed polynomial degrees (e.g. $\{0,1,2,3,4,5,6\}$)
     \For {$d$ \textbf{in}  ${ D}$ }
@@ -460,7 +460,7 @@ In this setting, the uncertainty of which and how many basis terms to include ma
 %
 \par Here, the basis symbols required by Alg. (\ref{alg:pgreedy}) are the multinomial terms in \eqn{eq:mvt}.
 %
-Each term is an element of the $n$-fold cartesian inner-product of the power-sets of each model dimension. That is $\mlam_{bulk} = \{x_0,x_1 .. x_N, ... x_0^1, x_0^2, x_0^3, ...  , (x_0^K x_1^K ... x_N^K) \}$.
+Each term is an element of the tensor-product of the power-sets of each model dimension. That is $\mlam_{bulk} = \{x_0,x_1 .. x_N, ... x_0^1, x_0^2, x_0^3, ...  , (x_0^K x_1^K ... x_N^K) \}$.
 %
 Note that in practice it may be useful to encode elements of $\mlam_{bulk}$ with strings representing their constituents (e.g. $x_0 x_0 x_1 x_2 x_2 x_4$ could be represented by the string ``001224''). This provides a way of bijectively mapping between symbols and numerical basis vectors.
 %
@@ -523,7 +523,7 @@ At this stage, we will also explicitly consider the $j^\mathrm{th}$ samples of t
   %
   \includegraphics[width=\textwidth]{issue3_summary.pdf}
   %
-	\caption{ Standard summary plot for Greedy Multivariate Rational fitting algorithm (\gmvr) as implemented in \cite{lionel_london_2018_1402516}. (\textit{left}) 3D plot of training data (black dots) and final fit (red mesh). (\textit{center top}) Same as left most panel, but in index space. (\textit{center bottom}) Fractional residual error (grey blocks) along with uniform (black) and gaussian (red) fits to error. (\textit{top right}) convergence of the L2 norm during iterative refinement. (\textit{bottom right}) Same as top right, but on log scale, where $\epsilon_0$ is the value of $\epsilon$ at the final $k^{\mathrm{th}}$ iteration of refinement. }
+	\caption{ Standard summary plot for Greedy Multivariate Rational fitting algorithm (\gmvr) as implemented in \cite{lionel_london_2018_1402516}. (\textit{left}) 3D plot of training data (black dots) and final fit (red mesh). (\textit{center top}) Same as left most panel, but in index space. (\textit{center bottom}) {Percent residual error with respect to validation data (grey blocks) along with uniform (black) and gaussian (red) fits to error. The validation data were generated in the same manner as the training data.} (\textit{top right}) convergence of the L2 norm during iterative refinement. (\textit{bottom right}) Same as top right, but on log scale, where $\epsilon_0$ is the value of $\epsilon$ at the final $k^{\mathrm{th}}$ iteration of refinement. }
   %
   \label{fig:gmvrtoy}
   %
@@ -685,11 +685,11 @@ Towards easily identifying test values for $a_j$ and $b_k$ with those recovered,
 %
 Under this perspective we will consider test data generated with the parameters listed in \tbl{tb:gmvrtoy}'s left two panels.
 %
-\par To generate the test data, \eqn{eq:gmvrtoy1} is evaluated with 25 points in $x_0$ and $x_1$, where each is between -3 and 3. Though not a requirement of \gmvr{}, for simplicity of presentation, domain points are equally spaced.
+\par To generate the test data, \eqn{eq:gmvrtoy1} is evaluated with 25 points along $x_0$ and $x_1$ (with $25^2$ total points), where each is between -3 and 3. Though not a requirement of \gmvr{}, for simplicity of presentation, domain points are equally spaced.
 %
 \par \fig{fig:gmvrtoy} shows the application of \gmvr{} to this fiducial dataset.
 %
-\fig{fig:gmvrtoy}'s central bottom panel displays the distribution of fractional residuals, and demonstrates their approximately flat distribution.
+\fig{fig:gmvrtoy}'s central bottom panel displays the distribution of percentage residuals with respect to validation data generated in the same manner as training data.
 %
 A gaussian fit to the fractional residuals is displayed for comparison.
 %
@@ -697,7 +697,7 @@ In particular, despite the uniform nature of the underlying noise distribution, 
 %
 We see that this is not the case here, and that the uniformly random noise distribution is approximately recovered.
 %
-Specifically, when considering many noise realizations, we find that sample noise and residuals have an average correlation of $99.46\%$.
+Moreover, when considering many noise realizations to generate validation data, we find that sample noise and residuals have an average correlation of $99.46\%$.
 %
 \par \fig{fig:gmvrtoy}'s right top and bottom panels show the convergence of Alg. (\ref{alg:A_gmvr})'s iterative refinement stage (i.e. its while-loop).
 %
@@ -855,9 +855,11 @@ We note that, in the asymptotic vicinity of $\jf=1$, the \qnm{} frequencies and 
 %
 In allowing \eqns{eq:cw_fit_1}{eq:cw_fit_9} to extrapolate to $\jf=1$, we do not explicitly account for this additional effect.
 %
-\par Lastly, \fig{fig:qnm}'s bottom two panels show fractional residual errors.
+\par Lastly, \fig{fig:qnm}'s bottom two panels show absolute fractional residual errors of the complex frequency, $\cw\lmn = \omega\lmn + i/\tau\lmn$.
 %
-Although each model's fractional error is within 2\%, each error is dominated by well known nonlinear oscillations which are considered to be outside of the experimental accuracy of current 2nd generation \gw{} efforts.
+Although each model's fractional error is within 1\% of the perturbation theory result, each is dominated by systematic error due to the choice fitting ansatz.
+%
+For comparison, the same residual errors are shown in gray for the model presented in Ref.~\cite{Berti:2005ys}.
 %
 \par Together, \eqns{eq:cw_fit_1}{eq:cw_fit_9} along with \fig{fig:qnm} present precise and accurate fits for the real and imaginary parts of \qnm{} frequencies for gravitational perturbations of Kerr \qnm{s}.
 %
@@ -929,7 +931,7 @@ This treatment also demonstrates the convergence of the algorithm's greedy phase
     %
     \State {\bf Input:} $ \{ x, f, $max\_degree = 6$, tol \}$
     \vskip 10pt
-    \State Define, $\mlam_{bulk}$, the bulk symbol space using the $n$-fold cartesian inner-product of the power set of each basis symbol. This is the combined bulk for numerator and denominator symbols.
+    \State Define, $\mlam_{bulk}$, the bulk symbol space using the tensor-product of the power set of each basis symbol. This is the combined bulk for numerator and denominator symbols.
     \State Define $\mathcal{A}_{\gmvr{}}$ according to Alg. (\ref{alg:A_gmvr}).
     \State Given $max\_degree$, define, ${ D}$, a list of allowed polynomial degrees (e.g. $\{0,1,2,3,4,5,6\}$)
     \For {$d$ \textbf{in}  ${ D}$ }

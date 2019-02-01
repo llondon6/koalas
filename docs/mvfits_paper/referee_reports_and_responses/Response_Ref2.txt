@@ -20,4 +20,18 @@ Response for Referee #2
 
 8. We note in the text that this halting criteria can either be representation error, or changinges in represenation error. In the latter scenario, a maximum number of iterations need be imposed in fewer scenarios. Of course, more complicated halting criteria are possible.
 
-9.
+9. We have added additional citations to this and the preceeding section.
+
+10. Correct, the product are the same. This has been noted.
+
+11. To our knowledge degree tempering is new. Our literature seearch has returned no clear precident for this approach. However, we would prefer to not advertise this moreso than has already been done.
+
+12. Thank you. We have clarified that validation data has been used here. When discussing the disctribution of residuals, we now highlight that validation data were also used.
+
+13. Thanks. We have tried to clairfy that ther are 25*25 total points.
+
+14. We confess that this sentence turns out to be a can of worms, and we have modified the text to simply comment on the relative scale of the residuals.
+
+15. Thank you for pointing this out. We checked that labeling of equations is correct as stands, and we have found and corrected sentence on page 3 that icorrectly mentions K rather than K+1 terms.
+
+16. Thanks again. We have again proof read the draft. We trust that additional corrections will potentially take place at the proofs stage. 
