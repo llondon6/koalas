@@ -106,7 +106,7 @@ In the coming years, expectations for frequent \gw{} detections of increasing \s
 %
 Concurrent with \virgo{}, the \aligo{} detectors will enter their third observing run in approximately early 2019.
 %
-During this period, a few to dozens of \bbh{} signals are likely to be detected \cite{Abbott:2016nhf}.
+During this period, a few to dozens of \bbh{} signals are likely to be detected \cite{Abbott:2016nhf,Abbott2018OS}.
 %
 In this context, signal detection and subsequent inference of physical parameters hinges upon efficient models for source properties and dynamics \cite{Abbott:2016wiq}.
 %
@@ -121,13 +121,13 @@ $%\begin{align}
 $%\end{align}
 , where $\omega\lmn$ is the central frequency of the ringing, and $1/\tau\lmn$ is the damping rate.
 %
-These discrete frequencies have associated radial and spatial functions which are \textit{spheroidal} harmonic in nature \cite{Leaver85,London:2014cma}.
+These discrete frequencies have associated radial and spatial functions which are \textit{spheroidal} harmonic in nature \cite{Leaver85}.
 %
 Together, these harmonic functions and frequencies constitute the \qnm{} solutions to \ee{}.
 %
 Specifically, they are the eigen-solutions of the source free linearized \ee{} (i.e. \tk{'s} equations \cite{PhysRevLett.29.1114}) for a perturbed \bh{} with final mass, $\mf$, and dimensionless final spin, $\jf$.
 %
-The well known and effective completeness of these solutions allows \grad{} from generic perturbations to be well approximated by a spectral (multipolar) sum which combines the complex \qnm{} amplitude, $A\lmn$, with the spin weight -2 spheroidal harmonics, $_{-2}S\lmn$.
+These solutions allow \grad{} from generic perturbations to be well approximated by a spectral (multipolar) sum which combines the complex \qnm{} amplitude, $A\lmn$, with the spin weight -2 spheroidal harmonics, $_{-2}S\lmn$.
 %
 \begin{align}
 	%
@@ -157,15 +157,20 @@ This latter form is ubiquitous for the development and implementation of \imr{} 
 In the \eob{} formalism, $h\LM$ is modeled such that, after its peak (near merger), the effective functional form reduces (asymptotically) to \eqn{hrd}'s second line \cite{Cotesta:2018fcv, Buonanno:2000ef,
 Bohe:2016gbl,Pan:2013rra, Bohe:2016gbl, Nagar:2018zoe}.
 %
-This view currently comes with the added assumption that ${_{-2}}S_{\ell m n} = {_{-2}}Y_{\ell m}$, where only $n=0$ is explicitly considered, and ${_{-2}}Y_{\ell m}$ are the spins weighted -2 spherical harmonics.
+This view currently comes with the added assumption that ${_{-2}}S_{\ell m n} = {_{-2}}Y_{\ell m}$, where ${_{-2}}Y_{\ell m}$ are the spins weighted -2 spherical harmonics.
 %
 Only where $\jf \cw\lmn=0$ do $_{-2}S\lmn( 0,\theta,\phi) = {_{-2}}Y_{\ell m}(\theta,\phi)$, which makes equating the spherical and spheroidal harmonics approximate at best for general values of $\jf \cw\lmn$.
 %
-The consequences of that approximation, in particular the mixing between spherical and spheroidal harmonics, are discussed in reference \cite{London:2014cma,Berti:2014fga,London:2018gaq}.
+The consequences of that approximation, in particular the mixing between spherical and spheroidal harmonics, are discussed in reference \cite{London:2014cma,Berti:2014fga,London:2018gaq,Kelly:2012nd}.
 %
-This approximation also applies to many of the \textit{Phenom} models, where the frequency domain multipoles, $\tilde{h}\LM(f)$, are constructed such that their high frequency behavior is consistent with \eqn{hrd} in the time domain \cite{Hannam:2013oca,London:2017bcn,Khan:2015jqa,Schmidt:2014iyl}.
+This approximation also applies to the \textit{Phenom} models,
+where the frequency domain multipoles, $\tilde{h}\LM(f)$, are constructed such that their high frequency behavior is consistent with \eqn{hrd} in the time domain
 %
-\par Both Phenom and \eob{} approaches directly use phenomenological models for the \qnm{} frequencies, as these fits are more computationally efficient than the underlying analytic calculations, which involve the solving of continued fraction equations \cite{Leaver85}.
+\cite{ Hannam:2013oca, London:2017bcn, Khan:2015jqa, Schmidt:2014iyl, Mehta:2017jpq, Khan:2018fmp }.
+%
+\par Both Phenom and \eob{} approaches either use phenomenological models of remnant \bh{} mass and spin to interpolate over tables of \qnm{} frequencies, or phenomenological models for \qnm{} frequencies are used directly.
+%
+Either approach typically incurs less computational cost that the direct numerical calculation of \qnm{} frequencies, which may involve, for example, the solving of continued fraction equations \cite{Leaver85}.
 %
 In the case of the higher multipole model \texttt{PhenomHM} and its derivative models, fits for the \qnm{} frequencies are used in the process of mapping $\tilde{h}_{22}(f)$ into other $\tilde{h}\LM(f)$ \cite{London:2017bcn}.
 %
@@ -197,21 +202,29 @@ It is therefore efficient to use accurate models for $\sigma\LMlmn$ which avoids
 %
 \par In this combined context, it is clear that the modeling of \qnm{} frequencies, $\cw\lmn$, and spherical-spheroidal mixing coefficients, $\sigma\LMlmn$, are relevant for a range of \gw{} signal models.
 %
-While models for $\cw\lmn$ and $\sigma\LMlmn$ are present in the literature (e.g. \cite{Berti:2005ys,Berti:2014fga}), there exist minor shortcomings which we wish to address here.
+While models for $\cw\lmn$ and $\sigma\LMlmn$ are present in the literature (e.g. \cite{Berti:2005ys, Berti:2014fga, Cook:2014cta}), there exist minor shortcomings which we wish to address here.
 %
-\par For the \qnm{} frequencies, it is well known that for nearly extremal \bh{s} (i.e. $\jf \rightarrow 1$) some of the frequencies have zero-damping (i.e. $\tau\lmn \rightarrow \infty$) \cite{Zimmerman:2015trm}.
+\par For both the \qnm{} frequencies and the spherical-sphoidal mixing coefficients, we present the first models which treat \qnm{s} rotating with and against the rotation of the \bh{} as being a part of a single solution parameterized by dimensionless \bh{} spin ranging from -1 to 1.
 %
-In the context of \aligo{} \da{}, where source parameters are estimated using routines which sample over the space of all possible \bh{} masses and spins, it is useful to have accurate physical behavior in the extremal limit \cite{TheLIGOScientific:2016wfe}.
+This perspective reflects the empirical observation that the remnant spin of \bbh{} mergers smoothly connects regions of positive and negative spin \cite{Husa:2015iqa,London:2018gaq}.
 %
-Here, we present the first models for $\cw\lmn$ that explicitly account for zero-damping in the extremal Kerr limit.
+\par For the \qnm{} frequencies, it is well known that for nearly extremal \bh{s} (i.e. $\jf \rightarrow 1$) some of the frequencies have zero-damping (i.e. $\tau\lmn \rightarrow \infty$) \cite{Yang:2012pj,Zimmerman:2015trm}.
 %
-\par For the modeling of $\sigma\LMlmn$, we note that the results presented in \cite{Berti:2014fga} are limited to cases where the azimuthal indices, $\ell$ and $\bar{\ell}$, are less than or equal to 3.
+In the context of \gw{} \da{}, where source parameters are estimated using routines which sample over the space of all possible \bh{} masses and spins, it is useful to have accurate physical behavior in the extremal limit \cite{TheLIGOScientific:2016wfe}.
 %
-As the most advanced signal models include at least $\ell$ or $\bar{\ell}$ of 3, there is use in extending current results.
+Here, we present the first models for $\cw\lmn$ that explicitly account for zero-damping \textit{and} non-zero-damping in the extremal Kerr limit.
 %
-In particular, it is well known that $\sigma_{43330}$ can have a significant impact on the $(4,3)$ spherical multipole (via \ceqn{hlm}).
+% \par For the modeling of $\sigma\LMlmn$, we note that the results presented in \cite{Berti:2014fga} are limited to cases where the azimuthal indices, $\ell$ and $\bar{\ell}$, are less than or equal to 3.
+% %
+% As the most advanced signal models include at least $\ell$ or $\bar{\ell}$ of 3, there is use in extending current results.
+% %
+% In particular, it is well known that $\sigma_{43330}$ can have a significant impact on the $(4,3)$ spherical multipole (via \ceqn{hlm}).
+% %
+% For consistency with the multipolar content of current ringdown models, we extend previous results to include the most significant multipoles with $\ell \leq 5$ \cite{London:2018gaq,London:2014cma}.
 %
-For consistency with the multipolar content of current ringdown models, we extend previous results to include the most significant multipoles with $\ell \leq 5$ \cite{London:2018gaq,London:2014cma}.
+\par For the modeling of $\sigma\LMlmn$, we note that the \cite{Berti:2014fga} do not appear to include the \qnm{s} which rotate counter to the \bh{} spin direction (i.e. ``mirror-modes'').
+%
+In addition to our
 %
 %
 \par In parallel, the methods for modeling $\cw\lmn$ and $\sigma\LMlmn$ have been dispersed: different phenomenological techniques have been used under no coherent framework.

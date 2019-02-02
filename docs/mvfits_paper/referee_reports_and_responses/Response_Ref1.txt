@@ -2,3 +2,25 @@
 
 Response for Referee #1
 ---
+
+1. (p. 1, L17-17) The referee makes a valid, though largely semantic point regarding the use of interpolating in the abstract as it related to GMVR and Runge's phenomenon. We kindly note that GMVR is an iterative regression method that works for equally spaced grids, and constructs rational functions (equivalently, sums of rational functions) that smoothly connect or interpolate data assuming a rational ansatz.
+
+2. (p. 1, L32) Thank you. We have added the citation.
+
+3. (p. 1, L44) We have added this reference.
+
+4. (p. 1, L46) We have kept only Leaver's reference at this line. There are indeed many many publications that could be cited here, but Leaver's is one of the earliest and most relevant.
+
+5. (p. 1, L52) We have altered the language here to not mention the topic of completeness.
+
+6. (Third Paragraph) We now no longer constrain this discussion to n=0. The text has been modified to include updated references and now state (perhaps uninformatively) that all phenom models have high frequency regions that are consistent with perturbation theory.
+
+7. (p. 1, L49-50) Thank you. We hope that the current text will avoid any confusion.
+
+8. (p. 1, L52-53) Thank you. We hope that the current text will avoid any confusion.
+
+9. (p. 2, L30) Thank you. We hope that the current text will avoid any confusion.
+
+10. (p. 2, L30) Thank you. We agree that Yang+ should be referenced here.
+
+11. (p. 2, L39)
