@@ -446,7 +446,7 @@ given training data thought to be related to a smooth multivariate function, it 
 }
 %
 %
-\par This truncated expansion happens to be a polynomial in at most $N$ variables.
+\par \eqn{eq:mvt}'s truncated expansion happens to be a polynomial in at most $N$ variables.
 %
 In this setting, the uncertainty of which and how many basis terms to include makes this a problem ripe for the application of linear modeling driven by a greedy process, namely \eqn{eq:linsol1} and Alg. (\ref{alg:pgreedy}) .
 %
@@ -466,7 +466,7 @@ In this setting, the uncertainty of which and how many basis terms to include ma
   %
   Before the application of $\kappa(\j{})$, points are spaced between -\CwFitCalibrationRegion and \CwFitCalibrationRegion according to \CwFitCalibrationRegion times the $\sin$ of a fiducial angle which is uniformly spaced between $-\pi/2$ and $\pi/2$. Values of $\j{}$ are shown in the upper axis for $\kappa$ at $l=m$.
   %
-  The grey dashed line marks the value of $\kappa$ where $\j{}=0$. Fits of dimensionless \qnm{} decay rates (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. (Bottom) Percentage residual errors for fits of dimensionless \qnm{} central frequencies and decay times (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. }
+  The grey dashed line marks the value of $\kappa$ where $\j{}=0$. Fits of dimensionless \qnm{} decay rates (solid lines) along with select numerical values (grey markers) computed using Leaver's method \cite{Leaver85}. (Bottom) Percentage absolute residual errors for fits of dimensionless \qnm{} frequencies,, $\cw\lmn$ along with select numerical values (colored markers) computed using Leaver's method \cite{Leaver85}. For comparison, residuals using the models in Ref.~\cite{Berti:2005ys} are shown in gray. }
   %
   \label{fig:qnm}
   %
@@ -496,9 +496,9 @@ The degree tempering process halts when increasing the maximum allowed degree ha
 \subsection{Greedy Multivariate Rational Fitting}
 %
 %
-\par Despite the apparent universality of of \eqn{eq:mvt}, there are many cases where $K$ must be orders of magnitude greater than 1 in order for $\vec{f}$ to be accurately represented by a multinomial.
+\par Despite the apparent universality of \eqn{eq:mvt}, there are many cases where $K$ must be orders of magnitude greater than 1 in order for $\vec{f}$ to be accurately represented by a low order multinomial.
 %
-Worst, in cases where the underlying dataset is best described by a rational function, no polynomial of the same family describing the numerator and denominator will yield satisfactory results (e.g. the well known ``Runge's phenomenon'' \cite{10.2307/2323093}).
+Worst, in cases where the underlying dataset is best described by a rational function, no polynomial of the same family describing the numerator and denominator will yield satisfactory results in low order (e.g. the well known ``Runge's phenomenon'' \cite{10.2307/2323093}).
 %
 In general, the optimal polynomial basis may not be clear, and so a more general set of ansatzes may be of use.
 %
@@ -581,7 +581,7 @@ and
 %
 where, $\hat{P}$ is the pseudo-inverse of the matrix whose elements are $\psi_k(\vec{x}_j)$, $\vec\alpha = ( z_0, z_1, ... z_{R+V-1},z_{R+V} )$, and $\vec{g} = ( g_0, g_1, ... g_{R+V-1},g_{R+V} )$.
 %
-\par However, we note that $\hat{P}$'s depends on $g$.
+\par However, we note that $\hat{P}$ depends nontrivially on $g$, and is therefore susceptible to noise in the training data.
 %
 Let us briefly consider the effect of zero-mean noise on $g$, e.g. $g \rightarrow g+n$.
 %
@@ -645,7 +645,7 @@ However, rather than independent greedy optimizations for the numerator and deno
 %
 Put another way, rather than two simultaneous greedy optimizations over $R+1$ and $V$ symbols (with $(R+1)V$ iterations), a single greedy process over $V+R+1$ symbols is performed, where each symbol is additionally labeled as being in the numerator or denominator.
 %
-\par With the conceptual tools in hand, we may proceed to constructing \gmvr{} by first defining its action, $\mathcal{A}_{\gmvr}$.
+\par With these conceptual tools in hand, we may proceed to constructing \gmvr{} by first defining its action, $\mathcal{A}_{\gmvr}$.
 %
 This is done in Alg. (\ref{alg:A_gmvr}).
 %
@@ -871,13 +871,17 @@ We note that, in the asymptotic vicinity of $\jf=1$, the \qnm{} frequencies and 
 %
 In allowing \eqns{eq:cw_fit_1}{eq:cw_fit_9} to extrapolate to $\jf=1$, we do not explicitly account for this additional effect.
 %
-\par Lastly, \fig{fig:qnm}'s bottom two panels show absolute fractional residual errors of the complex frequency, $\cw\lmn = \omega\lmn + i/\tau\lmn$.
+\par \fig{fig:qnm}'s bottom two panels show absolute fractional residual errors of the complex frequency, $\cw\lmn = \omega\lmn + i/\tau\lmn$.
 %
 Although each model's fractional error is within 1\% of the perturbation theory result, each is dominated by systematic error due to the choice fitting ansatz.
 %
-For comparison, the same residual errors are shown in gray for the model presented in Ref.~\cite{Berti:2005ys}.
+For comparison, the same residual errors are shown in gray for the model presented in Ref.~\cite{Berti:2005ys};
+%
+here, the sharp feature near $\jf=0$ results from their modeling counter and co-rotating \qnm{} as two different curves.
 %
 \par Together, \eqns{eq:cw_fit_1}{eq:cw_fit_9} along with \fig{fig:qnm} present precise and accurate fits for the real and imaginary parts of \qnm{} frequencies for gravitational perturbations of Kerr \qnm{s}.
+%
+A \texttt{Python} implementation of \eqns{eq:cw_fit_1}{eq:cw_fit_9} is available in Ref.~\cite{lionel_london_2018_1402516} via \texttt{positive.physics.cw181003550}.
 %
 %
 \subsection{Modeling spherical-spheroidal inner-products with \gmvr{}}
@@ -890,6 +894,8 @@ As in the case of the \qnm{} frequencies, we use the domain transformation defin
 \par While it is possible to enforce extremal Kerr and Schwarzschild limiting conditions for $\sigma_{\LMlmn}$, we find it effective to first use \gmvr{} to determine a functional form that works for {individual} $\sigma_{\LMlmn}$, and then from these ansatz develop a single ansatz for all $\sigma_{\LMlmn}$.
 %
 \eqns{eq:ys22220}{eq:ys55550} present the resulting model equations.
+%
+A \texttt{Python} implementation of \eqns{eq:ys22220}{eq:ys55550} is available in Ref.~\cite{lionel_london_2018_1402516} via \texttt{positive.physics.ysprod181003550}.
 %
 %
 \par \fig{fig:ys} displays fits, training data and related residuals.
@@ -914,9 +920,9 @@ In cases where $(\bar\ell,\bar{m})=(\ell,m)$, the real part of $\sigma_{\LMlmn}$
 %
 Consistency with the Schwarzschild limit is equally true in cases where $(\bar\ell,\bar{m}) \neq (\ell,m)$.
 %
-As with the \qnm{} frequencies, residuals are dominated by small scale oscillations with amplitudes that are fractions of a percent of the central values.
+As with the \qnm{} frequencies, residuals are dominated by small scale oscillations with amplitudes that are fractions of a percent of the central values, and largely result from the model asatz.
 %
-For comparison, fractional residual error for models in Ref.~\cite{Berti:2014fga} are also shown.
+For comparison, fractional residual errors for models in Ref.~\cite{Berti:2014fga} are also shown.
 %
 \section{Discussion}
 \label{discuss}
@@ -934,6 +940,21 @@ When applied to the modeling of analytically computed quantities, both algorithm
 This treatment also demonstrates the convergence of the algorithm's greedy phase with increasing iterations, as well as the convergence of an underlying iterative refinement phase (\ceqn{eq:rat4}).
 %
 %
+%
+\par Both \gmvp{} and \gmvr{} may be used to automatically determine the functional form and model for a given dataset that is expected to be respectively polynomial or rational.
+%
+An alternative use-strategy is to use either \gmvp{} or \gmvr{} to determine a fitting ansatz for individual cases (e.g. individual \qnm{s}), and then use these results to develop a single ansatz for all cases.
+%
+This is what as been done for the modeling of \qnm{} frequencies and spherical-spheroidal mixing coefficients.
+%
+%
+\par \gmvp{} has been applied to the modeling of \qnm{} frequencies. The resulting models have been constrained in the extremal Kerr limit, and perform well compared to similar fits in the literature.
+%
+The fits presented here are of direct use in Ref. \cite{London:2017bcn}, where efficiently evaluable \qnm{} frequencies are required to generate template waveforms for \gw{} searches and parameter estimation.
+%
+The fits presented may find future use in Phenom or EOB based \gw{} models.
+%
+\par \gmvr{} has been applied to the modeling of mixing coefficients between the spherical and spheroidal harmonics.
 %
 % GMVR
 % \hspace{1cm}
@@ -964,21 +985,6 @@ This treatment also demonstrates the convergence of the algorithm's greedy phase
   %
 \end{algorithm}
 }
-%
-\par Both \gmvp{} and \gmvr{} may be used to automatically determine the functional form and model for a given dataset that is expected to be respectively polynomial or rational.
-%
-An alternative use strategy is to use either \gmvp{} or \gmvr{} to determine a fitting ansatz for individual cases (e.g. individual \qnm{s}), and then use these results to develop a single ansatz for all cases.
-%
-This is what as been done for the modeling of \qnm{} frequencies and spherical-spheroidal mixing coefficients.
-%
-%
-\par \gmvp{} has been applied to the modeling of \qnm{} frequencies. The resulting models have been constrained in the extremal Kerr limit.
-%
-The fits presented are of direct use in Ref. \cite{London:2017bcn}, where efficiently evaluable \qnm{} frequencies are required to generate template waveforms for \gw{} searches and parameter estimation.
-%
-The fits presented may find future use in Phenom or EOB based \gw{} models.
-%
-\par \gmvr{} has been applied to the modeling of mixing coefficients between the spherical and spheroidal harmonics.
 %
 These fits are of direct use in Ref. \cite{Carullo:2018sfu}, and may be of future use in similar ringdown-only models for the purpose of testing \gr{}.
 %
