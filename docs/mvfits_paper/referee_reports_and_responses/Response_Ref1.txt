@@ -23,4 +23,30 @@ Response for Referee #1
 
 10. (p. 2, L30) Thank you. We agree that Yang+ should be referenced here.
 
-11. (p. 2, L39)
+11. (p. 2, L39) Thank you. We have updated this section to avoid any confusion.
+
+12. (In Eq.6) Thank you. We have clarified the notation.
+
+13. (p. 2, L26-27) Thank you for mentioning the Stone-Weierstrass theorem. We do not wish to reference this theorem in place of the series expansion as the latter is more accessible to a physics audience. We note that our introduction to the discussion is generally applicable given some smooth functoin and an epsilon neighborhood around a point. We intend primarily to motivate a general numtinobial basis perspective of our algorithms from first principles. he text has been modified in an effort to clarify this intention.
+
+14. (Algs. 2 and 5 ...) Thank you. We have clarified that we refer to the set of all multinomial combinations of basis vectors up to a predefined maximum order.
+
+15. (Algs. 2 and 5 ...) Thank you. We have corrected these lines to reference epsilons.
+
+16. (p. 3, L60) The current description of \lambda_{bulk} seeks to communicate the presense of the constant term.
+
+17. (p. 5, L3-4) We refer the reviewer to the introducion section here: https://en.wikipedia.org/wiki/Runge%27s_phenomenon. We have sought to clarify the text to minimize confusion.
+
+18. ( Eq. 20 ) We refer the referee to Eq 21
+
+19. Via Eq. 15, n>=1 for alpha. Here, "implicitely" n plays no real role in the algorithm and therefore need not be stored and increamented.
+
+20. (Alg. 4, step 4) Thank you. We have defined var to be the variance.
+
+21. (Alg. 4, step 4) Thank you. Yes.
+
+22. (p. 8, final line) We have clarified the text.
+
+23. (Fig. 4) We have clarified the text.
+
+24. Code: While we are appreciative of the referee's comments, we point out to the submitted draft only pertains to the GMVP and GMVR algorithms.
