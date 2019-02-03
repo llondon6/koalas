@@ -1738,6 +1738,7 @@ def ysprod14081860(j,ll,mm,lmn):
 
 # Fit for spherica-sphoidal harmonic inner-product from Berti et al
 def ysprod14081860_from_paper_is_broken(j,L,M,lmn):
+
     '''
     Fits for sherical-spheroidal mixing coefficients from arxiv:1408.1860 -- Berti, Klein
 
@@ -1958,3 +1959,68 @@ def Berti0512160(jf,l,m,n):
         return array( [ lowlevel(j,m) for j in jf ] ).T[0]
     else:
         return lowlevel(jf,m)
+
+
+# Fits for spin-2 QNM frequencies from arxiv:1810.03550
+def cw181003550(jf,l,m,n):
+
+    '''
+    Fit for Kerr -2 QNMs from https://arxiv.org/abs/1810.03550
+    '''
+
+    # Import usefuls
+    from numpy import loadtxt,array,ndarray
+    from imp import load_source
+    import positive
+
+    # Load fit functions from reference module
+    module_path = positive.parent(positive.__path__[0])+'data/ksm2_cw.py'
+    cw_module = load_source( '', module_path )
+
+    # Extract dict of fit functions
+    fit_dictionary = cw_module.CW
+
+    if (l,m,n) in fit_dictionary:
+        #
+        ans = fit_dictionary[l,m,n](jf)
+    else:
+        #
+        error('this fit does not apply to (l,m,n)=(%i,%i,%i)'%(l,m,n))
+
+    #
+    return ans
+
+
+
+# Fits for spin-2 spherical-spheroidal mixing coefficients from arxiv:1810.03550
+def ysprod181003550(jf,ll,mm,lmn):
+
+    '''
+    Fit for Kerr -2 QNMs from https://arxiv.org/abs/1810.03550
+    '''
+
+    # Import usefuls
+    from numpy import loadtxt,array,ndarray
+    from imp import load_source
+    import positive
+
+    # Import ysprod models
+    data_path = positive.parent(positive.__path__[0])+'data/ysmodels.pickle'
+    with open(data_path,'rb') as f:
+        ysfits = pickle.load(f)
+
+    # Extract dict of fit functions
+    fit_dictionary = ysfits
+
+    # Extract kerr indices
+    l,m,n = lmn
+
+    # Eval fit
+    if (ll,mm,l,m,n) in fit_dictionary:
+        #
+        beta = 1.0 / ( 2 + ll-abs(mm) )
+        kappa = lambda JF: (log( 2 - JF ) / log(3))**(beta)
+        return fit_dictionary[ll,mm,l,m,n].eval( kappa(jf) )
+    else:
+        #
+        error('this fit does not apply to (ll,mm,l,m,n)=(%i,%i,%i)'%(ll,mm,l,m,n))

@@ -88,7 +88,7 @@ superscriptaddress,10pt]{revtex4-1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Abstract %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
   %
-  Models of black hole properties play an important role in the ongoing direct detection of gravitational waves from black hole binaries. One important aspect of model based gravitational wave detection, and subsequent estimation of source parameters, are the low level modeling of information related to perturbed Kerr black holes. Here, we present new methods and models for the analytically understood gravitational wave spectra (quasi-normal mode frequencies), and harmonic structure of Kerr black holes (mixing coefficients between spherical and spheroidal harmonics). In particular, we present a greedy-multivariate-polynomial (GMVP) regression method and greedy-multivariate-rational (GMVR) regression method for the automated modeling of polynomial and rational functions respectively. GMVR is a quasi-linear numerical method for interpolating rational functions. It therefore represents a solution to Runge's phenomenon. GMVP is used to develop the first model for QNM frequencies explicitly enforces consistency with the extremal Kerr limit. GMVR is used to develop a model for harmonic mixing coefficients that extends previous results to dominant multipoles with $\ell \le 5$. We discuss the use of these models in current and future gravitational wave signal modeling.
+  Models of black hole properties play an important role in the ongoing direct detection of gravitational waves from black hole binaries. One important aspect of model based gravitational wave detection, and subsequent estimation of source parameters, are the low level modeling of information related to perturbed Kerr black holes. Here, we present new phenomenological methods to model the analytically understood gravitational wave spectra (quasi-normal mode frequencies), and harmonic structure of Kerr black holes (mixing coefficients between spherical and spheroidal harmonics). In particular, we present a greedy-multivariate-polynomial (GMVP) regression method and greedy-multivariate-rational (GMVR) regression method for the automated modeling of polynomial and rational functions respectively. GMVR is a quasi-linear numerical method for interpolating rational functions. It therefore represents a solution to Runge's phenomenon. GMVP is used to develop the first model for QNM frequencies explicitly enforces consistency with the extremal Kerr limit. GMVR is used to develop a model for harmonic mixing coefficients that extends previous results to dominant multipoles with $\ell \le 5$. We discuss the potential use of these models in current and future gravitational wave signal modeling.
 	%
 \end{abstract}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -127,7 +127,7 @@ Together, these harmonic functions and frequencies constitute the \qnm{} solutio
 %
 Specifically, they are the eigen-solutions of the source free linearized \ee{} (i.e. \tk{'s} equations \cite{PhysRevLett.29.1114}) for a perturbed \bh{} with final mass, $\mf$, and dimensionless final spin, $\jf$.
 %
-These solutions allow \grad{} from generic perturbations to be well approximated by a spectral (multipolar) sum which combines the complex \qnm{} amplitude, $A\lmn$, with the spin weight -2 spheroidal harmonics, $_{-2}S\lmn$.
+These solutions allow \grad{} from generic perturbations to be well approximated by a spectral (multipolar) sum which combines the complex \qnm{} amplitude, $A\lmn$, with the spin $-2$ weighted -2 spheroidal harmonics, $_{-2}S\lmn$.
 %
 \begin{align}
 	%
@@ -145,7 +145,7 @@ These solutions allow \grad{} from generic perturbations to be well approximated
 %
 Here, the labels $\ell$ and $m$ are polar and azimuthal eigenvalues of \tk{'s} angular equations, where total mass and the speed of light are set to unity (i.e. $M=c=1$).
 %
-Note that barred indices, namely $\bar{\ell}$ and $\bar{m}$, will refer to \textit{spherical} harmonics, leaving the unbarred indices to refer to the spheroidals.
+Note that barred indices, namely $\bar{\ell}$ and $\bar{m}$, refer to \textit{spherical} harmonics of spin weight -2, leaving the unbarred indices to refer to the spheroidals.
 %
 In the third line of \eqn{hrd}, we represent $h$ in terms of {spherical} harmonic multipoles.
 %
@@ -197,7 +197,7 @@ In \eqn{sigma}, $*$ denotes complex conjugation, and $\Omega$ is the standard so
 %
 Whereas the calculation of each ${_{-2}S}\lmn$ involves a series solution which slowly converges for $\jf$ near unity, the calculation of each ${_{-2}Y}\LM$ is achieved using closed form expressions.
 %
-It is therefore efficient to use accurate models for $\sigma\LMlmn$ which avoids convergence issues. These can then be used directly to calculate $h\LM$ via \eqn{hlm}, and thereby the \gw{} polarizations via \eqn{hrd}.
+It is therefore efficient to use accurate models for $\sigma\LMlmn$ to avoid convergence issues. These can then be used directly to calculate $h\LM$ via \eqn{hlm}, and thereby the \gw{} polarizations via \eqn{hrd}.
 %
 %
 \par In this combined context, it is clear that the modeling of \qnm{} frequencies, $\cw\lmn$, and spherical-spheroidal mixing coefficients, $\sigma\LMlmn$, are relevant for a range of \gw{} signal models.
@@ -206,7 +206,7 @@ While models for $\cw\lmn$ and $\sigma\LMlmn$ are present in the literature (e.g
 %
 \par For both the \qnm{} frequencies and the spherical-sphoidal mixing coefficients, we present the first models which treat \qnm{s} rotating with and against the rotation of the \bh{} as being a part of a single solution parameterized by dimensionless \bh{} spin ranging from -1 to 1.
 %
-This perspective reflects the empirical observation that the remnant spin of \bbh{} mergers smoothly connects regions of positive and negative spin \cite{Husa:2015iqa,London:2018gaq}.
+This perspective reflects the empirical observation that the remnant spin of \bbh{} mergers smoothly connects regions of positive and negative spin relative to the direction of the initial oribital angular momentum \cite{Husa:2015iqa,London:2018gaq}.
 %
 \par For the \qnm{} frequencies, it is well known that for nearly extremal \bh{s} (i.e. $\jf \rightarrow 1$) some of the frequencies have zero-damping (i.e. $\tau\lmn \rightarrow \infty$) \cite{Yang:2012pj,Zimmerman:2015trm}.
 %
@@ -214,10 +214,10 @@ In the context of \gw{} \da{}, where source parameters are estimated using routi
 %
 Like Ref.~\cite{Cook:2014cta}, we present models for $\cw\lmn$ that explicitly account for zero-damping in the extremal Kerr limit.
 %
-We go further by presenting models that also account for non-zero-damping in modes such as $(\ell,m,n)=(2,1,0)$ and $(3,2,0)$.
+The models presented here go further by applying outside of the nearly extremal Kerr regime while also accounting for non-zero-damping in modes such as $(\ell,m,n)=(2,1,0)$ and $(3,2,0)$\cite{Yang:2012pj}.
 %
 %
-\par For the modeling of $\sigma\LMlmn$, we note that the \cite{Berti:2014fga} do not appear to include the \qnm{s} which rotate counter to the \bh{} spin direction (i.e. ``mirror-modes'').
+\par For the modeling of $\sigma\LMlmn$, we note that the models of Ref.~\cite{Berti:2014fga} do not appear to include the \qnm{s} which rotate counter to the \bh{} spin direction (i.e. ``mirror-modes'').
 %
 Here these \qnm{} are explicitly modeled on a continuation of the positive spin line to negative spin.
 %
@@ -236,9 +236,11 @@ As the underlying process for \gmvp{} and \gmvr{} is stepwise regression, highly
 %
 It will be demonstrated that these approaches are readily capable of modeling the complex valued $\cw\lmn$ and $\sigma\LMlmn$.
 %
-Results suggest that the versions of \gmvp{} and \gmvr{} presented here may have broad application in instances where training data are approximately noiseless, and an initial guess is difficult to obtain.
+Results suggest that the versions of \gmvp{} and \gmvr{} presented here may apply in instances where training data are approximately noiseless, and an initial guess is difficult to obtain.
 %
 Both algorithms are publicly available in \texttt{Python} via Ref. \cite{lionel_london_2018_1402516}.
+%
+While this paper's fits for the \qnm{} frequencies and mixing coefficients are presented in \eqns{eq:cw_fit_1}{eq:cw_fit_9} and \eqns{eq:ys22220}{eq:ys55550}  respectively, we encourage the reader to use the fits implemented in Ref.~\cite{lionel_london_2018_1402516}: \texttt{positive.physics.cw181003550} (\qnm{} frequencies) and in \texttt{positive.physics.ysprod181003550} (mixing coefficients).
 %
 %
 \par The plan of the paper is as follows.
