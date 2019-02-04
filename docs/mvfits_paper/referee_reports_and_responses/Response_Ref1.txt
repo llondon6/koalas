@@ -3,7 +3,7 @@
 Response for Referee #1
 ---
 
-1. (p. 1, L17-17) The referee makes a valid, though largely semantic point regarding the use of interpolating in the abstract as it related to GMVR and Runge's phenomenon. We kindly note that GMVR is an iterative regression method that works for equally spaced grids, and constructs rational functions (equivalently, sums of rational functions) that smoothly connect or interpolate data assuming a rational ansatz.
+1. (p. 1, L16-17) The referee makes a valid, though largely semantic point regarding the use of interpolating in the abstract as it related to GMVR and Runge's phenomenon. We kindly note that GMVR is an iterative regression method that works for equally spaced grids, and constructs rational functions (equivalently, sums of rational functions) that smoothly connect or interpolate data assuming a rational ansatz.
 
 2. (p. 1, L32) Thank you. We have added the citation.
 
@@ -27,26 +27,28 @@ Response for Referee #1
 
 12. (In Eq.6) Thank you. We have clarified the notation.
 
-13. (p. 2, L26-27) Thank you for mentioning the Stone-Weierstrass theorem. We do not wish to reference this theorem in place of the series expansion as the latter is more accessible to a physics audience. We note that our introduction to the discussion is generally applicable given some smooth functoin and an epsilon neighborhood around a point. We intend primarily to motivate a general numtinobial basis perspective of our algorithms from first principles. he text has been modified in an effort to clarify this intention.
+13. (p. 2, L26-27) Thank you for mentioning the Stone-Weierstrass theorem. We do not wish to reference this theorem in place of the series expansion as the latter is more accessible to a physics audience. We note that our introduction to the discussion is generally applicable given some smooth function and an epsilon neighbourhood around a point. We intend primarily to motivate a general multinomial basis perspective of our algorithms from first principles. he text has been modified in an effort to clarify this intention.
 
 14. (Algs. 2 and 5 ...) Thank you. We have clarified that we refer to the set of all multinomial combinations of basis vectors up to a predefined maximum order.
 
 15. (Algs. 2 and 5 ...) Thank you. We have corrected these lines to reference epsilons.
 
-16. (p. 3, L60) The current description of \lambda_{bulk} seeks to communicate the presense of the constant term.
+16. (p. 3, L60) The current description of \lambda_{bulk} seeks to communicate the presence of the constant term.
 
-17. (p. 5, L3-4) We refer the reviewer to the introducion section here: https://en.wikipedia.org/wiki/Runge%27s_phenomenon. We have sought to clarify the text to minimize confusion.
+17. (p. 5, L3-4) We refer the reviewer to the introduction section here: https://en.wikipedia.org/wiki/Runge%27s_phenomenon. We have sought to clarify the text to minimise confusion.
 
 18. ( Eq. 20 ) We refer the referee to Eq 21
 
-19. Via Eq. 15, n>=1 for alpha. Here, "implicitely" n plays no real role in the algorithm and therefore need not be stored and increamented.
+19. (Alg. 3, step 3) The algorithm as stated applies to multiple definitions of the representation error. We now accentuate this point by citing the L2 norm as a possible choice.
 
-20. (Alg. 4, step 4) Thank you. We have defined var to be the variance.
+20. (Alg. 4, step 2) Via Eq. 15, n>=1 for alpha. Here, "implicitly" n plays no real role in the algorithm and therefore need not be stored and incremented.
 
-21. (Alg. 4, step 4) Thank you. Yes.
+21. (Alg. 4, step 4) Thank you. We have defined var to be the variance.
 
-22. (p. 8, final line) We have clarified the text.
+22. (Alg. 4, step 10) Thank you. Yes.
 
-23. (Fig. 4) We have clarified the text.
+23. (p. 8, final line) We have clarified the text.
 
-24. Code: While we are appreciative of the referee's comments, we point out to the submitted draft only pertains to the GMVP and GMVR algorithms.
+24. (Fig. 4) We have clarified the text.
+
+25. Code: While we are appreciative of the referee's comments, we point out to the submitted draft only pertains to the GMVP and GMVR algorithms.
