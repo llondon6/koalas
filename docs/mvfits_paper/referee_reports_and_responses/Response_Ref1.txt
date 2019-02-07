@@ -3,7 +3,7 @@
 Response for Referee #1
 ---
 
-1. (p. 1, L17-17) The referee makes a valid, though largely semantic point regarding the use of interpolating in the abstract as it related to GMVR and Runge's phenomenon. We kindly note that GMVR is an iterative regression method that works for equally spaced grids, and constructs rational functions (equivalently, sums of rational functions) that smoothly connect or interpolate data assuming a rational ansatz.
+1. (p. 1, L17-17) The referee makes a valid, though largely semantic point regarding the use of interpolating in the abstract as it related to GMVR and Runge's phenomenon. However, to avoid any confusion, we have removed discussion of Runge's problem from the text.
 
 2. (p. 1, L32) Thank you. We have added the citation.
 
@@ -35,7 +35,7 @@ Response for Referee #1
 
 16. (p. 3, L60) The current description of \lambda_{bulk} seeks to communicate the presense of the constant term.
 
-17. (p. 5, L3-4) We refer the reviewer to the introducion section here: https://en.wikipedia.org/wiki/Runge%27s_phenomenon. We have sought to clarify the text to minimize confusion.
+17. (p. 5, L3-4) We have sought to clarify the text to minimize confusion.
 
 18. ( Eq. 20 ) We refer the referee to Eq 21
 
