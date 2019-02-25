@@ -241,7 +241,8 @@ class smart_object:
                 is_number = True
                 for val in part[1].split(','):
                     #
-                    if  not isnumeric(val):   # IF
+                    if  (not isnumeric(val)) or ( isnumeric(val) and (val[0]=='0') ):   # IF
+                        # NOTE that the conditional here interprets numbers with leading zeros as strings for python 3 compatability
                         is_number = False
                         if 'unstring' in this.__dict__:
                             if this.__unstring__: val = val.replace("'",'').replace('"','')
