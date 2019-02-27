@@ -111,13 +111,14 @@ def Mf14067295( m1,m2,chi1,chi2,chif=None ):
 
     # Swapping inputs to conform to fit conventions
     # NOTE: See page 2 of https://arxiv.org/pdf/1406.7295.pdf
-    if m1>m2:
-        #
-        m1_,m2_ = m1,m2
-        chi1_,chi2_ = chi1,chi2
-        #
-        m1,m2 = m2_,m1_
-        chi1,chi2 = chi2_,chi1_
+    m2,m1,chi1,chi2 = mass_ratio_convention_sort(m2,m1,chi1,chi2)
+    # if m1>m2:
+    #     #
+    #     m1_,m2_ = m1,m2
+    #     chi1_,chi2_ = chi1,chi2
+    #     #
+    #     m1,m2 = m2_,m1_
+    #     chi1,chi2 = chi2_,chi1_
 
     # binary parameters
     m = m1+m2
@@ -269,11 +270,12 @@ def Erad161100332(m1,m2,chi1,chi2):
     '''
     # Import usefuls
     from numpy import sqrt
-    # Test for m2>m2 convention
-    if m1<m2:
-        # Swap everything
-        m1_,m2_ = m2 ,m1 ;  chi1_,chi2_ =  chi2,chi1
-        m1,m2   = m1_,m2_;  chi1,chi2   = chi1_,chi2_
+    # Test for m1>m2 convention
+    m1,m2,chi1,chi2 = mass_ratio_convention_sort(m1,m2,chi1,chi2)
+    # if m1<m2:
+    #     # Swap everything
+    #     m1_,m2_ = m2 ,m1 ;  chi1_,chi2_ =  chi2,chi1
+    #     m1,m2   = m1_,m2_;  chi1,chi2   = chi1_,chi2_
     #
     M = m1+m2
     eta = m1*m2/(M*M)
@@ -307,11 +309,12 @@ def jf161100332(m1,m2,chi1,chi2):
     '''
     # Import usefuls
     from numpy import sqrt
-    # Test for m2>m2 convention
-    if m1<m2:
-        # Swap everything
-        m1_,m2_ = m2 ,m1 ;  chi1_,chi2_ =  chi2,chi1
-        m1,m2   = m1_,m2_;  chi1,chi2   = chi1_,chi2_
+    # Test for m1>m2 convention
+    m1,m2,chi1,chi2 = mass_ratio_convention_sort(m1,m2,chi1,chi2)
+    # if m1<m2:
+    #     # Swap everything
+    #     m1_,m2_ = m2 ,m1 ;  chi1_,chi2_ =  chi2,chi1
+    #     m1,m2   = m1_,m2_;  chi1,chi2   = chi1_,chi2_
     #
     M = m1+m2
     eta = m1*m2/(M*M)
@@ -461,7 +464,7 @@ def remnant(m1,m2,chi1,chi2,arxiv=None,verbose=False,L_vec=None):
     '''
 
     #
-    if not isinstance(chi1,float):
+    if not isinstance(chi1,(float,int)):
         arxiv = '1605.01938'
         warning('spin vectors found; we will use a precessing spin formula from 1605.01938 for the final spin and a non-precessing formula from 1611.00332')
 
@@ -470,7 +473,7 @@ def remnant(m1,m2,chi1,chi2,arxiv=None,verbose=False,L_vec=None):
         if verbose: alert('Using method from arxiv:1611.00332 by Jimenez et. al.')
         Mf = Mf161100332(m1,m2,chi1,chi2)
         jf = jf161100332(m1,m2,chi1,chi2)
-    if arxiv in ('1605.01938',160501938,'precessing','p'):
+    elif arxiv in ('1605.01938',160501938,'precessing','p'):
         Mf = Mf161100332(m1,m2,chi1,chi2)
         jf = jf160501938(m1,m2,chi1,chi2,L_vec=L_vec)
     else:
@@ -2024,3 +2027,73 @@ def ysprod181003550(jf,ll,mm,lmn):
     else:
         #
         error('this fit does not apply to (ll,mm,l,m,n)=(%i,%i,%i)'%(ll,mm,l,m,n))
+
+
+
+#
+def mass_ratio_convention_sort(m1,m2,chi1,chi2):
+
+    '''
+    Function to enforce mass ratio convention m1>m2.
+
+    USAGE:
+
+    m1,m2,chi1,chi2 = mass_ratio_convention_sort(m1,m2,chi1,chi2,format=None)
+
+    INPUTS:
+
+    m1,         1st component mass
+    m2,         2nd component mass
+    chi1,       1st dimensionless spin
+    chi2,       2nd dimensionless spin
+
+    OUTPUTS:
+
+    m1,m2,chi1,chi2
+
+    NOTE that outputs are swapped according to desired convention.
+
+    londonl@mit.edu 2019
+
+    '''
+
+    # Import usefuls
+    from numpy import min,max,array,ndarray,ones_like
+
+    # Enforce arrays
+    float_input_mass = not isinstance(m1,(ndarray,list,tuple))
+    if float_input_mass:
+        m1 = array([m1]);     m2 = array([m2])
+    float_input_chi = not isinstance(chi1,(ndarray,list,tuple))
+    if float_input_chi:
+        chi1 = chi1*ones_like(m1); chi2 = chi2*ones_like(m2)
+
+    #
+    L = len( m1 )
+    if  (L != len(m2)) or (len(chi1)!=len(chi2)) :
+        error( 'lengths of input parameters not same' )
+
+    # Prepare for swap / allocate output
+    m1_   = array(m2);   m2_   = array(m1)
+    chi1_ = array(chi2); chi2_ = array(chi1)
+
+    #
+    for k in range(L):
+
+        # Enforce m1 > m2
+        if (m1[k] < m2[k]):
+
+            m1_[k] = m2[k]
+            m2_[k] = m1[k]
+
+            chi1_[k] = chi2[k]
+            chi2_[k] = chi1[k]
+
+    #
+    if float_input_mass:
+        m1_   = m1_[0];   m2_   = m2_[0]
+    if float_input_chi:
+        chi1_ = chi1_[0]; chi2_ = chi2_[0]
+
+    #
+    return (m1_,m2_,chi1_,chi2_)

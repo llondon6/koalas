@@ -161,11 +161,10 @@ class smart_object:
 
         # Only keep attributes found in file
         if cleanup:
-            delattr(this,'valid')
-            delattr(this,'overwrite')
-            delattr(this,'source_dir')
-            delattr(this,'source_file_path')
-            delattr(this,'unstring')
+            trash_bin = [ 'valid', 'overwrite', 'source_dir', 'source_file_path', 'unstring' ]
+            for item in trash_bin:
+                if item in this.__dict__:
+                    delattr(this,item)
 
     #
     def show( this ):
