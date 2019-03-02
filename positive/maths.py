@@ -8,28 +8,53 @@ class smooth:
     '''
 
     # Class constructor
-    def __init__(this,y,width=None,method=None):
+    def __init__(this,y,width=None,method=None,auto_method=None,polynomial_order=2):
         # Import useful things
         from numpy import ones,convolve,mod,hstack,arange,cumsum,mod,array
         # Handle method input; set default
-        method = 'average' if method is None else method.lower()
+        method = 'savgol' if method is None else method.lower()
         # Handle n input; default is None which causes method to be auto
         method = 'auto' if width is None else method
         # Store relevant inputs to this object
         this.scalar_range = array(y)
         this.width = width
         this.method = method
+
         # Handle different methods
-        if method in ('average'):
+        if method in ('average','avg','mean'):
             # Use Rolling Average (non convulative)
             y_smooth = this.__rolling_average__(width)
+        elif method in ('savgol'):
+            # Automatically determine best smoothing length to use with average
+            y_smooth = this.__savgol__(width=width,polynomial_order=polynomial_order)
         elif method in ('auto','optimal'):
             # Automatically determine best smoothing length to use with average
-            y_smooth = this.__auto_smooth__()
+            y_smooth = this.__auto_smooth__(method=auto_method)
         else:
             error('unknown smoothing method requested: %s'%red(method))
         #
         this.answer = y_smooth
+
+    # Smooth using savgol filter from scipy
+    def __savgol__(this,width=None,polynomial_order=2):
+
+        # Import usefuls
+        from scipy.signal import savgol_filter as savgol
+        from numpy import mod
+
+        # Handle inputs
+        if width is None: width = max( ceil( len(this.scalar_rang)/10 ), polynomial_order+1 )
+        if not isinstance(width,int):
+            error('width muist be int')
+        if width<(polynomial_order+1):
+            width += 2
+        if not mod(width,2):
+            width += 1
+
+        #
+        print '>> ',width,polynomial_order
+        ans = savgol( this.scalar_range, width, polynomial_order )
+        return ans
 
     # Smooth using moving average of available pionts
     def __rolling_average__(this,width):
@@ -54,25 +79,37 @@ class smooth:
         return ans
 
     # Automatically determine best smoothing length to use with average
-    def __auto_smooth__(this):
+    def __auto_smooth__(this,method=None):
         '''Automatically determine best smoothing length to use with average'''
         # Import useful things
-        from numpy import ones,convolve,mod,hstack,arange,cumsum,mod,array
+        from numpy import ones,convolve,mod,hstack,arange,cumsum,mod,array,mean
         from numpy import poly1d,polyfit,std,argmin
 
         #
+        if method is None: method='savgol'
+
+        #
         err,smo = [],[]
-        width_range = list(range(3,min(50,int(len(this.scalar_range)/2))))
+        width_range = array(range(5,min(50,int(len(this.scalar_range)/2))))
+        # print lim(width_range)
+
+        if method=='savgol':
+            mask = mod(width_range,2).astype(bool)
+            width_range = width_range[ mask ]
+
         #
         for j,k in enumerate(width_range):
-            smo.append( smooth(this.scalar_range,k,method='average').answer )
-            err.append( std( this.scalar_range - smo[-1] )/std(this.scalar_range) )
+            smo.append( smooth(this.scalar_range,int(k),method=method).answer )
+            dif = this.scalar_range - smo[-1]
+            # err.append( -mean( dif ) if method=='savgol' else std(dif)/std(this.scalar_range) )
+            err.append( -mean( dif ) )
         #
         modeled_err = poly1d( polyfit(width_range,err,2) )(width_range)
         k = argmin( modeled_err )
-        best_width = width_range[k] if k>0 else 3
+        best_width = int( width_range[k] if k>0 else 3 )
+        # print 'best width = ',width_range[k]
         #
-        y_smooth = smooth(this.scalar_range,best_width,method='average').answer
+        y_smooth = smooth(this.scalar_range,best_width,method=method).answer
         #
         this.raw_error = err
         this.modeled_error = modeled_err
