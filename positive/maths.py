@@ -915,6 +915,10 @@ def tshift( t,      # time sries of data
         di = int( t0/mean(diff(t)) )
         h_ = roll(h, di)
 
+    else:
+
+        error('unhandled method for time shifting')
+
 
     # Return the answer
     return h_
