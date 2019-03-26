@@ -90,7 +90,7 @@ class smooth:
 
         #
         err,smo = [],[]
-        width_range = array(range(5,min(50,int(len(this.scalar_range)/2))))
+        width_range = array(list(range(5,min(50,int(len(this.scalar_range)/2)))))
         # print lim(width_range)
 
         if method=='savgol':
