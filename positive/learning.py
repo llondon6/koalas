@@ -1677,11 +1677,11 @@ class mvpolyfit:
         # Plot the raw data points
         ax.scatter(this.domain[:,0],this.domain[:,1],_map(this.range),marker='o',color='k',label='Data',zorder=1, facecolors='none')
 
-        xlabel( '$%s$'%this.labels['latex'][1][0] if len(this.labels.keys()) else '$x_0$' )
-        ylabel( '$%s$'%this.labels['latex'][1][1] if len(this.labels.keys()) else '$x_1$' )
+        xlabel( '$%s$'%this.labels['latex'][1][0] if len(list(this.labels.keys())) else '$x_0$' )
+        ylabel( '$%s$'%this.labels['latex'][1][1] if len(list(this.labels.keys())) else '$x_1$' )
         # ylabel( '$x_1$' )
         ax.set_zlabel( '$f(x_0,x_1)$' )
-        ax.set_zlabel( '$%s$'%this.labels['latex'][0] if len(this.labels.keys()) else '$f(x_0,x_1)$' )
+        ax.set_zlabel( '$%s$'%this.labels['latex'][0] if len(list(this.labels.keys())) else '$f(x_0,x_1)$' )
         dz = (-amin(_map(this.range))+amax(_map(this.range)))*0.05
         ax.set_zlim( amin(_map(this.range))-dz, amax(_map(this.range))+dz )
         # title('$%s$'%this)
@@ -1780,7 +1780,7 @@ class mvpolyfit:
 
         #
         xlabel('Domain Index')
-        ylabel(r'$%s$'%this.labels['latex'][0] if len(this.labels.keys()) else r'$f(\vec{x})$')
+        ylabel(r'$%s$'%this.labels['latex'][0] if len(list(this.labels.keys())) else r'$f(\vec{x})$')
 
 
     # High level plotting function
@@ -2551,7 +2551,7 @@ def positive_romline(   domain,           # Domain of Map
     if len(d) != len(R):
         raise ValueError('length of domain (of len %i) and range (of len %i) mus be equal'%(len(d),len(R)))
     if len(d)<3:
-        print domain.shape, range_.shape
+        print(domain.shape, range_.shape)
         raise ValueError('domain length is less than 3. it must be longer for a romline porcess to apply. domain is %s'%domain)
 
     # Normalize Data
