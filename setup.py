@@ -20,7 +20,11 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     package_dir={'positive': 'positive'},
-    package_data={'./': ['docs/*', 'examples/*', 'factory/*', 'gallery/*', 'LICENSE', 'README.md']},
+    package_data={
+        'positive': [
+            'data/berti_kerrcw_fitcoeffsWEB.dat', 'data/berti_swsh_fits.dat',
+            'data/ksm2_cw.py', 'data/ysmodels.pickle', 'data/kerr/note.rm',
+            'data/kerr/*/*.dat']},
     url='https://github.com/llondon6/positive',
     download_url='https://github.com/llondon6/positive/archive/master.zip',
     install_requires=['numpy', 'scipy', 'matplotlib', 'h5py', 'six'],
