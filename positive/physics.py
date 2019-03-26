@@ -1895,10 +1895,49 @@ def Berti0512160(jf,l,m,n):
 
 # Fits for spin-2 QNM frequencies from arxiv:1810.03550
 def cw181003550(jf,l,m,n):
+    """Fit for quasi-normal mode frequencies
 
-    '''
-    Fit for Kerr -2 QNMs from https://arxiv.org/abs/1810.03550
-    '''
+    Fit for the quasi-normal mode frequencies from
+    https://arxiv.org/abs/1810.03550 for Kerr under -2 spin-weighted spheroidal
+    harmonics. Fits are provided for the following indices
+
+    |  l  |  m  |  n  |
+    | --- | --- | --- |
+    |  2  |  2  |  0  |
+    |  2  | -2  |  0  |
+    |  2  |  2  |  1  |
+    |  2  | -2  |  1  |
+    |  3  |  2  |  0  |
+    |  3  | -2  |  0  |
+    |  4  |  4  |  0  |
+    |  4  | -4  |  0  |
+    |  2  |  1  |  0  |
+    |  2  | -1  |  0  |
+    |  3  |  3  |  0  |
+    |  3  | -3  |  0  |
+    |  3  |  3  |  1  |
+    |  3  | -3  |  1  |
+    |  4  |  3  |  0  |
+    |  4  | -3  |  0  |
+    |  5  |  5  |  0  |
+    |  5  | -5  |  0  |
+
+    Parameters
+    ----------
+    jf: float
+         Dimensionless final spin
+    l: int
+        Polar index
+    m: int
+        Azimuthal index
+    n: int
+        Overtone index
+
+    Returns
+    -------
+    float
+        Evaluation of the fit at `jf` for the requested Kerr -2 QNM
+    """
 
     # Import usefuls
     from numpy import loadtxt,array,ndarray
@@ -1926,10 +1965,43 @@ def cw181003550(jf,l,m,n):
 
 # Fits for spin-2 spherical-spheroidal mixing coefficients from arxiv:1810.03550
 def ysprod181003550(jf,ll,mm,lmn):
+    """Fit for spherical-spheroidal mixing coefficients
 
-    '''
-    Fit for Kerr -2 QNMs from https://arxiv.org/abs/1810.03550
-    '''
+    Fit for the spherical-spheroidal mixing coefficients from
+    https://arxiv.org/abs/1810.03550 for Kerr under -2 spin-weighted harmonics.
+    Fits are provided for the following spherical harmonic and Kerr indices
+
+    | ll  | mm  | lmn       |
+    | --- | --- | --------- |
+    |  2  |  1  | (2, 1, 0) |
+    |  2  |  2  | (2, 2, 0) |
+    |  2  |  2  | (2, 2, 1) |
+    |  3  |  2  | (2, 2, 0) |
+    |  3  |  2  | (2, 2, 1) |
+    |  3  |  2  | (3, 2, 0) |
+    |  3  |  3  | (3, 3, 0) |
+    |  3  |  3  | (3, 3, 1) |
+    |  4  |  3  | (3, 3, 0) |
+    |  4  |  3  | (4, 3, 0) |
+    |  4  |  4  | (4, 4, 0) |
+    |  5  |  5  | (5, 5, 0) |
+
+    Parameters
+    ----------
+    jf: float
+         Dimensionless final spin
+    ll: int
+        Spherical harmonic degree
+    mm: int
+        Spherical harmonic order
+    lmn: list of int
+        List of Kerr Indices [l, m, n]
+
+    Returns
+    -------
+    float
+        Evaluation of the fit at `jf` for the requested mixing coefficient
+    """
 
     # Import usefuls
     from numpy import loadtxt,array,ndarray,log,exp
