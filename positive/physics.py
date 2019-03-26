@@ -1576,7 +1576,7 @@ def leaver( jf,                     # Dimensionless BH Spin
         p = sign(jf) + int( jf==0 )
     # NOTE that the norm of the spin input will be used to interpolate the data as the numerical data was mapped according to jf>=0
     # Given l,m,n,sign(jf) create a RELATIVE file string from which to load the data
-    cmd = parent(  parent(os.path.realpath(__file__))  )
+    cmd = parent(os.path.realpath(__file__))
     #********************************************************************************#
     m_label = 'm%i'%abs(m) if (p>=0) or (abs(m)==0) else 'mm%i'%abs(m)
     #********************************************************************************#
@@ -1645,7 +1645,7 @@ def ysprod14081860(j,ll,mm,lmn):
 
     LondonL@mit.edu 2019
     '''
-    tbl = loadtxt(parent(positive.__path__[0])+'/data/berti_swsh_fits.dat')
+    tbl = loadtxt(parent(os.path.realpath(__file__))+'/data/berti_swsh_fits.dat')
 
     def lowlevel(J,__mm__):
         MM,LL,L,N,P1,P2,P3,P4,Q1,Q2,Q3,Q4,_,_,_,_ = tbl.T
@@ -1854,7 +1854,7 @@ def Berti0512160(jf,l,m,n):
     import positive
 
     # Load fit coefficients
-    data_path = positive.parent(positive.__path__[0])+'data/berti_kerrcw_fitcoeffsWEB.dat'
+    data_path = parent(os.path.realpath(__file__))+'/data/berti_kerrcw_fitcoeffsWEB.dat'
     data = loadtxt(data_path)
 
     # Unpack: l,m,n,f1,f2,f3,q1,q2,q3
@@ -1945,7 +1945,7 @@ def cw181003550(jf,l,m,n):
     import positive
 
     # Load fit functions from reference module
-    module_path = positive.parent(positive.__path__[0])+'data/ksm2_cw.py'
+    module_path = parent(os.path.realpath(__file__))+'/data/ksm2_cw.py'
     cw_module = load_source( '', module_path )
 
     # Extract dict of fit functions
