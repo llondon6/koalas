@@ -141,6 +141,7 @@ def splot( domain,
     # Import usefult things
     from matplotlib.pyplot import figure,plot,scatter,xlabel,ylabel,savefig,imshow,colorbar,gca
     from numpy import linspace,meshgrid,array,angle,unwrap
+    from positive.maths import sunwrap
     from matplotlib import cm
 
     #
