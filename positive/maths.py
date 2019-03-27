@@ -1,6 +1,9 @@
 #
 from positive import *
 
+# Reference factorial from scipy
+from scipy.misc import factorial
+
 # Smooth 1D data
 class smooth:
     '''
