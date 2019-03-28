@@ -619,11 +619,11 @@ The refinement process is to terminate when a measure of model error (e.g. the $
   \epsilon^{(n)}  = \left|\frac{\operatorname{Var}\left(\vec{g}^{(n)} - \vec{g}^{(0)}\right)}{\operatorname{Var}\left(\vec{g}^{(0)}\right)}\right|
 \end{align}
 %
-where $\operatorname{Var}$ is the variance defined as
+where $\operatorname{Var}$ is the variance defined for a vector $\vec{d} = (d_j)$ as
 %
 \begin{align}
   \label{eq:ratvar}
-  \operatorname{Var}\left(\vec{a}\right)  = \frac{1}{J}\sum_{j=0}^{J}\left(g_j - \frac{1}{J}\sum_{u=0}^{J}g_j\right)^2
+  \operatorname{Var}\left(\vec{a}\right)  = \frac{1}{J}\sum_{j=0}^{J}\left(d_j - \frac{1}{J}\sum_{u=0}^{J}d_u\right)^2
 \end{align}
 %
 % \hspace{1cm}
