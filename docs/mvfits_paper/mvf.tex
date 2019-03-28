@@ -474,7 +474,7 @@ In this setting, the uncertainty of which and how many basis terms to include ma
 %
 \par Here, the basis symbols required by Alg. (\ref{alg:pgreedy}) are the multinomial terms in \eqn{eq:mvt}.
 %
-Each term is an element of the tensor-product of the power-sets of each model dimension. That is $\mlam_{bulk} = \{x_0,x_1 .. x_N, ... x_0^1, x_0^2, x_0^3, ...  , (x_0^K x_1^K ... x_N^K) \}$.
+Each term is an element of the tensor-product of the sets of powers of each coordinate of a chosen representation of the models domain. That is $\mlam_{bulk} = \{x_0^{d_0} x_1^{d_1} \ldots x_N^{d_N} \mid d_i \in \{0,\ldots,K\}, i \in \{0,\ldots,N\}\}$.
 %
 Note that in practice it may be useful to encode elements of $\mlam_{bulk}$ with strings representing their constituents (e.g. $x_0 x_0 x_1 x_2 x_2 x_4$ could be represented by the string ``001224''). This provides a way of bijectively mapping between symbols and numerical basis vectors.
 %
