@@ -579,7 +579,7 @@ and
   \vec{\alpha} = \hat{P} \; \vec{g} \;.
 \end{align}
 %
-where, $\hat{P}$ is the pseudo-inverse of the matrix whose elements are $\psi_k(\vec{x}_j)$, $\vec\alpha = ( z_0, z_1, ... z_{R+V-1},z_{R+V} )$, and $\vec{g} = ( g_0, g_1, ... g_{R+V-1},g_{R+V} )$.
+where, $\hat{P}$ is the pseudo-inverse of the matrix whose elements are $\psi_k(\vec{x}_j)$, $\vec\alpha = ( z_0, z_1, ... z_{R+V-1},z_{R+V} )$, and $\vec{g} = ( g_j )$.
 %
 \par However, we note that $\hat{P}$ depends nontrivially on $g$, and is therefore susceptible to noise in the training data.
 %
@@ -603,14 +603,14 @@ If we define $g^{(0)}=g$ (i.e. $g$ is the training data), with $\hat{P} = \hat{P
   \vec{\alpha}^{(n+1)} = \hat{P}(\vec{g}^{\,(n)}) \, \vec{g}^{(0)}\;.
 \end{align}
 %
-In practice, one solves \eqn{eq:pinv3} for $\vec{\alpha}^{(n+1)}$, and then uses the related $a_r^{(n+1)}$ and $b_v^{(n+1)}$ to calculate $g^{(n+1)}$ via
+In practice, one solves \eqn{eq:pinv3} for $\vec{\alpha}^{(n+1)}$, and then uses the related $a_r^{(n+1)}$ and $b_v^{(n+1)}$ to calculate $g_j^{(n+1)}$ via
 %
 \begin{align}
   \label{eq:rat4}
-  g^{(n+1)} =  \frac{ \sum_{r=0}^{R} a^{(n+1)}_r \, \phi_{r}(\vec{x}) }{ 1\;-\;  \sum_{v=1}^{V} b^{(n+1)}_v \, \phi_{v}(\vec{x}) } \; .
+  g_j^{(n+1)} =  \frac{ \sum_{r=0}^{R} a^{(n+1)}_r \, \phi_{r}(\vec{x_j}) }{ 1\;-\;  \sum_{v=1}^{V} b^{(n+1)}_v \, \phi_{v}(\vec{x_j}) } \; .
 \end{align}
 %
-Subsequently, $g^{(n+1)}$ is then fed back into \eqn{eq:pinv3} for further refinement.
+Subsequently, $g_j^{(n+1)}$ is then fed back into \eqn{eq:pinv3} for further refinement.
 %
 The refinement process is to terminate when a measure of model error (e.g. the $L^2$ norm $||g^{(0)}-g^{(n)}||$) passes a predetermined threshold.
 %
