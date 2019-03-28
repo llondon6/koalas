@@ -365,7 +365,7 @@ This rough algorithmic picture is encapsulated by Alg. \ref{alg:pgreedy}.
       \State $\epsilon_{min} = \epsilon_{last}$
       %
       \For { $\mlam$ in $\mlam^{bulk}$ }
-        \State $\mlam_{trial} = \mlam_{kept} \cup \mlam$ {\hskip0.525in} (add $\mlam$ to $\mlam_{kept}$)
+        \State $\mlam_{trial} = \mlam_{kept} \cup \{\mlam\}$ {\hskip0.525in} (add $\mlam$ to $\mlam_{kept}$)
         \State $\epsilon = \mathcal{A}(\mlam_{trial})$ {\hskip0.70in} (action returns fit error)
         \If { $\epsilon < \epsilon_{min}$ }
           \State $\epsilon_{min} = \epsilon$  {\hskip0.825in} (store trial min)
@@ -381,7 +381,7 @@ This rough algorithmic picture is encapsulated by Alg. \ref{alg:pgreedy}.
       %
     \EndWhile
     \vskip 10pt
-    \State {\bf Output:} $\{ \mlam_{kept} \}$ (the Greedy Basis)
+    \State {\bf Output:} $\mlam_{kept}$ (the Greedy Basis)
     %
   \end{algorithmic}
   %
