@@ -88,7 +88,7 @@ superscriptaddress,10pt]{revtex4-1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Abstract %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
   %
-  Models of black hole properties play an important role in the ongoing direct detection of gravitational waves from black hole binaries. One important aspect of model based gravitational wave detection, and subsequent estimation of source parameters, are the low level modeling of information related to perturbed Kerr black holes. Here, we present new phenomenological methods to model the analytically understood gravitational wave spectra (quasi-normal mode frequencies), and harmonic structure of Kerr black holes (mixing coefficients between spherical and spheroidal harmonics). In particular, we present a greedy-multivariate-polynomial (GMVP) regression method and greedy-multivariate-rational (GMVR) regression method for the automated modeling of polynomial and rational functions respectively. GMVP is used to develop a model for QNM frequencies that explicitly enforces consistency with the extremal Kerr limit. GMVR is used to develop a model for harmonic mixing coefficients that extends previous results to dominant multipoles with $\ell \le 5$. Both models are the first of their kind to consider black hole spin to vary between -1 and 1, thus naturally connecting the pro and retrograde modes. We discuss the potential use of these models in current and future gravitational wave signal modeling.
+  Models of black hole properties play an important role in the ongoing direct detection of gravitational waves from black hole binaries. One important aspect of model based gravitational wave detection, and subsequent estimation of source parameters, are the low level modeling of information related to perturbed Kerr black holes. Here, we present new phenomenological methods to model the analytically understood gravitational wave spectra (quasi-normal mode frequencies), and harmonic structure of Kerr black holes (mixing coefficients between spherical and spheroidal harmonics). In particular, we present a greedy-multivariate-polynomial (GMVP) regression method and greedy-multivariate-rational (GMVR) regression method for the automated modeling of polynomial and rational functions respectively. GMVP is used to develop a model for QNM frequencies that explicitly enforces consistency with the extremal Kerr limit. GMVR is used to develop a model for harmonic mixing coefficients for the dominant multipoles with $\ell \le 5$. Both models are the first of their kind to consider black hole spin to vary between -1 and 1, thus naturally connecting the pro and retrograde modes. We discuss the potential use of these models in current and future gravitational wave signal modeling.
 	%
 \end{abstract}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -112,7 +112,7 @@ In this context, signal detection and subsequent inference of physical parameter
 %
 Most prominently, there is ongoing interest in efficient and accurate signal models for \bbh{} \imr{} \cite{Blackman:2017dfb, London:2017bcn, Hannam:2013oca}.
 %
-As the merger of isolated \bh{s} is expected to result in a perturbed Kerr \bh{}, there is related interest in having computationally efficient models for perturbative parameters, namely those that enable evaluation of the related \rd{} radiation \cite{Berti:2005ys}.
+As the merger of isolated \bh{s} is expected to result in a perturbed Kerr \bh{}, there is related interest in having accurate and computationally efficient models for perturbative parameters, namely those that enable evaluation of the related \rd{} radiation \cite{Berti:2005ys,TheLIGOScientific:2016wfe}.
 %
 \par In particular, a perturbed Kerr \bh{} (e.g. resulting from \bbh{} merger) will have \gw{} radiation that rings down with characteristic \textit{dimensionless} frequencies,
 %
@@ -127,7 +127,7 @@ Together, these harmonic functions and frequencies constitute the \qnm{} solutio
 %
 Specifically, they are the eigen-solutions of the source free linearized \ee{} (i.e. \tk{'s} equations \cite{PhysRevLett.29.1114}) for a perturbed \bh{} with final mass, $\mf$, and dimensionless final spin, $\jf$.
 %
-These solutions allow \grad{} from generic perturbations to be well approximated by a spectral (multipolar) sum which combines the complex \qnm{} amplitude, $A\lmn$, with the spin $-2$ weighted -2 spheroidal harmonics, $_{-2}S\lmn$.
+Following the usual treatment, these solutions allow \grad{} from a perturbed Kerr BH at sufficiently late times to be approximated by a spectral (multipolar) sum which combines the complex \qnm{} amplitude, $A\lmn$, with spheroidal harmonics, $_{-2}S\lmn$, of spin weight -2.
 %
 \begin{align}
 	%
@@ -141,9 +141,9 @@ These solutions allow \grad{} from generic perturbations to be well approximated
 	%
 \end{align}
 %
-\par In the first and second lines of \eqn{hrd}, we relate the observable \gw{} polarizations, $h_+$ and $h_\times$, to the analytically understood morphology of the time domain \rd{} waveform.
+\par In the first and second lines of \eqn{hrd}, we relate the observable \gw{} polarizations, $h_+$ and $h_\times$, to the analytically understood morphology of the time domain \rd{} waveform where $r$ is the distance from the source.
 %
-Here, the labels $\ell$ and $m$ are polar and azimuthal eigenvalues of \tk{'s} angular equations, where total mass and the speed of light are set to unity (i.e. $M=c=1$).
+Here, the labels $\ell$ and $m$ are polar and azimuthal eigenvalues of \tk{'s} angular equations, where total mass, the speed of light and the gravitational constant are set to unity (i.e. $M=c=G=1$).
 %
 Note that barred indices, namely $\bar{\ell}$ and $\bar{m}$, refer to \textit{spherical} harmonics of spin weight -2, leaving the unbarred indices to refer to the spheroidals.
 %
@@ -155,9 +155,9 @@ This latter form is ubiquitous for the development and implementation of \imr{} 
 \par Towards the development of these models, \eqn{hrd} enters in many incarnations.
 %
 In the \eob{} formalism, $h\LM$ is modeled such that, after its peak (near merger), the effective functional form reduces (asymptotically) to \eqn{hrd}'s second line \cite{Cotesta:2018fcv, Buonanno:2000ef,
-Bohe:2016gbl,Pan:2013rra, Bohe:2016gbl, Nagar:2018zoe}.
+Bohe:2016gbl,Pan:2013rra, Bohe:2016gbl, Nagar:2018zoe,Babak:2016tgq}.
 %
-This view currently comes with the added assumption that ${_{-2}}S_{\ell m n} = {_{-2}}Y_{\ell m}$, where ${_{-2}}Y_{\ell m}$ are the spins weighted -2 spherical harmonics.
+This view currently comes with the added assumption that ${_{-2}}S_{\ell m n} = {_{-2}}Y_{\ell m}$, where ${_{-2}}Y_{\ell m}$ are the spherical harmonics of spin weight -2.
 %
 Only where $\jf \cw\lmn=0$ do $_{-2}S\lmn( 0,\theta,\phi) = {_{-2}}Y_{\ell m}(\theta,\phi)$, which makes equating the spherical and spheroidal harmonics approximate at best for general values of $\jf \cw\lmn$.
 %
@@ -206,11 +206,11 @@ While models for $\cw\lmn$ and $\sigma\LMlmn$ are present in the literature (e.g
 %
 \par For both the \qnm{} frequencies and the spherical-sphoidal mixing coefficients, we present the first models which treat \qnm{s} rotating with and against the rotation of the \bh{} as being a part of a single solution parameterized by dimensionless \bh{} spin ranging from -1 to 1.
 %
-This perspective reflects the empirical observation that the remnant spin of \bbh{} mergers smoothly connects regions of positive and negative spin relative to the direction of the initial oribital angular momentum \cite{Husa:2015iqa,London:2018gaq}.
+This perspective reflects the empirical observation that the remnant spin of \bbh{} mergers smoothly connects regions of positive and negative spin relative to the direction of the initial orbital angular momentum \cite{Husa:2015iqa,London:2018gaq}.
 %
 \par For the \qnm{} frequencies, it is well known that for nearly extremal \bh{s} (i.e. $\jf \rightarrow 1$) some of the frequencies have zero-damping (i.e. $\tau\lmn \rightarrow \infty$) \cite{Yang:2012pj,Zimmerman:2015trm}.
 %
-In the context of \gw{} \da{}, where source parameters are estimated using routines which sample over the space of all possible \bh{} masses and spins, it is useful to have accurate physical behavior in the extremal limit \cite{TheLIGOScientific:2016wfe}.
+In the context of \gw{} \da{}, where source parameters are estimated using routines which sample over the space of all possible \bh{} masses and spins \cite{TheLIGOScientific:2016wfe}, it is useful to have accurate physical behavior in the extremal limit.
 %
 Like Ref.~\cite{Cook:2014cta}, we present models for $\cw\lmn$ that explicitly account for zero-damping in the extremal Kerr limit.
 %
@@ -269,7 +269,7 @@ Perhaps most intriguingly, the formal series expansions of smooth functions supp
 %
 With this in mind, here, we will develop algorithms for the linear (polynomial and rational) modeling of scalar functions (real or complex) of many variables.
 %
-\par If we consider a scalar function, $f$, of $N$ variables sampled in $j$, $\vec{x}_j = \{x_{\alpha j}\}_{\alpha=0}^{N}$, then $f(\vec{x}_j)$ can be represented (possibly inaccurately) as a sum over $K$ linearly independent basis functions, $\phi_k(\vec{x}_j)$:
+\par If we consider a scalar function, $f$, of $N+1$ variables sampled in $j$, $\vec{x}_j = \{x_{\alpha j}\}_{\alpha=0}^{N}$, then $f(\vec{x}_j)$ can be represented (possibly inaccurately) as a sum over $K+1$ linearly independent basis functions, $\phi_k(\vec{x}_j)$:
 %
 \begin{align}
   \label{lin1}
@@ -365,7 +365,7 @@ This rough algorithmic picture is encapsulated by Alg. \ref{alg:pgreedy}.
       \State $\epsilon_{min} = \epsilon_{last}$
       %
       \For { $\mlam$ in $\mlam^{bulk}$ }
-        \State $\mlam_{trial} = \mlam_{kept} \cup \mlam$ {\hskip0.525in} (add $\mlam$ to $\mlam_{kept}$)
+        \State $\mlam_{trial} = \mlam_{kept} \cup \{\mlam\}$ {\hskip0.525in} (add $\mlam$ to $\mlam_{kept}$)
         \State $\epsilon = \mathcal{A}(\mlam_{trial})$ {\hskip0.70in} (action returns fit error)
         \If { $\epsilon < \epsilon_{min}$ }
           \State $\epsilon_{min} = \epsilon$  {\hskip0.825in} (store trial min)
@@ -381,7 +381,7 @@ This rough algorithmic picture is encapsulated by Alg. \ref{alg:pgreedy}.
       %
     \EndWhile
     \vskip 10pt
-    \State {\bf Output:} $\{ \mlam_{kept} \}$ (the Greedy Basis)
+    \State {\bf Output:} $\mlam_{kept}$ (the Greedy Basis)
     %
   \end{algorithmic}
   %
@@ -474,7 +474,7 @@ In this setting, the uncertainty of which and how many basis terms to include ma
 %
 \par Here, the basis symbols required by Alg. (\ref{alg:pgreedy}) are the multinomial terms in \eqn{eq:mvt}.
 %
-Each term is an element of the tensor-product of the power-sets of each model dimension. That is $\mlam_{bulk} = \{x_0,x_1 .. x_N, ... x_0^1, x_0^2, x_0^3, ...  , (x_0^K x_1^K ... x_N^K) \}$.
+Each term is an element of the tensor-product of the sets of powers of each coordinate of a chosen representation of the models domain. That is $\mlam_{bulk} = \{x_0^{d_0} x_1^{d_1} \ldots x_N^{d_N} \mid d_i \in \{0,\ldots,K\}, i \in \{0,\ldots,N\}\}$.
 %
 Note that in practice it may be useful to encode elements of $\mlam_{bulk}$ with strings representing their constituents (e.g. $x_0 x_0 x_1 x_2 x_2 x_4$ could be represented by the string ``001224''). This provides a way of bijectively mapping between symbols and numerical basis vectors.
 %
@@ -579,7 +579,7 @@ and
   \vec{\alpha} = \hat{P} \; \vec{g} \;.
 \end{align}
 %
-where, $\hat{P}$ is the pseudo-inverse of the matrix whose elements are $\psi_k(\vec{x}_j)$, $\vec\alpha = ( z_0, z_1, ... z_{R+V-1},z_{R+V} )$, and $\vec{g} = ( g_0, g_1, ... g_{R+V-1},g_{R+V} )$.
+where, $\hat{P}$ is the pseudo-inverse of the matrix whose elements are $\psi_k(\vec{x}_j)$, $\vec\alpha = ( z_0, z_1, ... z_{R+V-1},z_{R+V} )$, and $\vec{g} = ( g_j )$.
 %
 \par However, we note that $\hat{P}$ depends nontrivially on $g$, and is therefore susceptible to noise in the training data.
 %
@@ -603,18 +603,28 @@ If we define $g^{(0)}=g$ (i.e. $g$ is the training data), with $\hat{P} = \hat{P
   \vec{\alpha}^{(n+1)} = \hat{P}(\vec{g}^{\,(n)}) \, \vec{g}^{(0)}\;.
 \end{align}
 %
-In practice, one solves \eqn{eq:pinv3} for $\vec{\alpha}^{(n+1)}$, and then uses the related $a_r^{(n+1)}$ and $b_v^{(n+1)}$ to calculate $g^{(n+1)}$ via
+In practice, one solves \eqn{eq:pinv3} for $\vec{\alpha}^{(n+1)}$, and then uses the related $a_r^{(n+1)}$ and $b_v^{(n+1)}$ to calculate $g_j^{(n+1)}$ via
 %
 \begin{align}
   \label{eq:rat4}
-  g^{(n+1)} =  \frac{ \sum_{r=0}^{R} a^{(n+1)}_r \, \phi_{r}(\vec{x}) }{ 1\;-\;  \sum_{v=1}^{V} b^{(n+1)}_v \, \phi_{v}(\vec{x}) } \; .
+  g_j^{(n+1)} =  \frac{ \sum_{r=0}^{R} a^{(n+1)}_r \, \phi_{r}(\vec{x_j}) }{ 1\;-\;  \sum_{v=1}^{V} b^{(n+1)}_v \, \phi_{v}(\vec{x_j}) } \; .
 \end{align}
 %
-Subsequently, $g^{(n+1)}$ is then fed back into \eqn{eq:pinv3} for further refinement.
+Subsequently, $g_j^{(n+1)}$ is then fed back into \eqn{eq:pinv3} for further refinement.
 %
-The refinement process is to terminate when a measure of model error (e.g. the $L^2$ norm $||g^{(0)}-g^{(n)}||$) passes a predetermined threshold.
+The refinement process is to terminate when a measure of model error (e.g. the $L^2$ norm $||\vec{g}^{(0)}-\vec{g}^{(n)}||$) passes a predetermined threshold. For \cite{lionel_london_2018_1402516} the following model representation error was used
 %
+\begin{align}
+  \label{eq:raterr}
+  \epsilon^{(n)}  = \left|\frac{\operatorname{Var}\left(\vec{g}^{(n)} - \vec{g}^{(0)}\right)}{\operatorname{Var}\left(\vec{g}^{(0)}\right)}\right|
+\end{align}
 %
+where $\operatorname{Var}$ is the variance defined for a vector $\vec{d} = (d_j)$ as
+%
+\begin{align}
+  \label{eq:ratvar}
+  \operatorname{Var}\left(\vec{a}\right)  = \frac{1}{J}\sum_{j=0}^{J}\left(d_j - \frac{1}{J}\sum_{u=0}^{J}d_u\right)^2
+\end{align}
 %
 % \hspace{1cm}
 {\scriptsize
@@ -798,7 +808,7 @@ We also wish to impose a domain transformation, $\kappa(\jf,\ell,m)$, such that 
   \kappa(\jf,\ell,m) = \left( \log_3( 2 - \jf ) \right)^{1/(2+\ell-|m|)}
 \end{align}
 %
-appropriately linearizes the sharp behavior of each frequency near $\jf=1$ while also mapping $-1 \le \jf \le 1$ onto $0 \le \kappa \le 1$.
+appropriately linearizes the sharp behavior of each frequency near $\jf=1$ while also mapping $-1 \le \jf \le 1$ onto $0 \le \kappa \le 1$. Note that under the mapping $j_f \mapsto \kappa$ the orientation is reversed such that as $j_f \rightarrow 1$ from below $\kappa \rightarrow 0$ from above.
 %
 \par Towards the zero-damping constraint, when considering a \qnm{} frequency $\cw_{\lmn}$, zero-damping at $\jf=1$ implies that $\cw_{\lmn}(\kappa \approx 0)-m/2 \propto \kappa$, where $m/2$ is the well known limiting value for each \qnm{} frequencies real part as $\jf\rightarrow 1$.
 %
@@ -806,21 +816,21 @@ This implies that
 %
 \begin{align}
   \label{eq:zd}
-  \cw_{\lmn} = m/2 + \kappa \sum_{j=1}^{J} c_j \kappa^k \; .
+  \cw_{\lmn} = m/2 + \kappa \sum_{j=0}^{J} c_j \kappa^j \; .
 \end{align}
 %
 In the case of the non-zero damped \qnm{s}, (e.g. $(\ell,m)=(3,2)$), a more general polynomial form may be adopted, namely,
 %
 \begin{align}
   \label{eq:nzd}
-  \cw_{\lmn} = \sum_{j=0}^{J} c_j \kappa^k \; .
+  \cw_{\lmn} = \sum_{u=0}^{U} c_u \kappa^u \; .
 \end{align}
 %
 \par The polynomial content of \eqn{eq:zd} and \eqn{eq:nzd} is determined by \gmvp{}.
 %
 \eqns{eq:cw_fit_1}{eq:cw_fit_9} display the resulting polynomial models.
 %
-In particular, the domain map allows most \qnm{} frequencies to be well modeled by 4th order polynomials which include all lower degree terms; concurrently, the real and imaginary parts of each $\cw\lmn$ are modeled simultaneously.
+In particular, the domain map allows most \qnm{} frequencies to be well modeled by 5th order polynomials which include all lower degree terms; concurrently, the real and imaginary parts of each $\cw\lmn$ are modeled simultaneously.
 %
 \par \fig{fig:qnm} displays select training points, as well as model fits for $\cw\lmn$'s real and imaginary parts.
 %
@@ -835,7 +845,7 @@ In the top left panel, we have scaled $1/\tau\lmn$ by factors for $m/(n+1/2)$ to
 %
 \par \fig{fig:qnm}'s top left and right panels' upper axes demonstrate the effect of mapping $\jf$ onto $\kappa$.
 %
-In particular, it is shown that the two branches (namely $\jf>0$ and $\jf<0$) naturally form a single family of solutions when accounting for the sign of the \bh{}'s oriented spin \cite{Husa:2007hp}.
+In particular, it is shown that the two branches (namely $\jf>0$ and $\jf<0$) naturally form a single family of solutions when accounting for the sign of the \bh{}'s oriented spin \cite{Husa:2015iqa}.
 %
 Concurrently, the use of $\kappa$ as a domain variable has the desirable effect of making each $\cw\lmn$ and $\tau\lmn$ approximately polynomial.
 %
@@ -851,16 +861,17 @@ We note that, in the asymptotic vicinity of $\jf=1$, the \qnm{} frequencies and 
     %
     \State {\bf Input:} \{ $\mlam_{trial}$, $tol=10^{-3}$ \}
     \vskip 10pt
-    \State Calculate $\alpha^{(1)}_k$ via \eqn{eq:pinv3}. Implicitly, $n=1$.
-    \State Calculate the current model prediction $g^{(1)}$ via \eqn{eq:rat4}.
-    \State Calculate the model representation error, e.g.: $\epsilon^{(1)}  = ||var(g^{(n)} - g^{(0)})||/||g^{(0)}||$, where $var$ is the variance.
-    \State $done = False$
+    \State \textbf{Let} $n=0$
+    \State Calculate $\vec{\alpha}^{(1)}$ via \eqn{eq:pinv3}.
+    \State Calculate the model prediction $\vec{g}^{(1)}$ via \eqn{eq:rat4}.
+    \State Calculate the model representation error $\epsilon^{(1)}$.
+    \State \textbf{Let} $done = False$
     \While { not $done$ }
-      \State Calculate $\alpha^{n+1}_{k}$  via \eqn{eq:pinv3}.
-      \State Calculate the current model prediction $g^{(n)}$ via \eqn{eq:rat4}.
-      \State Calculate the model representation error, e.g. $\epsilon^{(n)} = ||g^{(n)} - g^{(0)}||/||g^{(0)}||$.
-      \State $done = |\epsilon^{(n-1)}-\epsilon^{(n)}| < tol$
-      \State (Implicitly, $n = n+1$)
+      \State $n=n+1$
+      \State Calculate $\vec{\alpha}^{(n+1)}$  via \eqn{eq:pinv3}.
+      \State Calculate the model prediction $\vec{g}^{(n+1)}$ via \eqn{eq:rat4}.
+      \State Calculate the model representation error $\epsilon^{(n+1)}$.
+      \State $done = |\epsilon^{(n)}-\epsilon^{(n+1)}| < tol$
     \EndWhile
     \vskip 10pt
     \State {\bf Output:} $\epsilon^{(n)}$
@@ -920,7 +931,7 @@ In cases where $(\bar\ell,\bar{m})=(\ell,m)$, the real part of $\sigma_{\LMlmn}$
 %
 Consistency with the Schwarzschild limit is equally true in cases where $(\bar\ell,\bar{m}) \neq (\ell,m)$.
 %
-As with the \qnm{} frequencies, residuals are dominated by small scale oscillations with amplitudes that are fractions of a percent of the central values, and largely result from the model asatz.
+As with the \qnm{} frequencies, residuals are dominated by small scale oscillations with amplitudes that are fractions of a percent of the central values, and largely result from the model ansatz.
 %
 For comparison, fractional residual errors for models in Ref.~\cite{Berti:2014fga} are also shown.
 %
