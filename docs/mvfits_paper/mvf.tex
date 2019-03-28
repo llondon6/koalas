@@ -612,9 +612,19 @@ In practice, one solves \eqn{eq:pinv3} for $\vec{\alpha}^{(n+1)}$, and then uses
 %
 Subsequently, $g_j^{(n+1)}$ is then fed back into \eqn{eq:pinv3} for further refinement.
 %
-The refinement process is to terminate when a measure of model error (e.g. the $L^2$ norm $||g^{(0)}-g^{(n)}||$) passes a predetermined threshold.
+The refinement process is to terminate when a measure of model error (e.g. the $L^2$ norm $||\vec{g}^{(0)}-\vec{g}^{(n)}||$) passes a predetermined threshold. For \cite{lionel_london_2018_1402516} the following model representation error was used
 %
+\begin{align}
+  \label{eq:raterr}
+  \epsilon^{(n)}  = \left|\frac{\operatorname{Var}\left(\vec{g}^{(n)} - \vec{g}^{(0)}\right)}{\operatorname{Var}\left(\vec{g}^{(0)}\right)}\right|
+\end{align}
 %
+where $\operatorname{Var}$ is the variance defined as
+%
+\begin{align}
+  \label{eq:ratvar}
+  \operatorname{Var}\left(\vec{a}\right)  = \frac{1}{J}\sum_{j=0}^{J}\left(g_j - \frac{1}{J}\sum_{u=0}^{J}g_j\right)^2
+\end{align}
 %
 % \hspace{1cm}
 {\scriptsize
