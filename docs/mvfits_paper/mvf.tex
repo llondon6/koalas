@@ -246,7 +246,7 @@ While this paper's fits for the \qnm{} frequencies and mixing coefficients are p
 %
 \par The plan of the paper is as follows.
 %
-In section \sec{meth}, we outline the \gmvp{} and \gmvr{} algorithms.
+In \sec{meth}, we outline the \gmvp{} and \gmvr{} algorithms.
 %
 In \sec{results}, we demonstrate the application of each algorithm.
 %
@@ -613,7 +613,7 @@ In practice, one solves \eqn{eq:pinv3} for $\vec{\alpha}^{(n+1)}$, and then uses
 %
 Subsequently, $g_j^{(n+1)}$ is then fed back into \eqn{eq:pinv3} for further refinement.
 %
-The refinement process is to terminate when a measure of model error (e.g. the $L^2$ norm $||\vec{g}^{(0)}-\vec{g}^{(n)}||$) passes a predetermined threshold. For \cite{lionel_london_2018_1402516} the following model representation error was used
+The refinement process is to terminate when a measure of model error (e.g. the $L^2$ norm $||\vec{g}^{(0)}-\vec{g}^{(n)}||$) passes a predetermined threshold. For the results presented in \sec{results} the following model representation error was used
 %
 \begin{align}
   \label{eq:raterr}
@@ -624,7 +624,7 @@ where $\operatorname{Var}$ is the variance defined for a vector $\vec{d} = (d_j)
 %
 \begin{align}
   \label{eq:ratvar}
-  \operatorname{Var}\left(\vec{a}\right)  = \frac{1}{J}\sum_{j=0}^{J}\left(d_j - \frac{1}{J}\sum_{u=0}^{J}d_u\right)^2
+  \operatorname{Var}\left(\vec{d}\right)  = \frac{1}{J}\sum_{j=0}^{J}\left(d_j - \frac{1}{J}\sum_{u=0}^{J}d_u\right)^2
 \end{align}
 %
 % \hspace{1cm}
