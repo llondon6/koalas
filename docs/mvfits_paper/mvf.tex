@@ -397,24 +397,22 @@ This rough algorithmic picture is encapsulated by Alg. \ref{alg:pgreedy}.
 %
 \subsection{Greedy Multivariate Polynomial Fitting}
 %
-The study of smooth scalar functions (e.g. $f(\vec{x})$) often centers about the Taylor series expansion.
+The study of continuous scalar functions often centers about their expansion in terms of monomials.
 %
-In that instance, it is clear that any infinitely differentiable scalar function of many variables can be represented in terms of its derivatives by
+This is made rigorous by the Generalised Stone-Weierstrass Theorem \cite{Hassani:2013}. Consider a continuous function $f(\vec{x}) \equiv f(x_0, x_1, ..., x_N)$ in $N+1$ variables. Then $f(\vec{x})$ can be represented as
 %
 \begin{align}
   \label{eq:mvt}
-  f( \vec{x} + \vec{h} ) &= e^{ \vec{x} \cdot \vec{\nabla}' } \, f(\vec{x}\,') |_{\vec{x}\,'=\vec{h}}
+  f( \vec{x}) &= \sum_{\substack{d_i=0 \\ i \in \{0 \ldots N\}}}^{\infty} c_{d_0 d_1 \ldots d_N} x^{d_0} x^{d_1} \ldots x^{d_N}
   \\ \nonumber
-  &\approx \sum_{k=0}^{K} \, \frac{1}{k!} \, (\vec{x} \cdot \vec{\nabla}')^{k} \, f(\vec{x}\,') |_{\vec{x}\,'=\vec{h}}
+  &\approx \sum_{\substack{d_i=0 \\ i \in \{0 \ldots N\}}}^{K} c_{d_0 d_1 \ldots d_N} x^{d_0} x^{d_1} \ldots x^{d_N}
 \end{align}
 %
-From the first to second line of \eqn{eq:mvt}, we have used the definition of the exponential function (i.e. its series expansion).
+From the first to second line of \eqn{eq:mvt} the equality has been replaced by an approximation as we have limited the linear representation to monomials with combined exponents no greater than $KN$. This implication follows from the Stone-Weierstrass Theorem \cite{Lang:1983} and tells us that a continuous function may be uniformly approximated by a polynomial.
 %
-In the second line, the equality has been replaced by an approximation as we have limited the linear representation to $K+1$ terms.
+\par This is key to the perspective of \gmvp{}:
 %
-\par This latter point is key to the perspective of \gmvp{}:
-%
-given training data thought to be related to a smooth multivariate function, it may, particularly on small scales, be well approximated by a truncated series expansion in an appropriate coordinate basis.
+given training data thought to be related to a continuous multivariate function, it may, particularly on small scales, be well approximated by a polynomial in an appropriate coordinate basis.
 %
 % GMVP
 \hspace{1cm}
@@ -447,9 +445,7 @@ given training data thought to be related to a smooth multivariate function, it 
 }
 %
 %
-\par \eqn{eq:mvt}'s truncated expansion happens to be a polynomial in at most $N$ variables.
-%
-In this setting, the uncertainty of which and how many basis terms to include makes this a problem ripe for the application of linear modeling driven by a greedy process, namely \eqn{eq:linsol1} and Alg. (\ref{alg:pgreedy}) .
+\par In this setting, the uncertainty of which and how many basis terms to include makes this a problem ripe for the application of linear modeling driven by a greedy process, namely \eqn{eq:linsol1} and Alg. (\ref{alg:pgreedy}) .
 %
 %
 % Plots of QNM frequencies
