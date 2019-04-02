@@ -616,13 +616,7 @@ The refinement process is to terminate when a measure of model error (e.g. the $
   \epsilon^{(n)}  = \left|\frac{\operatorname{Var}\left(\vec{g}^{(n)} - \vec{g}^{(0)}\right)}{\operatorname{Var}\left(\vec{g}^{(0)}\right)}\right|
 \end{align}
 %
-where $\operatorname{Var}$ is the variance defined for a vector $\vec{d} = (d_j)$ as
-%
-\begin{align}
-  \label{eq:ratvar}
-  \operatorname{Var}\left(\vec{d}\right)  = \frac{1}{J}\sum_{j=0}^{J}\left(d_j - \frac{1}{J}\sum_{u=0}^{J}d_u\right)^2
-\end{align}
-%
+where $\operatorname{Var}$ is the variance. This model representation error is similar to the square of the root-mean-squared-deviation normalized by the variance of the data set.
 % \hspace{1cm}
 {\scriptsize
 \begin{algorithm}[H]
