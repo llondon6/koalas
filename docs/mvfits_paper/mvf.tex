@@ -89,7 +89,7 @@ superscriptaddress,10pt]{revtex4-1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Abstract %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
   %
-  Models of black hole properties play an important role in the ongoing direct detection of gravitational waves from black hole binaries. One important aspect of model based gravitational wave detection, and subsequent estimation of source parameters, are the low level modeling of information related to perturbed Kerr black holes. Here, we present new phenomenological methods to model the analytically understood gravitational wave spectra (quasi-normal mode frequencies), and harmonic structure of Kerr black holes (mixing coefficients between spherical and spheroidal harmonics). In particular, we present a greedy-multivariate-polynomial (GMVP) regression method and greedy-multivariate-rational (GMVR) regression method for the automated modeling of polynomial and rational functions respectively. GMVP is used to develop a model for QNM frequencies that explicitly enforces consistency with the extremal Kerr limit. GMVR is used to develop a model for harmonic mixing coefficients for the dominant multipoles with $\ell \le 5$. The models for the mixing coefficients and $(l,m)\neq(2,2)$ QNM frequencies are the first of their kind to consider black hole spin to vary between -1 and 1, thus naturally connecting the pro and retrograde modes. We discuss the potential use of these models in current and future gravitational wave signal modeling.
+  Models of black hole properties play an important role in the ongoing direct detection of gravitational waves from black hole binaries. One important aspect of model based gravitational wave detection, and subsequent estimation of source parameters, are the low level modeling of information related to perturbed Kerr black holes. Here, we present new phenomenological methods to model the analytically understood gravitational wave spectra (quasi-normal mode frequencies), and harmonic structure of Kerr black holes (mixing coefficients between spherical and spheroidal harmonics). In particular, we present a greedy-multivariate-polynomial (GMVP) regression method and greedy-multivariate-rational (GMVR) regression method for the automated modeling of polynomial and rational functions respectively. GMVP is used to develop a model for QNM frequencies that explicitly enforces consistency with the extremal Kerr limit. GMVR is used to develop a model for harmonic mixing coefficients for the dominant multipoles with $\ell \le 5$. The models for the mixing coefficients are the first of their kind to consider black hole spin to vary between -1 and 1, thus naturally connecting the pro and retrograde modes. We discuss the potential use of these models in current and future gravitational wave signal modeling.
 	%
 \end{abstract}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -167,9 +167,9 @@ The consequences of that approximation, in particular the mixing between spheric
 This approximation also applies to the \textit{Phenom} models,
 where the frequency domain multipoles, $\tilde{h}\LM(f)$, are constructed such that their high frequency behavior is consistent with \eqn{hrd} in the time domain
 %
-\cite{Hannam:2013oca, London:2017bcn, Khan:2015jqa, Mehta:2017jpq,Khan:2018fmp}.
+\cite{Hannam:2013oca, London:2017bcn, Khan:2015jqa, Schmidt:2014iyl, Mehta:2017jpq,Khan:2018fmp}.
 %
-\par Both Phenom and \eob{} approaches either use phenomenological models of remnant \bh{} mass and spin to interpolate over tables of \qnm{} frequencies, or phenomenological models for \qnm{} frequencies are used directly.
+\par Phenomenological models of remnant \bh{} mass and spin are used by both Phenom and \eob{} approaches either to interpolate over tables of \qnm{} frequencies or in the evaluation of phenomenological models for \qnm{} frequencies.
 %
 Either approach typically incurs less computational cost that the direct numerical calculation of \qnm{} frequencies, which may involve, for example, the solving of continued fraction equations \cite{Leaver85}.
 %
@@ -205,7 +205,7 @@ It is therefore efficient to use accurate models for $\sigma\LMlmn$ to avoid con
 %
 While models for $\cw\lmn$ and $\sigma\LMlmn$ are present in the literature (e.g. \cite{Berti:2005ys, Berti:2014fga, Cook:2014cta}), there exist minor shortcomings which we wish to address here.
 %
-\par For both the $(l,m)\neq(2,2)$ \qnm{} frequencies and the spherical-sphoidal mixing coefficients, we present the first models which treat \qnm{s} rotating with and against the rotation of the \bh{} as being a part of a single solution parameterized by dimensionless \bh{} spin ranging from -1 to 1.
+\par For $(l,m)\neq(2,2)$ \qnm{} frequencies and the spherical-sphoidal mixing coefficients, we present the first models which treat \qnm{s} rotating with and against the rotation of the \bh{} as being a part of a single solution parameterized by dimensionless \bh{} spin ranging from -1 to 1.
 %
 This perspective reflects the empirical observation that the remnant spin of \bbh{} mergers smoothly connects regions of positive and negative spin relative to the direction of the initial orbital angular momentum \cite{Husa:2015iqa,London:2018gaq}.
 %
@@ -246,7 +246,7 @@ While this paper's fits for the \qnm{} frequencies and mixing coefficients are p
 %
 \par The plan of the paper is as follows.
 %
-In section \sec{meth}, we outline the \gmvp{} and \gmvr{} algorithms.
+In \sec{meth}, we outline the \gmvp{} and \gmvr{} algorithms.
 %
 In \sec{results}, we demonstrate the application of each algorithm.
 %
@@ -397,24 +397,22 @@ This rough algorithmic picture is encapsulated by Alg. \ref{alg:pgreedy}.
 %
 \subsection{Greedy Multivariate Polynomial Fitting}
 %
-The study of smooth scalar functions (e.g. $f(\vec{x})$) often centers about the Taylor series expansion.
+The study of continuous scalar functions often centers about their expansion in terms of monomials.
 %
-In that instance, it is clear that any infinitely differentiable scalar function of many variables can be represented in terms of its derivatives by
+This is made rigorous by the Generalised Stone-Weierstrass Theorem \cite{Hassani:2013}. Consider a continuous function $f(\vec{x}) \equiv f(x_0, x_1, ..., x_N)$ in $N+1$ variables. Then $f(\vec{x})$ can be represented as
 %
 \begin{align}
   \label{eq:mvt}
-  f( \vec{x} + \vec{h} ) &= e^{ \vec{x} \cdot \vec{\nabla}' } \, f(\vec{x}\,') |_{\vec{x}\,'=\vec{h}}
+  f( \vec{x}) &= \sum_{\substack{d_i=0 \\ i \in \{0 \ldots N\}}}^{\infty} c_{d_0 d_1 \ldots d_N} x^{d_0} x^{d_1} \ldots x^{d_N}
   \\ \nonumber
-  &\approx \sum_{k=0}^{K} \, \frac{1}{k!} \, (\vec{x} \cdot \vec{\nabla}')^{k} \, f(\vec{x}\,') |_{\vec{x}\,'=\vec{h}}
+  &\approx \sum_{\substack{d_i=0 \\ i \in \{0 \ldots N\}}}^{K} c_{d_0 d_1 \ldots d_N} x^{d_0} x^{d_1} \ldots x^{d_N}
 \end{align}
 %
-From the first to second line of \eqn{eq:mvt}, we have used the definition of the exponential function (i.e. its series expansion).
+From the first to second line of \eqn{eq:mvt} the equality has been replaced by an approximation as we have limited the linear representation to monomials with combined exponents no greater than $K(N+1)$. This implication follows from the Stone-Weierstrass Theorem \cite{Lang:1983} and tells us that a continuous function may be uniformly approximated by a polynomial.
 %
-In the second line, the equality has been replaced by an approximation as we have limited the linear representation to $K+1$ terms.
+\par This is key to the perspective of \gmvp{}:
 %
-\par This latter point is key to the perspective of \gmvp{}:
-%
-given training data thought to be related to a smooth multivariate function, it may, particularly on small scales, be well approximated by a truncated series expansion in an appropriate coordinate basis.
+given training data thought to be related to a continuous multivariate function, it may, particularly on small scales, be well approximated by a polynomial in an appropriate coordinate basis.
 %
 % GMVP
 \hspace{1cm}
@@ -447,9 +445,7 @@ given training data thought to be related to a smooth multivariate function, it 
 }
 %
 %
-\par \eqn{eq:mvt}'s truncated expansion happens to be a polynomial in at most $N$ variables.
-%
-In this setting, the uncertainty of which and how many basis terms to include makes this a problem ripe for the application of linear modeling driven by a greedy process, namely \eqn{eq:linsol1} and Alg. (\ref{alg:pgreedy}) .
+\par In this setting, the uncertainty of which and how many basis terms to include makes this a problem ripe for the application of linear modeling driven by a greedy process, namely \eqn{eq:linsol1} and Alg. (\ref{alg:pgreedy}) .
 %
 %
 % Plots of QNM frequencies
@@ -497,9 +493,7 @@ The degree tempering process halts when increasing the maximum allowed degree ha
 \subsection{Greedy Multivariate Rational Fitting}
 %
 %
-\par Despite the apparent universality of \eqn{eq:mvt}, there are many cases where $K$ must be orders of magnitude greater than 1 in order for $\vec{f}$ to be accurately represented by a low order multinomial.
-%
-Worst, in cases where the underlying dataset is best described by a rational function, no polynomial of the same family describing the numerator and denominator will yield satisfactory results in low order.
+\par Despite the apparent universality of \eqn{eq:mvt}, there are many cases where $K$ must be orders of magnitude greater than 1 in order for $\vec{f}$ to be accurately represented by a polynomial.
 %
 In general, the optimal polynomial basis may not be clear, and so a more general set of ansatzes may be of use.
 %
@@ -613,20 +607,14 @@ In practice, one solves \eqn{eq:pinv3} for $\vec{\alpha}^{(n+1)}$, and then uses
 %
 Subsequently, $g_j^{(n+1)}$ is then fed back into \eqn{eq:pinv3} for further refinement.
 %
-The refinement process is to terminate when a measure of model error (e.g. the $L^2$ norm $||\vec{g}^{(0)}-\vec{g}^{(n)}||$) passes a predetermined threshold. For \cite{lionel_london_2018_1402516} the following model representation error was used
+The refinement process is to terminate when a measure of model error (e.g. the $L^2$ norm $||\vec{g}^{(0)}-\vec{g}^{(n)}||$) passes a predetermined threshold. For the results presented in \sec{results} the following model representation error was used
 %
 \begin{align}
   \label{eq:raterr}
   \epsilon^{(n)}  = \left|\frac{\operatorname{Var}\left(\vec{g}^{(n)} - \vec{g}^{(0)}\right)}{\operatorname{Var}\left(\vec{g}^{(0)}\right)}\right|
 \end{align}
 %
-where $\operatorname{Var}$ is the variance defined for a vector $\vec{d} = (d_j)$ as
-%
-\begin{align}
-  \label{eq:ratvar}
-  \operatorname{Var}\left(\vec{a}\right)  = \frac{1}{J}\sum_{j=0}^{J}\left(d_j - \frac{1}{J}\sum_{u=0}^{J}d_u\right)^2
-\end{align}
-%
+where $\operatorname{Var}$ is the variance. This model representation error is similar to the square of the root-mean-squared-deviation normalized by the variance of the data set.
 % \hspace{1cm}
 {\scriptsize
 \begin{algorithm}[H]
@@ -889,7 +877,7 @@ Although each model's fractional error is within 1\% of the perturbation theory 
 %
 For comparison, the same residual errors are shown in gray for the model presented in Ref.~\cite{Berti:2005ys};
 %
-here, the sharp feature near $\jf=0$ results from their modeling counter and co-rotating \qnm{} as two different curves. A residual error is also shown as an orange dashed line for the $\cw_{220}$ model presented in Ref.~\cite{Nagar:2018zoe}. This is a rational model with 14 fitted parameters compared to the polynomial model with 10 fitted parameters defined in \eqn{eq:cw_fit_1}. We observe that Ref.~\cite{Nagar:2018zoe} performs better overall while performing worse for higher $\jf$.
+here, the sharp feature near $\jf=0$ results from their modeling counter and co-rotating \qnm{} as two different curves. A residual error is also shown as an orange dashed line for the $\cw_{220}$ model presented in Ref.~\cite{Nagar:2018zoe}. We observe that the rational model of Ref.~\cite{Nagar:2018zoe} performs better overall while performing worse for higher $\jf$ compared to our model. While we use a polynomial ansatz, the comparison with Ref.~\cite{Nagar:2018zoe} highlights the potential of rational ansatzes.
 %
 \par Together, \eqns{eq:cw_fit_1}{eq:cw_fit_9} along with \fig{fig:qnm} present precise and accurate fits for the real and imaginary parts of \qnm{} frequencies for gravitational perturbations of Kerr \qnm{s}.
 %
@@ -922,7 +910,7 @@ For efficiency of presentation, each $\sigma_{\LMlmn}$ is plotted via its real a
     \includegraphics[width=0.48\textwidth]{issue2_ysprod_3v2.pdf} & \hspace{0.3cm}\includegraphics[width=0.48\textwidth]{issue2_ysprod_4v2.pdf}
   \end{tabular}
   %
-	\caption{ Spherical-spheroidal harmonic mixing coefficients and percentage residual errors for spherical-spheroidal harmonic mixing coefficient fits. (\textit{Top Left}) Mixing coefficients for cases where $(\bar{\ell},\bar{m})=(\ell,m)$. The dashed horizontal intersects each curve at the Schwarzschild limit where $\jf=0$. (\textit{Top Right}) Mixing coefficients where $(\bar{\ell},\bar{m})\neq(\ell,m)$. (\textit{Bottom Left and Right}) Factional residuals for mixing coefficient fits. For comparison, residual errors for the fits in Ref.~\cite{Berti:2014fga} are also shown over their region of validity in \bh{} spin. Note that markers match between grey and colored data points. }
+	\caption{ Spherical-spheroidal harmonic mixing coefficients and percentage residual errors for spherical-spheroidal harmonic mixing coefficient fits. (\textit{Top Left}) Mixing coefficients for cases where $(\bar{\ell},\bar{m})=(\ell,m)$. The dashed horizontal intersects each curve at the Schwarzschild limit where $\jf=0$. (\textit{Top Right}) Mixing coefficients where $(\bar{\ell},\bar{m})\neq(\ell,m)$. (\textit{Bottom Left and Right}) Factional residuals for mixing coefficient fits. For comparison, residual errors for the fits in Ref.~\cite{Berti:2014fga} are also shown over their region of validity in \bh{} spin. Note that markers match between grey and colored data points and the fits in Ref.~\cite{Berti:2014fga} are conjugated and multiplied by $(-1)^{\bar{l}+l}$ to correct for the different choice of spherical harmonic conventions.}
   %
   \label{fig:ys}
   %
@@ -960,7 +948,7 @@ An alternative use-strategy is to use either \gmvp{} or \gmvr{} to determine a f
 This is what as been done for the modeling of \qnm{} frequencies and spherical-spheroidal mixing coefficients.
 %
 %
-\par \gmvp{} has been applied to the modeling of \qnm{} frequencies. The resulting polynomial models have been constrained in the extremal Kerr limit, and perform well compared to similar fits in the literature. We note our comparison of $\cw_{220}$ from Ref.~\cite{Nagar:2018zoe} suggests even better fits for $(l,m,n)\neq(2,2,0)$ QNM frequencies might be achievable using a rational ansatz. We leave this extension to future modeling work.
+\par \gmvp{} has been applied to the modeling of \qnm{} frequencies. The resulting polynomial models have been constrained in the extremal Kerr limit, and perform well compared to similar fits in the literature. We note our comparison of $\cw_{220}$ from Ref.~\cite{Nagar:2018zoe} suggests even better fits for $(l,m,n)\neq(2,2,0)$ QNM frequencies might be achievable using a rational ansatz. This is a possible avenue for future improvement.
 %
 The fits presented here are of direct use in Ref. \cite{London:2017bcn}, where efficiently evaluable \qnm{} frequencies are required to generate template waveforms for \gw{} searches and parameter estimation.
 %
