@@ -399,22 +399,27 @@ This rough algorithmic picture is encapsulated by Alg. \ref{alg:pgreedy}.
 %
 \subsection{Greedy Multivariate Polynomial Fitting}
 %
-The study of continuous scalar functions often centers about their expansion in terms of monomials.
+The study of continuous scalar functions often centers about their Taylor series expansion.
 %
-This is made rigorous by the Generalised Stone-Weierstrass Theorem \cite{Hassani:2013}. Consider a continuous function $f(\vec{x}) \equiv f(x_0, x_1, ..., x_N)$ in $N+1$ variables. Then $f(\vec{x})$ can be represented as
+In that instance, it is clear that any infinitely differentiable scalar function of many variables can be represented in terms of its derivatives by
 %
 \begin{align}
   \label{eq:mvt}
-  f( \vec{x}) &= \sum_{\substack{d_i=0 \\ i \in \{0 \ldots N\}}}^{\infty} c_{d_0 d_1 \ldots d_N} x^{d_0} x^{d_1} \ldots x^{d_N}
+  f( \vec{x} + \vec{h} ) &= e^{ \vec{x} \cdot \vec{\nabla}' } \, f(\vec{x}\,') |_{\vec{x}\,'=\vec{h}}
   \\ \nonumber
-  &\approx \sum_{\substack{d_i=0 \\ i \in \{0 \ldots N\}}}^{K} c_{d_0 d_1 \ldots d_N} x^{d_0} x^{d_1} \ldots x^{d_N}
+  &\approx \sum_{k=0}^{K} \, \frac{1}{k!} \, (\vec{x} \cdot \vec{\nabla}')^{k} \, f(\vec{x}\,') |_{\vec{x}\,'=\vec{h}}
 \end{align}
 %
-From the first to second line of \eqn{eq:mvt} the equality has been replaced by an approximation as we have limited the linear representation to monomials with combined exponents no greater than $K(N+1)$. This implication follows from the Stone-Weierstrass Theorem \cite{Lang:1983} and tells us that a continuous function may be uniformly approximated by a polynomial.
+From the first to second line of \eqn{eq:mvt}, we have used the definition of the exponential function (i.e. its series expansion).
 %
-\par This is key to the perspective of \gmvp{}:
+In the second line, the equality has been replaced by an approximation as we have limited the linear representation to $K+1$ terms.
 %
-given training data thought to be related to a continuous multivariate function, it may, particularly on small scales, be well approximated by a polynomial in an appropriate coordinate basis.
+Formally, the applicability of the truncated expansion over a local region is made rigorous by the Generalised Stone-Weierstrass Theorem \cite{Hassani:2013}.
+%
+\par These ideas are key to the perspective of \gmvp{}:
+%
+given training data thought to be related to a smooth multivariate function, it may, particularly on small scales, be well approximated by a truncated series expansion in an appropriate coordinate basis.
+%
 %
 % GMVP
 \hspace{1cm}
