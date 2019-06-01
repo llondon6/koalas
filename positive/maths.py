@@ -4,6 +4,68 @@ from positive import *
 # Reference factorial from scipy
 from scipy.misc import factorial
 
+
+
+# Lentz's continued fration solver
+def lentz( aa, bb, tol=1e-10, tiny=1e-30, mpm=False ):
+    '''
+    Lentz's method for accurate continued fraction calculation of a function
+    f:
+
+    f = b(0) + a(1)/( b(1) + a(2)/( b(2) + a(3)/( b(3) + ... ) ) )
+
+    (Equivalent notation)
+
+    f = b(0) + [a(1)/b(1)+][a(2)/b(2)+][a(3)/b(3)+]...[a(n)/b(n)+]...
+
+    References:
+
+    http://www.mpi-hd.mpg.de/astrophysik/HEA/internal/Numerical_Recipes/f5-2.pdf
+    http://epubs.siam.org/doi/pdf/10.1137/1.9780898717822.ch6
+
+    ~ llondon6'12
+    [CONVERTED TO PYTHON FROM MATLAB by llondon2'14]
+    '''
+
+    #
+    f = bb(0)
+    if 0==f: f = tiny
+
+    if mpm:
+        from mpmath import mpc
+        C,D = mpc(f),mpc(0)
+    else:
+        from numpy import complex256
+        C,D = complex256(f),complex256(0)
+
+    done,state = False,False
+    j,jmax = 0,2e3
+    while not done:
+
+        #
+        j = 1+j
+
+        #
+        D = bb(j) + aa(j)*D
+        if 0==D: D = tiny
+        #
+        C = bb(j) + aa(j)/C
+        if 0==C: C = tiny
+        #
+        D = 1.0/D
+        DELTA = C*D
+        #
+        f = f*DELTA
+        #
+        done = abs( DELTA - 1.0 )<tol
+        if j>=jmax:
+            # print('>>! Maximum number of iterations reached before error criteria passed.\n')
+            state = True
+            done = state
+
+    return (f,state)
+
+
 # Smooth 1D data
 class smooth:
     '''
