@@ -91,7 +91,7 @@ def wKerr_ISCO_Bardeen(j,M=1):
 
 
 # Calculate Kerr Light-Ring Radius
-def rKerr_LR_Bardeen(j,M=1):
+def rKerr_LR_Bardeen(j,M=1,branch=0):
     '''
 
     Calculate Kerr Light-Ring Radius
@@ -104,17 +104,19 @@ def rKerr_LR_Bardeen(j,M=1):
     '''
 
     #
-    from numpy import cos,arccos
+    from numpy import cos,arccos,sqrt
+    from positive import acos
 
     # Bardeen et al 2.18
-    rKerr_LR = 2*M*(   1 + cos( (2.0/3)*arccos(-j) )   )
+    rKerr_LR = 2*M*(   1 + cos( (2.0/3)*acos(-j,branch=branch) )   )
+    # rKerr_LR = 2*M*(   1 + cos( (2.0/3)*arccos(-j) )   )
 
     #
     return rKerr_LR
 
 
 # Calculate Kerr ISCO Angular Frequency
-def wKerr_LR_Bardeen(j,M=1):
+def wKerr_LR_Bardeen(j,M=1,branch=0):
     '''
 
     Calculate Kerr Light-Ring (aka PH for Photon) Angular Frequency
@@ -133,7 +135,7 @@ def wKerr_LR_Bardeen(j,M=1):
     a = M*j
 
     # Bardeen et al 2.18
-    r = M * rKerr_LR_Bardeen(j,M=M)
+    r = M * rKerr_LR_Bardeen(j,M=M,branch=branch)
 
     # 2.16 of Bardeen et al
     wKerr_LR = sqrt(M) / ( r**(3.0/2) + a*sqrt(M) )
@@ -2379,8 +2381,8 @@ def leaver_workfunction( j, l, m, state, s=-2, mpm=False ):
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
 ''' Implement Berti's approximation for the separation constants '''
-# NOTE that Beuer et all 1977 did it first!?
-# NOTE RElevant references:
+# NOTE that Beuer et all 1977 also did it
+# NOTE Relevant references:
 # * Primary: arxiv:0511111v4
 # * Proc. R. Soc. Lond. A-1977-Breuer-71-86
 # * E_Seidel_1989_Class._Quantum_Grav._6_012
@@ -2764,3 +2766,339 @@ def slm(  jf,               # Dimentionless spin parameter
 
     #
     return S
+
+
+# Validate list of l,m values
+def validate_lm_list( lm_space,s=-2 ):
+
+    # Validate list of l,m values
+    lmin = abs(s)
+    msg = 'lm_space should be iterable of iterables of length 2; eg [(2,2),(3,2)]'
+    if not isiterable(lm_space): error(msg)
+    for dex,j in enumerate(lm_space):
+        if isiterable(j):
+            if len(j)!=2:
+                error(msg)
+            else:
+                l,m = j
+                if (not isinstance(l,int)) or (not isinstance(m,int)):
+                    error('values fo l and m must be integers')
+                else:
+                    lm_space[dex] = (l,m)
+        else:
+            error(msg)
+    msg = 'lm_space must be a ordered iterable of unique elements'
+    if len(set(lm_space))!=len(lm_space):
+        error(msg)
+
+    #
+    return None
+
+# Calculte matrix of spherical spheroidal harmonic inner-products (sYlm|Slmn)
+def ysprod_matrix( jf, lm_space, N_theta=128, __aw_sc__=None, s=-2 ):
+    '''
+
+    == Calculte matrix of spherical spheroidal harmonic inner-products (sYlm|Slmn) ==
+
+    |a) = sum_j a_j |Yj) # Spherical representation with j=(L,M)
+        = sum_k b_k |Sk) # Spheroidal rep with k=(l,m,n)
+
+    -->
+
+    a_j = (Yj|a)
+        = sum_k b_k (Yj|Sk)
+
+    * (Yj|Sk) is treated as a matrix and the rest vectors
+    * (Yj|Sk) will be enforced to square:
+
+        A. IF lm_space is of length N, THEN sigma = (Yj|Sk) will be NxN
+        B. We CHOOSE k = (L,M,0) so that (Yj|Sk) is square
+        C. In the point above, we explicitely disregard overtones; they may be added in a future version of this method (if the dimensionality can be sorted ...)
+
+    USAGE
+    ---
+    sigma = ysprod_matrix( jf, lm_space, N_theta=128, __aw_sc__=None, s=-2 )
+
+
+    londonl@mit.edu 2019
+
+    '''
+
+    # Import usefuls
+    from positive import slm,sYlm,prod
+    from numpy import pi,linspace,trapz,sin,sqrt,zeros_like,ones
+
+    # Validate list of l,m values
+    validate_lm_list(lm_space,s=s)
+
+    #
+    theta = linspace( 0, pi, N_theta )
+    phi = 0
+
+    # Define index space for spheroidal basis
+    k_space = []
+    for l,m in lm_space:
+        k_space.append( (l,m,0) )
+
+    #
+    K = len(lm_space)
+    ans = ones( (K,K), dtype=complex )
+
+    #
+    for j,(l,m) in enumerate(lm_space):
+
+        #
+        sYj = sYlm(-2,l,m,theta,phi)
+        y = sYj/sqrt(prod(sYj,sYj,theta))
+
+        for k in range( len(k_space) ):
+
+            #
+            l_,m_,n_ = k_space[k]
+
+            #
+            if m==m_:
+                Sk = slm(jf,l_,m_,n_,theta,phi,norm=False,__aw_sc__=__aw_sc__)
+                s = Sk/sqrt(prod(Sk,Sk,theta))
+                ans[j,k] = prod( y,s, theta )
+            else:
+                ans[j,k] = 0
+            # print (L,M),(l,m,n), ans[j,k]
+
+    #
+    return ans
+
+
+# Given a dictionary of spherical multipole moment data values (i.e. l,m: spherical_multipole_float ), calculate the spheroidal counterpart
+def ys_change( spherical_basis_vector, lm_space, dimensionless_spin, N_theta=128, __aw_sc__=None, return_sigma=False ):
+    '''
+    Given a dictionary of spherical multipole moment data values (i.e. l,m: spherical_multipole_float ), calculate the spheroidal counterpart
+    '''
+
+    #
+    from numpy import dot
+    from numpy.linalg import inv,pinv,lstsq
+
+    # Calculate the mixing matrix
+    sigma = ysprod_matrix( dimensionless_spin, lm_space, N_theta=N_theta, __aw_sc__=__aw_sc__ )
+
+    # Take the inverse of the mixing matrix
+    inv_sigma = pinv( sigma )
+
+    # Calculate the spheroidal vector
+    spheroidal_basis_vector = dot( inv_sigma, spherical_basis_vector )
+
+    # Return desired information
+    if return_sigma:
+        return spheroidal_basis_vector,sigma
+    else:
+        return spheroidal_basis_vector
+
+#
+def calc_spheroidal_multipoles( domain_vals, spherical_multipole_dict, dimensionless_spin_series, s=-2 ):
+    '''
+    Low level function to convert spherical multipole time or frequency series to spheroidal ones GIVEN the dimensionless_spin_series associated with the spacetime. This method interprets the spacetime as Kerr at all radii. All values of m in the spherical multipole dict must be identical
+    '''
+
+    # Import usefuls
+    from numpy import diff,array,ones_like
+
+    # Collect spherical multipole indeces and sort by l
+    j_space = spherical_multipole_dict.keys()
+    # Validate list of l,m values
+    validate_lm_list(j_space,s=s)
+    # Sort
+    j_space.sort(key=lambda X: X[0])
+
+    #
+    if diff( [ j[-1] for j in j_space ] )!=0:
+        error( 'all values of m in the spherical multipole dict must be identical' )
+
+    #
+    spheroidal_multipole_dict = { (l,m,0):ones_like(spherical_multipole_dict[l,m]) for l,m in spherical_multipole_dict }
+    sigmas = []
+
+    #
+    for u,v in enumerate(domain_vals):
+
+        # Construct spherical basis vector
+        spherical_basis_vector = [ spherical_multipole_dict[j][u] for j in j_space ]
+
+        # Get the associated spin
+        dimensionless_spin = dimensionless_spin_series[u]
+
+        #
+        spheroidal_basis_vector,sigma = ys_change( spherical_basis_vector, j_space, dimensionless_spin, return_sigma=True )
+
+        #
+        sigmas.append(sigma)
+
+        #
+        for dex,(l,m) in enumerate(j_space):
+
+            #
+            k = (l,m,0)
+
+            #
+            spheroidal_multipole_dict[k][u] = spheroidal_basis_vector[dex]
+
+    #
+    sigmas = array(sigmas)
+
+
+    return spheroidal_multipole_dict,sigmas
+
+
+
+# Try solving the 4D equation near a single guess value [ cw.real cw.imag sc.real sc.imag ]
+def lvrsolve(jf,l,m,guess,tol=1e-8):
+
+    '''
+    Low-level function for numerically finding the root of leaver's equations
+    '''
+
+    # Import Maths
+    from numpy import log,exp,linalg,array
+    from scipy.optimize import root,fmin,minimize
+    from positive import alert,red,warning,leaver_workfunction
+
+    # Try using root
+    # Define the intermediate work function to be used for this iteration
+    fun = lambda STATE: log( 1.0 + abs(array(leaver_workfunction( jf,l,m, STATE ))) )
+    X  = root( fun, guess, tol=tol )
+    cw1,sc1 = X.x[0]+1j*X.x[1], X.x[2]+1j*X.x[3]
+    __lvrfmin1__ = linalg.norm(array( exp(X.fun)-1.0 ))
+    retry1 = ( 'not making good progress' in X.message.lower() ) or ( 'error' in X.message.lower() )
+
+
+    # Try using fmin
+    # Define the intermediate work function to be used for this iteration
+    fun = lambda STATE: log(linalg.norm(  leaver_workfunction( jf,l,m, STATE )  ))
+    X  = fmin( fun, guess, disp=False, full_output=True, ftol=tol )
+    cw2,sc2 = X[0][0]+1j*X[0][1], X[0][2]+1j*X[0][3]
+    __lvrfmin2__ = exp(X[1])
+    retry2 = __lvrfmin2__ > 1e-3
+
+    # Use the solution that converged the fastest to avoid solutions that have wandered significantly from the initial guess OR use the solution with the smallest fmin
+    if __lvrfmin1__ < __lvrfmin2__ : # use the fmin value for convenience
+        cw,sc,retry = cw1,sc1,retry1
+        __lvrfmin__ = __lvrfmin1__
+    else:
+        cw,sc,retry = cw2,sc2,retry2
+        __lvrfmin__ = __lvrfmin2__
+
+    # Don't retry if fval is small
+    if __lvrfmin__ > 1e-3:
+        retry = True
+        alert(red('Retrying because the trial fmin value is greater than 1e-3.'))
+
+    # Don't retry if fval is small
+    if retry and (__lvrfmin__ < 1e-4):
+        retry = False
+        alert(red('Not retrying becuase the fmin value is low.'))
+
+    # Return the solution
+    return cw,sc,__lvrfmin__,retry
+
+
+#
+def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1, verbose=False ):
+
+    '''
+    Extrapolative guess for gravitational perturbations
+    '''
+
+    #
+    from numpy import complex128,polyfit,linalg,ndarray,array,linspace,polyval
+    from matplotlib.pyplot import figure,show,plot
+
+    #
+    if not isinstance(j,(list,ndarray,tuple)):
+        j = array([j])
+    if not isinstance(cw,(list,ndarray,tuple)):
+        cw_ = ones_like(j,dtype=complex)
+        cw_[-1] = cw; cw = cw_
+    if not isinstance(sc,(list,ndarray,tuple)):
+        sc_ = ones_like(j,dtype=complex)
+        sc_[-1] = sc; sc = sc_
+
+    #
+    current_j = j[-1]
+    initial_solution = [ cw[-1].real, cw[-1].imag, sc[-1].real, sc[-1].imag ]
+
+    #
+    lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,m,STATE )  )
+
+    # Make sure that starting piont satisfies the tolerance
+    current_err = best_err = lvrwrk( current_j, initial_solution )
+    if current_err>tol:
+        if verbose: print initial_solution
+        if verbose: print current_err
+        error('Initial solution does not satisfy the input tolerance value.')
+
+    # determine the polynomial order to use based on the total number of points
+    nn = len(j)
+    order = min(nn-1,4)
+    place = -order-1
+    print 'nn,order,place = ',nn,order,place
+    #
+    xx = array(j)[place:]
+    #
+    yy = array(cw)[place:]
+    yrpoly = polyfit( xx, yy.real, order )
+
+    figure()
+    plot( xx, yy.real, 'ob' )
+    xs = linspace( xx[0]-1e-4,xx[-1]+1e-4 )
+    plot( xs, polyval(yrpoly,xs), 'r' )
+    show()
+
+    ycpoly = polyfit( yy.real, yy.imag, order )
+    yr_fit = lambda J: polyval( yrpoly, J )
+    yc_fit = lambda J: polyval( ycpoly, yr_fit(J) )
+    guess_cw_fit = lambda J: complex128( yr_fit(J) + 1j*yc_fit(J) )
+    #
+    zz = array(sc)[place:]
+    zrpoly = polyfit( xx, zz.real, order  )
+    zcpoly = polyfit( zz.real, zz.imag, order  )
+    zr_fit = lambda J: polyval( zrpoly, J )
+    zc_fit = lambda J: polyval( zcpoly, zr_fit(J) )
+    guess_sc_fit = lambda J: complex128( zr_fit(J) + 1j*zc_fit(J) )
+
+    #
+    def guess_fit(J):
+        guess_cw = guess_cw_fit(J)
+        guess_sc = guess_sc_fit(J)
+        return [ guess_cw.real, guess_cw.imag, guess_sc.real, guess_sc.imag ]
+
+    #
+    k = -1; kmax = 500
+    done = False
+    best_j = current_j = j[-1]
+    best_guess = guess_fit(current_j)
+    if verbose: print 'k,starting_j,starting_err = ',k,current_j,current_err
+    while not done:
+
+        #
+        k+=1
+        current_j += d2j*step_sign
+        current_guess = guess_fit(current_j)
+
+        #
+        current_err = lvrwrk( current_j, current_guess )
+
+        #
+        if verbose: print 'k,best_j,best_err = ',k,best_j,best_err
+        if current_err>tol:
+            done = True
+            print 'k,best_j,best_err = ',k,best_j,best_err
+        else:
+            best_j = current_j
+            best_guess = current_guess
+            best_err = current_err
+            if k==kmax:
+                done = True
+                warning('Max iterations exceeded. Exiting.')
+
+    #
+    return best_j, best_guess

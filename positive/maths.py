@@ -2230,3 +2230,44 @@ def reflect_unwrap2( VEC, tol=0.1, domain = None ):
 
     #
     return ans
+
+
+def acos(X,sig=1,branch=0):
+    '''
+    Inverse cosine function compatible with arguments greater than 1 and complex numbers.
+    ~ londonl@mit.edu '19
+
+    USAGE:
+        ans = acos(X,sig=1)
+
+    NOTE:
+        acos(X,sig=1) = -acos(X,sig=-1)
+    '''
+    #
+    from positive import isiterable
+    from numpy import sqrt,log,array,complex,angle,pi
+
+    #
+    def _acos_(x):
+        x2 = x*x
+        if x2<1:
+            det = 1j * sqrt( 1-x2 )
+        else:
+            det = sqrt( x2-1 )
+        #
+        a = x + sig*det
+        #
+        if (a<0) or isinstance(a,complex):
+            ans = -1j * (  log( abs(a) ) + 1j*(angle(a) + 2*pi*branch)  )
+        else:
+            ans = -1j * log( a  )
+        if x<1:
+            return ans.real
+        else:
+            return 1j*ans.imag
+
+    #
+    if isiterable(X):
+        return array( [ _acos_(x) for x in X ] )
+    else:
+        return _acos_(X)

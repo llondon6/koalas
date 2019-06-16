@@ -3,6 +3,20 @@ from positive import *
 from .strings import *
 
 #
+def isiterable( obj ):
+    '''
+    Return TRUE if object is iterable; else, FALSE.
+    USAGE:
+      boolean = isiterable( object )
+    '''
+    #
+    try:
+        _ = obj.__getitem__
+        return True
+    except:
+        return False
+
+#
 def parsin( keys, dict, default=False, verbose=False, fname='*', **kwarg ):
     '''
     Function for interpretive keyword parsing:
