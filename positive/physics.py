@@ -3038,7 +3038,7 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
 
     # Make sure that starting piont satisfies the tolerance
     current_err = best_err = lvrwrk( current_j, initial_solution )
-    print current_err
+    # print current_err
     if current_err>tol:
         print j
         print initial_solution
@@ -3047,7 +3047,7 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
 
     # Determine the polynomial order to use based on the total number of points
     nn = len(j)
-    order = min(nn-1,4)
+    order = min(nn-1,3) # NOTE that 4 and 5 don't work as well, especially near extremal values of spin
     place = -order-1
     # print 'nn,order,place = ',nn,order,place
 
@@ -3139,7 +3139,7 @@ def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, i
     '''
 
     # Import usefuls
-    from numpy import sign
+    from numpy import sign,array
 
     # Determin the direction of requested changes in spin
     step_sign = sign( final_spin - initial_spin )
@@ -3156,21 +3156,22 @@ def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, i
     #
     done = False
     k = 0
+    internal_res = 12
     current_j = initial_spin
-    d2j = 1e-7
+    d2j = 1e-3 # Initial value of internal step size
     while step_sign*(final_spin-current_j) > 0 :
 
         #
         current_j,current_guess = leaver_extrap_guess( j, cw, sc, l, m, tol=tol, d2j=d2j, step_sign=step_sign, verbose=False, plot=plot )
-        if current_j == j[0]:
-            # If there has been no change in extrap step size, divide it by ten.
-            # Here we use ten as a resolution hueristic.
-            d2j/=10
+        if current_j == j[-1]:
+            # If there has been no spin, then divinde the extrap step size by internal_res.
+            # Here we use internal_res as a resolution heuristic.
+            d2j/=internal_res
         else:
             j.append( current_j )
             # Set the dynamic step size based on previous step sizes
-            # Here we use ten as a resolution hueristic.
-            d2j = abs(j[-1]-j[-2])/10
+            # Here we use internal_res as a resolution heuristic.
+            d2j = abs(j[-1]-j[-2])/internal_res
             if verbose: print 'j = ',j
             if verbose: print 'd2j = ',d2j
             current_cw,current_sc,current_err,current_retry = lvrsolve(current_j,l,m,current_guess)
@@ -3180,7 +3181,8 @@ def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, i
             err.append( current_err )
             retry.append( current_retry )
 
-    # Convert to arrays with increasing spin 
+
+    # Convert to arrays with increasing spin
     j,cw,sc,err,retry = [ array( v if step_sign==1 else v[::-1] ) for v in [j,cw,sc,err,retry] ]
 
     #
