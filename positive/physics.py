@@ -3002,15 +3002,22 @@ def lvrsolve(jf,l,m,guess,tol=1e-8):
 
 
 #
-def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1, verbose=False ):
+def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1, verbose=False, plot=False ):
 
     '''
-    Extrapolative guess for gravitational perturbations
+    Extrapolative guess for gravitational perturbations. This function is best used within leaver_needle which solves leaver's equations for a range of spin values.
+
+    londonl@mit.edu 2019
     '''
 
     #
-    from numpy import complex128,polyfit,linalg,ndarray,array,linspace,polyval
-    from matplotlib.pyplot import figure,show,plot
+    from numpy import complex128,polyfit,linalg,ndarray,array,linspace,polyval,diff,sign,ones_like
+    if plot: from matplotlib.pyplot import figure,show,plot,xlim
+    from scipy.interpolate import InterpolatedUnivariateSpline as spline
+
+    #
+    if not ( step_sign in (-1,1) ):
+        error('step_sign input must be either -1 or 1 as it determins the direction of changes in spin')
 
     #
     if not isinstance(j,(list,ndarray,tuple)):
@@ -3031,48 +3038,63 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
 
     # Make sure that starting piont satisfies the tolerance
     current_err = best_err = lvrwrk( current_j, initial_solution )
+    print current_err
     if current_err>tol:
-        if verbose: print initial_solution
-        if verbose: print current_err
+        print j
+        print initial_solution
+        print current_err
         error('Initial solution does not satisfy the input tolerance value.')
 
-    # determine the polynomial order to use based on the total number of points
+    # Determine the polynomial order to use based on the total number of points
     nn = len(j)
     order = min(nn-1,4)
     place = -order-1
-    print 'nn,order,place = ',nn,order,place
-    #
+    # print 'nn,order,place = ',nn,order,place
+
     xx = array(j)[place:]
-    #
     yy = array(cw)[place:]
-    yrpoly = polyfit( xx, yy.real, order )
-
-    figure()
-    plot( xx, yy.real, 'ob' )
-    xs = linspace( xx[0]-1e-4,xx[-1]+1e-4 )
-    plot( xs, polyval(yrpoly,xs), 'r' )
-    show()
-
-    ycpoly = polyfit( yy.real, yy.imag, order )
-    yr_fit = lambda J: polyval( yrpoly, J )
-    yc_fit = lambda J: polyval( ycpoly, yr_fit(J) )
-    guess_cw_fit = lambda J: complex128( yr_fit(J) + 1j*yc_fit(J) )
-    #
     zz = array(sc)[place:]
-    zrpoly = polyfit( xx, zz.real, order  )
-    zcpoly = polyfit( zz.real, zz.imag, order  )
-    zr_fit = lambda J: polyval( zrpoly, J )
-    zc_fit = lambda J: polyval( zcpoly, zr_fit(J) )
-    guess_sc_fit = lambda J: complex128( zr_fit(J) + 1j*zc_fit(J) )
+
+    if order>0:
+
+        ## NOTE that coupling the splines can sometimes cause unhandled nans
+        # yrspl = spline( xx, yy.real, k=order )
+        # ycspl = spline( yy.real, yy.imag, k=order )
+        # zrspl = spline( xx, zz.real, k=order )
+        # zcspl = spline( zz.real, zz.imag, k=order )
+        # yrspl_fun = yrspl
+        # ycspl_fun = lambda J: ycspl( yrspl(J) )
+        # zrspl_fun = zrspl
+        # zcspl_fun = lambda J: zcspl( zrspl(J) )
+
+        yrspl_fun = spline( xx, yy.real, k=order )
+        ycspl_fun = spline( xx, yy.imag, k=order )
+        zrspl_fun = spline( xx, zz.real, k=order )
+        zcspl_fun = spline( xx, zz.imag, k=order )
+
+    else:
+        yrspl_fun = lambda J: cw[0].real*ones_like(J)
+        ycspl_fun = lambda J: cw[0].imag*ones_like(J)
+        zrspl_fun = lambda J: sc[0].real*ones_like(J)
+        zcspl_fun = lambda J: sc[0].imag*ones_like(J)
+
+
+    if plot:
+        figure()
+        plot( xx, yy.real, 'ob' )
+        dxs = abs(diff(lim(xx)))/4 if abs(diff(lim(xx)))!=0 else 1e-4
+        xs = linspace( min(xx)-dxs,max(xx)+dxs )
+        plot( xs, yrspl_fun(xs), 'r' )
+        xlim(lim(xs))
+        if verbose:
+            print lim(xs)
+            print lim(yrspl_fun(xs))
+        show()
+
+    guess_fit = lambda J: [ yrspl_fun(J), ycspl_fun(J), zrspl_fun(J), zcspl_fun(J) ]
 
     #
-    def guess_fit(J):
-        guess_cw = guess_cw_fit(J)
-        guess_sc = guess_sc_fit(J)
-        return [ guess_cw.real, guess_cw.imag, guess_sc.real, guess_sc.imag ]
-
-    #
-    k = -1; kmax = 500
+    k = -1; kmax = 50 # It's fair to think of kmax as a resolution of at least 1.0/kmax
     done = False
     best_j = current_j = j[-1]
     best_guess = guess_fit(current_j)
@@ -3102,3 +3124,64 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
 
     #
     return best_j, best_guess
+
+
+
+
+#
+def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, initial_d2spin=1e-7, plot = False,verbose=False ):
+
+    '''
+    Given an initial location and realted solution in the frequency-separation constant space,
+    find the solution to leaver's equations between inut BH spin values for the specified l,m multipole.
+
+    londonl@mit.edu 2019
+    '''
+
+    # Import usefuls
+    from numpy import sign
+
+    # Determin the direction of requested changes in spin
+    step_sign = sign( final_spin - initial_spin )
+
+    # Unpack the initial solution.
+    # NOTE that whether this is a solution of leaver's equations is tested within leaver_extrap_guess
+    cwr,cwc,scr,scc = initial_solution
+    initial_cw = cwr+1j*cwc
+    initial_sc = scr+1j*scc
+
+    # Initialize outputs
+    j,cw,sc,err,retry = [initial_spin],[initial_cw],[initial_sc],[],[]
+
+    #
+    done = False
+    k = 0
+    current_j = initial_spin
+    d2j = 1e-7
+    while step_sign*(final_spin-current_j) > 0 :
+
+        #
+        current_j,current_guess = leaver_extrap_guess( j, cw, sc, l, m, tol=tol, d2j=d2j, step_sign=step_sign, verbose=False, plot=plot )
+        if current_j == j[0]:
+            # If there has been no change in extrap step size, divide it by ten.
+            # Here we use ten as a resolution hueristic.
+            d2j/=10
+        else:
+            j.append( current_j )
+            # Set the dynamic step size based on previous step sizes
+            # Here we use ten as a resolution hueristic.
+            d2j = abs(j[-1]-j[-2])/10
+            if verbose: print 'j = ',j
+            if verbose: print 'd2j = ',d2j
+            current_cw,current_sc,current_err,current_retry = lvrsolve(current_j,l,m,current_guess)
+            if verbose: print k,current_j,current_cw,current_sc,current_err,current_retry
+            cw.append( current_cw )
+            sc.append( current_sc )
+            err.append( current_err )
+            retry.append( current_retry )
+
+    # Convert to arrays with increasing spin 
+    j,cw,sc,err,retry = [ array( v if step_sign==1 else v[::-1] ) for v in [j,cw,sc,err,retry] ]
+
+    #
+    return j,cw,sc,err,retry
