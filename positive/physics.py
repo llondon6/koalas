@@ -3834,7 +3834,7 @@ def lvrsolve(jf,l,m,guess,tol=1e-8):
 
 
 # Extrapolative guess for gravitational perturbations. This function is best used within leaver_needle which solves leaver's equations for a range of spin values.
-def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1, verbose=False, plot=False ):
+def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1, verbose=False, plot=False, spline_order=3, monotomic_steps=False, boundary_spin=None ):
 
     '''
     Extrapolative guess for gravitational perturbations. This function is best used within leaver_needle which solves leaver's equations for a range of spin values.
@@ -3843,7 +3843,7 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
     '''
 
     #
-    from numpy import complex128,polyfit,linalg,ndarray,array,linspace,polyval,diff,sign,ones_like,linalg
+    from numpy import complex128,polyfit,linalg,ndarray,array,linspace,polyval,diff,sign,ones_like,linalg, hstack
     if plot: from matplotlib.pyplot import figure,show,plot,xlim
     from scipy.interpolate import InterpolatedUnivariateSpline as spline
 
@@ -3873,14 +3873,17 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
     # print current_err
     if current_err>tol:
         print j
+        print current_j
         print initial_solution
         print current_err
         error('Initial solution does not satisfy the input tolerance value.')
 
     # Determine the polynomial order to use based on the total number of points
     nn = len(j)
-    order = min(nn-1,3) # NOTE that 4 and 5 don't work as well, especially near extremal values of spin
+    order = min( nn-1, spline_order ) # NOTE that 4 and 5 don't work as well, especially near extremal values of spin; 3may also have problems
     place = -order-1
+    # if m<0: tol *= 1e-4
+    # print 'm,tol = ',m,tol
     # print 'nn,order,place = ',nn,order,place
 
     xx = array(j)[place:]
@@ -3926,41 +3929,86 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
     guess_fit = lambda J: [ yrspl_fun(J), ycspl_fun(J), zrspl_fun(J), zcspl_fun(J) ]
 
     #
-    k = -1; kmax = 50 # It's fair to think of kmax as a resolution of at least 1.0/kmax
+    k = -1; kmax = 500
     done = False
+    exit_code = 0
+    near_bounary = False
     best_j = current_j = j[-1]
     best_guess = guess_fit(current_j)
-    if verbose: print 'k,starting_j,starting_err = ',k,current_j,current_err
+    if verbose: print '>> k,starting_j,starting_err = ',k,current_j,current_err
     while not done:
 
         #
         k+=1
         current_j += d2j*step_sign
+        if boundary_spin:
+            if (boundary_spin-current_j)*step_sign < 0:
+                alert('We\'re quite close to the specified boundary, so we will reduce the internal step size as to not exceed the boundary.')
+                current_j -= d2j*step_sign
+                print '** current_j = ',current_j
+                print '** boundary_spin = ',boundary_spin
+                new_d2j = min( d2j/21.0, abs( ( boundary_spin-current_j ) /21.0) )
+                print '** new_d2j = ',new_d2j
+                current_j = current_j + new_d2j*step_sign
+                print '** new_current_j = ',current_j
+                print '** old_tol = ',tol
+                tol *= 0.01
+                print '** new_tol = ',tol
+                d2j = new_d2j
+                if not near_bounary:
+                    near_bounary = True
+                    kmax = 4*kmax
+
+
+        #
         current_guess = guess_fit(current_j)
 
         #
         current_err = lvrwrk( current_j, current_guess )
 
         #
-        if verbose: print 'k,best_j,best_err = ',k,best_j,best_err
-        if current_err>tol:
+        if verbose: print '* k,best_j,best_err = ',k,best_j,best_err
+
+        #
+        tolerance_is_exceeded = (current_err>tol)
+
+        # #
+        # if (len(j)>3) and monotomic_steps:
+        #     stepsize_may_increase = (abs(current_j-j[-1])+d2j) > abs(j[-1]-j[-2])
+        # else:
+        #     stepsize_may_increase = False
+
+        best_j = current_j
+        best_guess = current_guess
+        best_err = current_err
+
+        #
+        if tolerance_is_exceeded: # or stepsize_may_increase:
             done = True
-            print 'k,best_j,best_err = ',k,best_j,best_err
+            print '* k,best_j,best_err = ',k,best_j,best_err
+            alert('Tolerance exceeded. Exiting.')
+            exit_code = 0
         else:
-            best_j = current_j
-            best_guess = current_guess
-            best_err = current_err
-            if k==kmax:
+            if (k==kmax) and (not near_bounary):
                 done = True
                 warning('Max iterations exceeded. Exiting.')
+                exit_code = 1
+
+        if abs(current_j-boundary_spin)<1e-10:
+            alert('We are close enough to the boundary to stop.')
+            print '$$ boundary_spin = ',boundary_spin
+            print '$$ current_j = ',current_j
+            k = kmax
+            done = True
+            exit_code = -1
 
     #
-    return best_j, best_guess
+    return best_j, best_guess, exit_code
 
 
 
 # Solve leaver's equations between two spin values given a solution at a starting point
-def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, initial_d2spin=1e-7, plot = False,verbose=False ):
+def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, initial_d2spin=1e-3, plot = False,verbose=False, use_feedback=True, spline_order=3 ):
 
     '''
     Given an initial location and realted solution in the frequency-separation constant space,
@@ -3970,7 +4018,7 @@ def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, i
     '''
 
     # Import usefuls
-    from numpy import sign,array
+    from numpy import sign,array,diff,argmin,argsort,hstack
 
     # Determin the direction of requested changes in spin
     step_sign = sign( final_spin - initial_spin )
@@ -3987,23 +4035,31 @@ def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, i
     #
     done = False
     k = 0
-    internal_res = 12
+    internal_res = 24
     current_j = initial_spin
-    d2j = 1e-3 # Initial value of internal step size
-    while step_sign*(final_spin-current_j) > 0 :
+    d2j = initial_d2spin # Initial value of internal step size
+    monotomic_steps = False
+    while not done :
 
         #
-        current_j,current_guess = leaver_extrap_guess( j, cw, sc, l, m, tol=tol, d2j=d2j, step_sign=step_sign, verbose=False, plot=plot )
-        if current_j == j[-1]:
+        current_j,current_guess,exit_code = leaver_extrap_guess( j, cw, sc, l, m, tol=tol, d2j=d2j, step_sign=step_sign, verbose=False, plot=plot, spline_order=spline_order, boundary_spin=final_spin )
+        if (current_j == j[-1]) and (exit_code!=1):
             # If there has been no spin, then divinde the extrap step size by internal_res.
             # Here we use internal_res as a resolution heuristic.
             d2j/=internal_res
+            alert('current_j == j[-1]')
+            if d2j<1e-9:
+                done = True
+                warning('Exiting becuase d2j is too small.')
         else:
+
+            done = step_sign*(final_spin-current_j) < 1e-10
+
             j.append( current_j )
             # Set the dynamic step size based on previous step sizes
             # Here we use internal_res as a resolution heuristic.
             d2j = abs(j[-1]-j[-2])/internal_res
-            if verbose: print 'j = ',j
+            # if verbose: print 'j = ',j
             if verbose: print 'd2j = ',d2j
             current_cw,current_sc,current_err,current_retry = lvrsolve(current_j,l,m,current_guess)
             if verbose: print k,current_j,current_cw,current_sc,current_err,current_retry
@@ -4012,6 +4068,11 @@ def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, i
             err.append( current_err )
             retry.append( current_retry )
 
+        #
+        if d2j==0:
+            warning('Exiting because the computer thinks d2j is zero')
+            break
+
 
     # Convert lists to arrays with increasing spin
     j,cw,sc,err,retry = [ array( v if step_sign==1 else v[::-1] ) for v in [j,cw,sc,err,retry] ]
@@ -4019,6 +4080,139 @@ def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, i
     #
     return j,cw,sc,err,retry
 
+#
+def greedy_leaver_needle( j,cw,sc,err,retry, l, m, plot = False, verbose=False, spline_order=3 ):
+
+    #
+    from positive import spline,leaver_needle,findpeaks
+    from numpy import array ,argmax,argsort,linspace,linalg,median,log, exp,hstack,diff,sort
+
+    # #
+    # j,cw,sc,err,retry = leaver_needle( initial_spin, final_spin, l,m, initial_solution, tol=tol, verbose=verbose, plot=plot, spline_order=spline_order )
+
+    # ------------------------------------------------------------ #
+    # Calculate the error of the resulting spline model between the boundaries
+    # ------------------------------------------------------------ #
+    nums = 301
+    alert('Calculating the error of the resulting spline model between the boundaries',verbose=verbose)
+    lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,abs(m),STATE )  )
+    js = linspace(min(j),max(j),nums)
+    cwrspl = spline(j,cw.real,k=2)
+    cwcspl = spline(j,cw.imag,k=2)
+    scrspl = spline(j,sc.real,k=2)
+    sccspl = spline(j,sc.imag,k=2)
+    statespl = lambda J: [ cwrspl(J), cwcspl(J), scrspl(J), sccspl(J) ]
+    errs = array( [ lvrwrk(J,statespl(J)) for J in js ] )
+    pks,locs = findpeaks( log(errs) )
+    tols = exp( median( pks ) )
+
+    #
+    pks,locs = findpeaks( log(errs) )
+    tols = exp( median( pks ) )
+
+    #
+    alert('Using greedy process to refine solution',header=True)
+    from matplotlib.pyplot import plot,yscale,axvline,axhline,show,figure,figaspect,subplot
+
+    #
+    # j,cw,sc,err,retry = [ list(v) for v in [j,cw,sc,err,retry] ]
+    done = ((max(errs)/tols) < 10) or (max(errs)<1e-4)
+    print done, 'max(errs) = ',max(errs),' tols = ',tols
+    if done:
+        alert('The data seems to have no significant errors due to interpolation. Exiting.')
+    while not done:
+
+        kmax = argmax( errs )
+
+        k_right = find( j>js[kmax] )[0]
+        k_left = find( j<js[kmax] )[-1]
+
+        jr = j[k_right]
+        jl = j[k_left]
+
+
+        plot( js, errs )
+        yscale('log')
+        axvline( js[kmax], color='r' )
+        plot( j, err, 'or', mfc='none' )
+        axvline( jr, ls=':', color='k' )
+        axvline( jl, ls='--', color='k' )
+        axhline(tols,color='g')
+        show()
+
+        initial_spin = jl
+        final_spin = jr
+        initial_solution = [ cw[k_left].real, cw[k_left].imag, sc[k_left].real, sc[k_left].imag ]
+
+        j_,cw_,sc_,err_,retry_ = leaver_needle( initial_spin, final_spin, l,abs(m), initial_solution, tol=tols, verbose=verbose, spline_order=spline_order )
+
+        j,cw,sc,err,retry = [ hstack([u,v]) for u,v in [(j,j_),(cw,cw_),(sc,sc_),(err,err_),(retry,retry_)] ]
+
+        #
+        sortmask = argsort(j)
+        j,cw,sc,err,retry = [ v[sortmask] for v in j,cw,sc,err,retry ]
+        uniquemask = hstack( [array([True]),diff(j)!=0] )
+        j,cw,sc,err,retry = [ v[uniquemask] for v in j,cw,sc,err,retry ]
+
+        #
+        alert('Calculating the error of the resulting spline model between the boundaries',verbose=verbose)
+        lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,abs(m),STATE )  )
+        js = linspace(min(j),max(j),2e2)
+        js = hstack([j,js])
+        js = array(sort(js))
+        cwrspl = spline(j,cw.real,k=spline_order)
+        cwcspl = spline(j,cw.imag,k=spline_order)
+        scrspl = spline(j,sc.real,k=spline_order)
+        sccspl = spline(j,sc.imag,k=spline_order)
+        statespl = lambda J: [ cwrspl(J), cwcspl(J), scrspl(J), sccspl(J) ]
+        #
+        errs = array( [ lvrwrk(J,statespl(J)) for J in js ] )
+
+        #
+        done = max(errs)<tols
+
+        # current_j = js[k]
+        # current_state = statespl( current_j )
+        # current_cw,current_sc,current_err,current_retry = lvrsolve(current_j,l,m,current_state)
+        #
+        # j,cw,sc,err,retry = [ list(v) for v in [j,cw,sc,err,retry] ]
+        # j.append( current_j )
+        # cw.append( current_cw )
+        # sc.append( current_sc )
+        # err.append( current_err )
+        # retry.append( current_retry )
+        #
+        # sort_mask = argsort(j)
+        # j,cw,sc,err,retry = [ array(v) for v in [j,cw,sc,err,retry] ]
+        # j,cw,sc,err,retry = [ v[sort_mask] for v in [j,cw,sc,err,retry] ]
+        #
+        # cwrspl = spline(j,cw.real,k=2)
+        # cwcspl = spline(j,cw.imag,k=2)
+        # scrspl = spline(j,sc.real,k=2)
+        # sccspl = spline(j,sc.imag,k=2)
+        # statespl = lambda J: [ cwrspl(J), cwcspl(J), scrspl(J), sccspl(J) ]
+        #
+        # errs = array( [ lvrwrk(J,statespl(J)) for J in js ] )
+        #
+        # figure( figsize=2*figaspect(0.5) )
+        # subplot(1,2,1)
+        # plot( js, errs )
+        # axvline( js[k], color='r' )
+        # axhline(tol,color='b',ls='--')
+        # axhline(tols,color='g',ls='-')
+        # yscale('log')
+        # subplot(1,2,2)
+        # plot( js, cwrspl(js) )
+        # axvline( js[k], color='r' )
+        #
+        # done = max(errs)<=(tols)
+        # print 'max(errs) = ',max(errs)
+        # print 'tols = ',tols
+        # show()
+
+
+    #
+    return j,cw,sc,err,retry
 
 
 #
@@ -4029,41 +4223,65 @@ class leaver_solve_workflow:
     '''
 
     #
-    def __init__( this, initial_spin, final_spin, l, m, tol=1e-3, verbose=False, basedir=None, box_xywh=None, max_overtone=10, output=True, plot=True ):
+    def __init__( this, initial_spin, final_spin, l, m, tol=1e-3, verbose=False, basedir=None, box_xywh=None, max_overtone=2, output=True, plot=True, initial_box_res=81, spline_order=3, initialize_only=False ):
 
         #
-        this.__validate_inputs__(initial_spin, final_spin, l, m, tol, verbose, basedir, box_xywh, max_overtone, output, plot)
+        this.__validate_inputs__(initial_spin, final_spin, l, m, tol, verbose, basedir, box_xywh, max_overtone, output, plot, initial_box_res, spline_order)
 
 
         # ------------------------------------------------------------ #
         # Define a box in cw space over which to calculate QNM solutions
         # ------------------------------------------------------------ #
+        alert('Initializing leaver box',verbose=this.verbose,header=True)
         this.__initialize_leaver_box__()
 
         # ------------------------------------------------------------ #
         # Map the QNM solution space at an initial spin value
         # ------------------------------------------------------------ #
-        alert('Mapping the QNM solution space at an initial spin value',header=True)
         this.leaver_box.map( this.initial_spin )
 
         # ------------------------------------------------------------ #
-        # Map the QNM solution space at an initial spin value
+        # Let's see what's in the box
         # ------------------------------------------------------------ #
+        alert('The following QNMs have been found in the box:',header=True)
+        this.starting_solutions = { k:this.leaver_box.data[k] for k in sorted(this.leaver_box.data.keys(), key = lambda x: x[1], reverse=True ) }
+        this.sorted_mode_list = sorted(this.starting_solutions.keys(), key = lambda x: -float(x[-1])/(x[2]+1), reverse=not True )
+        for k in this.sorted_mode_list:
+            print '(l,m,n,x,p) = %s'%(str(k))
+
+        # ------------------------------------------------------------ #
+        # Plot the QNM solution space at an initial spin value
+        # ------------------------------------------------------------ #
+        alert('Plotting 2D start frame',verbose=this.verbose,header=True)
         if this.plot: this.__plot2Dframe__()
 
         #
-        for z in [(l,m,0,0,1)]: # this.leaver_box.data.keys():
+        if not initialize_only:
+            alert('Threading QNM solutions',verbose=this.verbose,header=True)
+            this.solve_all_modes()
 
-            this.solve_mode(*z)
+        #
+        alert('Done!',verbose=this.verbose,header=True)
 
-            # ------------------------------------------------------------ #
-            # Ploting
-            # ------------------------------------------------------------ #
-            if this.plot:
-                # Plot interpolation error
-                this.__plotModeSplineError__(z)
-                # Plot frequency and separation constant
-                this.__plotCWSC__(z)
+    #
+    def solve_all_modes(this):
+
+        # for z in [(this.l,this.m,0,0,1)]: # this.leaver_box.data.keys():
+        for z in this.sorted_mode_list:
+            (l,m,n,x,p) = z
+            if True:# m<0:
+
+                alert('Working: (l,m,n,x,p) = %s'%str(z),header=True)
+                this.solve_mode(*z)
+
+                # ------------------------------------------------------------ #
+                # Ploting
+                # ------------------------------------------------------------ #
+                if this.plot:
+                    # Plot interpolation error
+                    this.__plotModeSplineError__(z)
+                    # Plot frequency and separation constant
+                    this.__plotCWSC__(z)
 
 
     #
@@ -4088,7 +4306,7 @@ class leaver_solve_workflow:
         plot( this.results[z]['js'],this.results[z]['errs'] )
         axhline(this.tol,color='orange',ls='--',label='tol = %g'%this.tol)
         yscale('log'); xlabel( '$j$' )
-        xlabel( r'$\epsilon$' ); legend()
+        ylabel( r'$\epsilon$' ); legend()
         title(r'$(\ell,m,n)=(%i,%i,%i)$'%(l,m,n))
         fig_fname = ('l%im%in%i_epsilon.pdf' % (l,m,n)).replace('-','m')
         if save is None: save = this.output
@@ -4115,11 +4333,10 @@ class leaver_solve_workflow:
 
         grey = '0.9'
         n = z[2]
-        if z[4]==-1: m*=-1
         figure( figsize=3*figaspect(0.618) )
         subplot(2,2,1)
         plot( j, cw.real,'o',label='Numerical Data' )
-        plot( js, cwrspl(js), 'r',label='Cubic Spline' )
+        plot( js, cwrspl(js), 'r',label='Spline, k=%i'%this.spline_order )
         legend()
         xlabel('$j$'); ylabel(r'$\mathrm{re}\; \tilde{\omega}_{%i%i%i}$'%(l,m,n))
         grid(color=grey, linestyle='-')
@@ -4153,7 +4370,7 @@ class leaver_solve_workflow:
         # Extract box parameters
         x,y,wid,hig = this.box_xywh
         # Define the cwbox object
-        this.leaver_box = cwbox( this.l,this.m,x,y,wid,hig,res=60,maxn=this.max_overtone,verbose=this.verbose )
+        this.leaver_box = cwbox( this.l,this.m,x,y,wid,hig,res=this.initial_box_res,maxn=this.max_overtone,verbose=this.verbose )
         # Shorthand
         a = this.leaver_box
 
@@ -4165,9 +4382,10 @@ class leaver_solve_workflow:
 
         #
         if this.plot: from matplotlib.pyplot import savefig,plot,xlim,ylim,xlabel,ylabel,title,figure,gca,subplot,close,gcf,figaspect
-        from numpy import linspace,complex128,array,log,savetxt,vstack,pi,mod,cos,linalg
+        from numpy import linspace,complex128,array,log,savetxt,vstack,pi,mod,cos,linalg,sign
         from positive import spline,leaver_needle
-        import dill, pickle
+        import dill
+        import pickle
 
         #
         z = (l,m,n,x,p)
@@ -4183,20 +4401,20 @@ class leaver_solve_workflow:
         alert('Threading the solution from cwbox through parameter space',verbose=this.verbose)
         solution_cw,solution_sc = this.leaver_box.data[z]['cw'][-1],this.leaver_box.data[z]['sc'][-1]
         initial_solution = [ solution_cw.real, solution_cw.imag, solution_sc.real, solution_sc.imag ]
-        j,cw,sc,err,retry = leaver_needle( this.initial_spin, this.final_spin, this.l,this. m, initial_solution, tol=this.tol, verbose=this.verbose )
+        j,cw,sc,err,retry = leaver_needle( this.initial_spin, this.final_spin, l,abs(m), initial_solution, tol=this.tol, verbose=this.verbose, spline_order=this.spline_order )
+        j,cw,sc,err,retry = greedy_leaver_needle( j,cw,sc,err,retry, l, abs(m), plot = False, verbose=False, spline_order=this.spline_order )
         this.results[z]['j'],this.results[z]['cw'],this.results[z]['sc'],this.results[z]['err'],this.results[z]['retry'] = j,cw,sc,err,retry
 
         # ------------------------------------------------------------ #
         # Calculate the error of the resulting spline model between the boundaries
         # ------------------------------------------------------------ #
         alert('Calculating the error of the resulting spline model between the boundaries',verbose=this.verbose)
-        lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,m,STATE )  )
+        lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,abs(m),STATE )  )
         js = linspace(min(j),max(j),1e3)
-        k = 3
-        cwrspl = spline(j,cw.real,k=k)
-        cwcspl = spline(j,cw.imag,k=k )
-        scrspl = spline(j,sc.real,k=k)
-        sccspl = spline(j,sc.imag,k=k )
+        cwrspl = spline(j,cw.real,k=this.spline_order)
+        cwcspl = spline(j,cw.imag,k=this.spline_order)
+        scrspl = spline(j,sc.real,k=this.spline_order)
+        sccspl = spline(j,sc.imag,k=this.spline_order)
         statespl = lambda J: [ cwrspl(J), cwcspl(J), scrspl(J), sccspl(J) ]
         # Store spline related quantities
         this.results[z]['errs'] = array( [ lvrwrk(J,statespl(J)) for J in js ] )
@@ -4218,12 +4436,16 @@ class leaver_solve_workflow:
                                     sc.imag,
                                     err ]  ).T
 
-            fname = this.outdir+('l%im%1.0fn%i.dat'%z[:3]).replace('-','m')
+            fname = this.outdir+('l%im%1.0fn%i.txt'%z[:3]).replace('-','m')
             savetxt( fname, data_array, fmt='%18.12e', delimiter='\t\t', header=r's=-2 Kerr QNM: [ jf reMw imMw reA imA error ], 2016/2019, londonl@mit, https://github.com/llondon6/' )
+            # Save the current object
+            alert('Saving the current object using pickle',verbose=this.verbose)
+            with open( fname.replace('.txt','_splines.pickle') , 'wb') as object_file:
+                pickle.dump( {'cwreal':cwrspl,'cwimag':cwcspl,'screal':scrspl,'scimag':sccspl} , object_file, pickle.HIGHEST_PROTOCOL )
 
 
     #
-    def __validate_inputs__( this, initial_spin, final_spin, l, m, tol, verbose, basedir, box_xywh, max_overtone, output, plot ):
+    def __validate_inputs__( this, initial_spin, final_spin, l, m, tol, verbose, basedir, box_xywh, max_overtone, output, plot, initial_box_res, spline_order ):
 
         # Save inputs as properties of the current object
         alert('Found inputs:',verbose=verbose)
@@ -4251,12 +4473,15 @@ class leaver_solve_workflow:
         if this.output: this.plot = True
 
         #
+        this.spline_order = spline_order
+
+        #
         this.results = {}
 
         #
         if this.box_xywh is None:
             x = 0
-            y = -0.45
+            y = -0.5
             wid = 1.2*(m if abs(m)>0 else 1.0)
             hig = pi-1
             this.box_xywh = [x,y,wid,hig]
