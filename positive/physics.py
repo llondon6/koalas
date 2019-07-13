@@ -2729,7 +2729,7 @@ def slm(  jf,               # Dimentionless spin parameter
     if plot:
         def ploterr():
             plot_( err, '-ob',mfc='w',mec='b' )
-            gca().set_yscale("log", nonposx='clip')
+            gca().set_yscale("log", nonposy='clip')
             title( '$l = %i$, $m = %i$, $jf = %s$'%(l,m,'%1.4f'%jf if jf is not None else 'n/a') )
             ylabel('Error Estimate')
             xlabel('Iteration #')
@@ -2826,7 +2826,7 @@ def ysprod_matrix( jf, lm_space, N_theta=128, __aw_sc__=None, s=-2 ):
 
     # Import usefuls
     from positive import slm,sYlm,prod
-    from numpy import pi,linspace,trapz,sin,sqrt,zeros_like,ones
+    from numpy import pi,linspace,trapz,sin,sqrt,zeros_like,ones,conj
 
     # Validate list of l,m values
     validate_lm_list(lm_space,s=s)
@@ -2860,7 +2860,7 @@ def ysprod_matrix( jf, lm_space, N_theta=128, __aw_sc__=None, s=-2 ):
             if m==m_:
                 Sk = slm(jf,l_,m_,n_,theta,phi,norm=False,__aw_sc__=__aw_sc__)
                 s = Sk/sqrt(prod(Sk,Sk,theta))
-                ans[j,k] = prod( y,s, theta )
+                ans[j,k] = conj(prod( y,s, theta ))
             else:
                 ans[j,k] = 0
             # print (L,M),(l,m,n), ans[j,k]
@@ -2895,13 +2895,13 @@ def ys_change( spherical_basis_vector, lm_space, dimensionless_spin, N_theta=128
         return spheroidal_basis_vector
 
 #
-def calc_spheroidal_multipoles( domain_vals, spherical_multipole_dict, dimensionless_spin_series, s=-2 ):
+def calc_spheroidal_multipoles( domain_vals, spherical_multipole_dict, dimensionless_spin_series, s=-2, verbose=False ):
     '''
     Low level function to convert spherical multipole time or frequency series to spheroidal ones GIVEN the dimensionless_spin_series associated with the spacetime. This method interprets the spacetime as Kerr at all radii. All values of m in the spherical multipole dict must be identical
     '''
 
     # Import usefuls
-    from numpy import diff,array,ones_like
+    from numpy import diff,array,ones_like,mod
 
     # Collect spherical multipole indeces and sort by l
     j_space = spherical_multipole_dict.keys()
@@ -2911,7 +2911,7 @@ def calc_spheroidal_multipoles( domain_vals, spherical_multipole_dict, dimension
     j_space.sort(key=lambda X: X[0])
 
     #
-    if diff( [ j[-1] for j in j_space ] )!=0:
+    if len(set( [ j[-1] for j in j_space ] ))>1:
         error( 'all values of m in the spherical multipole dict must be identical' )
 
     #
@@ -2919,7 +2919,13 @@ def calc_spheroidal_multipoles( domain_vals, spherical_multipole_dict, dimension
     sigmas = []
 
     #
+    q=0
     for u,v in enumerate(domain_vals):
+
+        #
+        q += 1
+        if 0==mod(q,51):
+            if verbose: print '.',
 
         # Construct spherical basis vector
         spherical_basis_vector = [ spherical_multipole_dict[j][u] for j in j_space ]
@@ -3876,7 +3882,7 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
         print current_j
         print initial_solution
         print current_err
-        error('Initial solution does not satisfy the input tolerance value.')
+        warning('Current solution does not satisfy the input tolerance value.')
 
     # Determine the polynomial order to use based on the total number of points
     nn = len(j)
@@ -3947,12 +3953,17 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
                 current_j -= d2j*step_sign
                 print '** current_j = ',current_j
                 print '** boundary_spin = ',boundary_spin
-                new_d2j = min( d2j/21.0, abs( ( boundary_spin-current_j ) /21.0) )
+                new_d2j = max( min( d2j/21.0, abs( ( boundary_spin-current_j ) /21.0) ), 1e-6 )
+                if new_d2j == 1e-6:
+                    warning('Min value of d2j reached')
                 print '** new_d2j = ',new_d2j
                 current_j = current_j + new_d2j*step_sign
                 print '** new_current_j = ',current_j
                 print '** old_tol = ',tol
                 tol *= 0.01
+                if tol<1e-6:
+                    tol = 1e-6
+                    warning('Min value of tol reached')
                 print '** new_tol = ',tol
                 d2j = new_d2j
                 if not near_bounary:
@@ -3961,6 +3972,7 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
 
 
         #
+        if d2j<1e-6: d2j = 1e-6
         current_guess = guess_fit(current_j)
 
         #
@@ -3996,6 +4008,7 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
 
         if abs(current_j-boundary_spin)<1e-10:
             alert('We are close enough to the boundary to stop.')
+            print '$$ start_spin = ',j[-1]
             print '$$ boundary_spin = ',boundary_spin
             print '$$ current_j = ',current_j
             k = kmax
@@ -4085,7 +4098,7 @@ def greedy_leaver_needle( j,cw,sc,err,retry, l, m, plot = False, verbose=False, 
 
     #
     from positive import spline,leaver_needle,findpeaks
-    from numpy import array ,argmax,argsort,linspace,linalg,median,log, exp,hstack,diff,sort
+    from numpy import array ,argmax,argsort,linspace,linalg,median,log, exp,hstack,diff,sort,pi,sin
 
     # #
     # j,cw,sc,err,retry = leaver_needle( initial_spin, final_spin, l,m, initial_solution, tol=tol, verbose=verbose, plot=plot, spline_order=spline_order )
@@ -4093,10 +4106,11 @@ def greedy_leaver_needle( j,cw,sc,err,retry, l, m, plot = False, verbose=False, 
     # ------------------------------------------------------------ #
     # Calculate the error of the resulting spline model between the boundaries
     # ------------------------------------------------------------ #
-    nums = 301
+    nums = 501
     alert('Calculating the error of the resulting spline model between the boundaries',verbose=verbose)
     lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,abs(m),STATE )  )
-    js = linspace(min(j),max(j),nums)
+    # js = linspace(min(j),max(j),nums)
+    js =  sin( linspace(0,pi/2,nums) )*(max(j)-min(j)) + min(j)
     cwrspl = spline(j,cw.real,k=2)
     cwcspl = spline(j,cw.imag,k=2)
     scrspl = spline(j,sc.real,k=2)
@@ -4266,8 +4280,7 @@ class leaver_solve_workflow:
     #
     def solve_all_modes(this):
 
-        # for z in [(this.l,this.m,0,0,1)]: # this.leaver_box.data.keys():
-        for z in this.sorted_mode_list:
+        for z in [(2, -2, 2, 0, -1)]: # this.sorted_mode_list:
             (l,m,n,x,p) = z
             if True:# m<0:
 
@@ -4382,7 +4395,7 @@ class leaver_solve_workflow:
 
         #
         if this.plot: from matplotlib.pyplot import savefig,plot,xlim,ylim,xlabel,ylabel,title,figure,gca,subplot,close,gcf,figaspect
-        from numpy import linspace,complex128,array,log,savetxt,vstack,pi,mod,cos,linalg,sign
+        from numpy import linspace,complex128,array,log,savetxt,vstack,pi,mod,cos,linalg,sign,exp
         from positive import spline,leaver_needle
         import dill
         import pickle
@@ -4401,8 +4414,11 @@ class leaver_solve_workflow:
         alert('Threading the solution from cwbox through parameter space',verbose=this.verbose)
         solution_cw,solution_sc = this.leaver_box.data[z]['cw'][-1],this.leaver_box.data[z]['sc'][-1]
         initial_solution = [ solution_cw.real, solution_cw.imag, solution_sc.real, solution_sc.imag ]
-        j,cw,sc,err,retry = leaver_needle( this.initial_spin, this.final_spin, l,abs(m), initial_solution, tol=this.tol, verbose=this.verbose, spline_order=this.spline_order )
+        #
+        j,cw,sc,err,retry = leaver_needle( this.initial_spin, this.final_spin, l,abs(m), initial_solution, tol=this.tol*exp(-n), verbose=this.verbose, spline_order=this.spline_order )
+        #
         j,cw,sc,err,retry = greedy_leaver_needle( j,cw,sc,err,retry, l, abs(m), plot = False, verbose=False, spline_order=this.spline_order )
+        #
         this.results[z]['j'],this.results[z]['cw'],this.results[z]['sc'],this.results[z]['err'],this.results[z]['retry'] = j,cw,sc,err,retry
 
         # ------------------------------------------------------------ #

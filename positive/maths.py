@@ -2257,7 +2257,7 @@ def acos(X,sig=1,branch=0):
         #
         a = x + sig*det
         #
-        if (a<0) or isinstance(a,complex):
+        if (a.real<0) or isinstance(a,complex):
             ans = -1j * (  log( abs(a) ) + 1j*(angle(a) + 2*pi*branch)  )
         else:
             ans = -1j * log( a  )
