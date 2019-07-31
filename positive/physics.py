@@ -1673,14 +1673,31 @@ def leaver( jf,                     # Dimensionless BH Spin
             Mf = 1.0,               # BH mass. NOTE that the default value of 1 is consistent with the tabulated data. (Geometric units ~ M_bare / M_ADM )
             verbose = False ):      # Toggle to be verbose
 
+    #
+    from numpy import ndarray,array
+
+    #
+    if isinstance(jf,(tuple,list,ndarray)):
+        #
+     cw,sc = array( [ __leaver_helper__(jf_, l, m, n, p , s, Mf, verbose) for jf_ in jf ] )[:,:,0].T
+     return cw,sc
+    else:
+        #
+        return __leaver_helper__(jf, l, m, n, p , s, Mf, verbose)
+
+
+def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = False):
+
+
     # Import useful things
     import os
     from scipy.interpolate import InterpolatedUnivariateSpline as spline
-    from numpy import loadtxt,exp,sign,abs
+    from numpy import loadtxt,exp,sign,abs,ndarray,array
     from numpy.linalg import norm
 
     # Validate jf input: case of int given, make float. NOTE that there is further validation below.
-    if isinstance(jf,int): jf = float(jf)
+    if isinstance(jf,(int,float)): jf = [float(jf)]
+    if not isinstance(jf,ndarray): jf = array(jf)
     # Valudate s input
     if abs(s) != 2: raise ValueError('This function currently handles on cases with |s|=2, but s=%i was given.'%s)
     # Validate l input
@@ -1690,7 +1707,7 @@ def leaver( jf,                     # Dimensionless BH Spin
     # Define a parity value to be used later:
     # NOTE that is p>0, then the corotating branch will be loaded, else if p<0, then the counter-rotating solution branch will be loaded.
     if p is None:
-        p = sign(jf) + int( jf==0 )
+        p = sign(jf) + ( jf==0 )
     # NOTE that the norm of the spin input will be used to interpolate the data as the numerical data was mapped according to jf>=0
     # Given l,m,n,sign(jf) create a RELATIVE file string from which to load the data
     cmd = parent(os.path.realpath(__file__))
@@ -1709,12 +1726,12 @@ def leaver( jf,                     # Dimensionless BH Spin
     # Extract spin, frequencies and separation constants
     JF = data[:,0]
     CW = data[:,1] - 1j*data[:,2] # NOTE: The minus sign here sets a phase convention
-                                  # where exp(+1j*cw*t) rather than exp(-1j*cw*t)
+                          # where exp(+1j*cw*t) rather than exp(-1j*cw*t)
     CS = data[:,3] - 1j*data[:,4] # NOTE: There is a minus sign here to be consistent with the line above
 
     # Validate the jf input
-    njf = norm(jf) # NOTE that the calculations were done using the jf>=0 convention
-    if njf<min(JF) or njf>max(JF):
+    njf = abs(jf) # NOTE that the calculations were done using the jf>=0 convention
+    if min(njf)<min(JF) or max(njf)>max(JF):
         warning('The input value of |jf|=%1.4f is outside the domain of numerical values [%1.4f,%1.4f]. Note that the tabulated values were computed on jf>0.' % (njf,min(JF),max(JF)) )
 
     # Here we rescale to a unit mass. This is needed because leaver's convention was used to perform the initial calculations.
