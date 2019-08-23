@@ -7,7 +7,7 @@ from scipy.misc import factorial
 
 
 # Lentz's continued fration solver
-def lentz( aa, bb, tol=1e-10, tiny=1e-30, mpm=False ):
+def lentz( aa, bb, tol=1e-12, tiny=1e-30, mpm=False ):
     '''
     Lentz's method for accurate continued fraction calculation of a function
     f:
@@ -1311,11 +1311,12 @@ def spline_diff(t,y,k=3,n=1):
     '''
 
     #
+    from numpy import sum
     from scipy.interpolate import InterpolatedUnivariateSpline as spline
 
     # Calculate the desired number of derivatives
     ans = spline(t,y.real,k=k).derivative(n=n)(t) \
-          + ( 1j*spline(t,y.imag,k=k).derivative(n=n)(t) if isinstance(y[0],complex) else 0 )
+          + ( 1j*spline(t,y.imag,k=k).derivative(n=n)(t) if (sum(abs(y.imag))!=0) else 0 )
 
     return ans
 
