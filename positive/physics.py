@@ -3131,7 +3131,6 @@ class cwbox:
                              this.center[1]+this.height/2.0])     # imag max
         this.wr_range = linspace( this.limit[0], this.limit[1], res )
         this.wc_range = linspace( this.limit[2], this.limit[3], res )
-        print 'wc_range limits = ',lim(this.wc_range)
         # Set patch object for plotting. NOTE the negative sign exists here per convention
         if None is pec: pec = 'k'
         this.patch = patches.Rectangle( (min(this.limit[0:2]), min(-this.limit[2:4]) ), this.width, this.height, fill=False, edgecolor=pec, alpha=0.4, linestyle='dotted' )
@@ -4516,7 +4515,7 @@ class leaver_solve_workflow:
         #
         j,cw,sc,err,retry = leaver_needle( this.initial_spin, this.final_spin, l,abs(m), initial_solution, tol=this.tol*exp(-n), verbose=this.verbose, spline_order=this.spline_order, s=this.s )
         #
-        j,cw,sc,err,retry = greedy_leaver_needle( j,cw,sc,err,retry, l, abs(m), plot = False, verbose=False, spline_order=this.spline_order, s=this.s )
+        # j,cw,sc,err,retry = greedy_leaver_needle( j,cw,sc,err,retry, l, abs(m), plot = False, verbose=False, spline_order=this.spline_order, s=this.s )
         #
         this.results[z]['j'],this.results[z]['cw'],this.results[z]['sc'],this.results[z]['err'],this.results[z]['retry'] = j,cw,sc,err,retry
 
@@ -4524,7 +4523,7 @@ class leaver_solve_workflow:
         # Calculate the error of the resulting spline model between the boundaries
         # ------------------------------------------------------------ #
         alert('Calculating the error of the resulting spline model between the boundaries',verbose=this.verbose)
-        lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,abs(m),STATE )  )
+        lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,abs(m),STATE,s=this.s )  )
         js = linspace(min(j),max(j),1e3)
         cwrspl = spline(j,cw.real,k=this.spline_order)
         cwcspl = spline(j,cw.imag,k=this.spline_order)
@@ -4562,9 +4561,6 @@ class leaver_solve_workflow:
     #
     def __validate_inputs__( this, initial_spin, final_spin, l, m, tol, verbose, basedir, box_xywh, max_overtone, output, plot, initial_box_res, spline_order, s ):
 
-        #
-        from positive import mkdir
-
         # Save inputs as properties of the current object
         alert('Found inputs:',verbose=verbose)
         for k in dir():
@@ -4575,6 +4571,7 @@ class leaver_solve_workflow:
         # Import usefuls
         from os.path import join,expanduser
         from numpy import pi
+        from positive import mkdir
 
         # Name directories for file IO
         alert('Making output directories ...',verbose=this.verbose)
