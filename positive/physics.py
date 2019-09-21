@@ -4364,8 +4364,8 @@ class leaver_solve_workflow:
         # ------------------------------------------------------------ #
         # Plot the QNM solution space at an initial spin value
         # ------------------------------------------------------------ #
-        alert('Plotting 2D start frame',verbose=this.verbose,header=True)
-        if this.plot: this.__plot2Dframe__()
+        # alert('Plotting 2D start frame',verbose=this.verbose,header=True)
+        # if this.plot: this.__plot2Dframe__()
 
         #
         if not initialize_only:
