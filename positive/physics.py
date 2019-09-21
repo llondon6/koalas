@@ -4562,6 +4562,9 @@ class leaver_solve_workflow:
     #
     def __validate_inputs__( this, initial_spin, final_spin, l, m, tol, verbose, basedir, box_xywh, max_overtone, output, plot, initial_box_res, spline_order, s ):
 
+        #
+        from positive import mkdir
+
         # Save inputs as properties of the current object
         alert('Found inputs:',verbose=verbose)
         for k in dir():
