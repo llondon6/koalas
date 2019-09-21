@@ -2245,13 +2245,20 @@ def mass_ratio_convention_sort(m1,m2,chi1,chi2):
 
 # Equation 27 of Leaver '86
 # Characteristic Eqn for Spheroidal Radial Functions
-def leaver27( a, l, m, w, A, s=-2.0, vec=False, mpm=False, **kwargs ):
+def leaver27( a, l, m, w, A, s=-2.0, vec=False, mpm=False, adjoint=False, tol=1e-10, **kwargs ):
 
     '''
     Equation 27 of Leaver '86
     Characteristic Eqn for Spheroidal Radial Functions
     - LLondon
     '''
+
+    from numpy import complex256 as dtyp
+
+    # Enforce Data Type
+    a = dtyp(a)
+    w = dtyp(w)
+    A = dtyp(A)
 
     #
     pmax = 5e2
@@ -2262,7 +2269,7 @@ def leaver27( a, l, m, w, A, s=-2.0, vec=False, mpm=False, **kwargs ):
     else:
         from numpy import sqrt
 
-    global c0, c1, c2, c3, c4, Alpha, Beta, Gamma, l_min
+    # global c0, c1, c2, c3, c4, Alpha, Beta, Gamma, l_min
 
     #
     l_min = l-max(abs(m),abs(s)) # VERY IMPORTANT
@@ -2282,6 +2289,10 @@ def leaver27( a, l, m, w, A, s=-2.0, vec=False, mpm=False, **kwargs ):
                     + (2.0+b)*1j*w - A + ((4.0*w+2.0j)/b) * c_param
     c4    =         s + 1.0 - 2.0*w*w - (2.0*s+3.0)*1j*w - ((4.0*w+2.0*1j)/b)*c_param
 
+    # If the related equations for the adjoint radial operator are requested, take conjugates
+    if adjoint:
+        c0,c1,c2,c3,c4 = [ q.conj() for q in (c0,c1,c2,c3,c4) ]
+
     Alpha = lambda k:	k*k + (c0+1)*k + c0
     Beta  = lambda k:   -2.0*k*k + (c1+2.0)*k + c3
     Gamma = lambda k:	k*k + (c2-3.0)*k + c4 - c2 + 2.0
@@ -2294,7 +2305,7 @@ def leaver27( a, l, m, w, A, s=-2.0, vec=False, mpm=False, **kwargs ):
     #
     aa = lambda p:   -Alpha(p-1.0+l_min)*Gamma(p+l_min)
     bb = lambda p:   Beta(p+l_min)
-    u,state = lentz(aa,bb)
+    u,state = lentz(aa,bb,tol)
     u = Beta(l_min) - u
 
     #
@@ -2308,7 +2319,7 @@ def leaver27( a, l, m, w, A, s=-2.0, vec=False, mpm=False, **kwargs ):
 
 # Equation 21 of Leaver '86
 # Characteristic Eqn for Spheroidal Angular Functions
-def leaver21( a, l, m, w, A, s=-2.0, vec=False, **kwargs ):
+def leaver21( a, l, m, w, A, s=-2.0, vec=False, adjoint=False,tol=1e-10, **kwargs ):
     '''
     Equation 21 of Leaver '86
     Characteristic Eqn for Spheroidal Angular Functions
@@ -2318,7 +2329,7 @@ def leaver21( a, l, m, w, A, s=-2.0, vec=False, **kwargs ):
     #
     pmax = 5e2
 
-    global k1, k2, alpha, beta, gamma, l_min
+    # global k1, k2, alpha, beta, gamma, l_min
 
     #
     l_min = l-max(abs(m),abs(s)) # VERY IMPORTANT
@@ -2328,6 +2339,10 @@ def leaver21( a, l, m, w, A, s=-2.0, vec=False, **kwargs ):
     # ------------------------------------------------ #
     k1 = 0.5*abs(m-s)
     k2 = 0.5*abs(m+s)
+
+    # If the related equations for the adjoint angular operator are requested, take conjugates
+    if adjoint:
+        w,A = w.conj(),A.conj()
 
     aw=a*w
     alpha = lambda k:	-2.0 * (k+1.0) * (k+2.0*k1+1.0)
@@ -2345,7 +2360,7 @@ def leaver21( a, l, m, w, A, s=-2.0, vec=False, **kwargs ):
     #
     aa = lambda p: -alpha(p-1.0+l_min)*gamma(p+l_min)
     bb = lambda p: beta(p+l_min)
-    u,state = lentz(aa,bb)
+    u,state = lentz(aa,bb,tol)
     u = beta(l_min) - u
 
     #
@@ -2358,7 +2373,7 @@ def leaver21( a, l, m, w, A, s=-2.0, vec=False, **kwargs ):
 
 
 # Work function for QNM solver
-def leaver_workfunction( j, l, m, state, s=-2, mpm=False ):
+def leaver_workfunction( j, l, m, state, s=-2, mpm=False, adjoint=False, tol=1e-10, use21=True, use27=True ):
     '''
     work_function_to_zero = leaver( state )
 
@@ -2387,11 +2402,27 @@ def leaver_workfunction( j, l, m, state, s=-2, mpm=False ):
         ceigenval = dtyp(state[2]) + 1.0j*dtyp(state[3])
 
     # concat list outputs
-    x = leaver21(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm) +  leaver27(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm)
+    #print adjoint
+
+    x = leaver21(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,adjoint=adjoint,tol=tol) +  leaver27(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,adjoint=adjoint,tol=tol)
+
+    x = []
+    if use21:
+        x += leaver21(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,adjoint=adjoint,tol=tol)
+    if use27:
+        x += leaver27(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,adjoint=adjoint,tol=tol)
+    if not x:
+        error('use21 or/and use27 must be true')
+
+    # print 'x = ',x
 
     #
     x = [ complex128(e) for e in x ]
     # print x
+
+    if s!=2:
+        alert('s=%i'%s)
+        error('something is off with spin weight propogation')
 
     #
     return x
@@ -2404,7 +2435,7 @@ def leaver_workfunction( j, l, m, state, s=-2, mpm=False ):
 # * Proc. R. Soc. Lond. A-1977-Breuer-71-86
 # * E_Seidel_1989_Class._Quantum_Grav._6_012
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
-def scberti(c,          # dimensionless cw*jf
+def scberti(acw,          # dimensionless cw*jf
             l,m,s=-2):
 
     '''
@@ -2412,9 +2443,9 @@ def scberti(c,          # dimensionless cw*jf
     '''
 
     #
-    from numpy import zeros,array
+    from numpy import zeros,array,sum
 
-    # NOTE that the input here is c = jf*complex_w
+    # NOTE that the input here is acw = jf*complex_w
     f = zeros((6,),dtype='complex128')
 
     #
@@ -2446,18 +2477,20 @@ def scberti(c,          # dimensionless cw*jf
     '''
 
     # Calcualate the series sum, and return output
-    return sum( f * array([ c**k for k in range(len(f)) ]) )
+    return sum( array([ f[k] * acw**k for k in range(len(f)) ]) )
 
 
 
 #
-def prod(A,B,TH):
+def prod(A,B,TH,WEIGHT_FUNCTION=None):
     from numpy import sin,pi
-    INTGRND = A.conj()*B*sin(TH)
+    if WEIGHT_FUNCTION is None:
+        WEIGHT_FUNCTION = 2*pi*sin(TH)
+    INTGRND = A.conj()*B*WEIGHT_FUNCTION
     RE_INTGRND = INTGRND.real
     IM_INTGRND = INTGRND.imag
     TH0,TH1 = lim(TH)
-    return (2*pi)*(  spline(TH,RE_INTGRND).integral(TH0,TH1) + 1j*spline(TH,IM_INTGRND).integral(TH0,TH1)  )
+    return spline(TH,RE_INTGRND).integral(TH0,TH1) + 1j*spline(TH,IM_INTGRND).integral(TH0,TH1)
 
 # ------------------------------------------------------------------ #
 # Calculate the inner-product between a spherical and spheroidal harmonic
@@ -2512,11 +2545,53 @@ def ysprod( jf,
 
     return ans
 
+
 # ------------------------------------------------------------------ #
 # Calculate inner product of two spheroidal harmonics at a a given spin
 # NOTE that this inner product does not rescale the spheroidal functions so that the spherical normalization is recovered
 # ------------------------------------------------------------------ #
-def ssprod( jf, z1, z2, verbose=False, N=2**9 ):
+def ssprod(jf, z1, z2, N=2**8,verbose=False):
+
+    '''
+    To be used outside of slm for general calculation of inner-products. This is NOT the function slm uses to normalize the spheroidal harmonics.
+    '''
+
+    #
+    from positive import prod
+    from numpy import linspace,pi,sqrt
+
+    #
+    l1,m1,n1 = z1
+    l2,m2,n2 = z2
+
+    #
+    if m1 == m2 :
+        th, phi = pi*linspace(0,1,N), 0
+        s1 = slm( jf, l1, m1, n1, th, phi, norm=False, __rescale__=False )
+        s2 = slm( jf, l2, m2, n2, th, phi, norm=False, __rescale__=False ) if (l2,m2,n2) != (l1,m1,n1) else s1
+        #
+        c1 = sqrt( prod(s1,s1,th) )
+        c2 = sqrt( prod(s2,s2,th) )
+        # c1 = 1.0
+        # c2 = 1.0
+        s1_ = s1/c1
+        s2_ = s2/c2
+        #
+        ans = prod(s1_,s2_,th)
+    else:
+        ans = 0
+
+    return ans
+
+
+# ------------------------------------------------------------------ #
+# Calculate inner product of two spheroidal harmonics at a a given spin
+# NOTE that this inner product does not rescale the spheroidal functions so that the spherical normalization is recovered
+# ------------------------------------------------------------------ #
+def internal_ssprod( jf, z1, z2, verbose=False, N=2**9 ):
+    '''
+    To be used by slm to normalize output
+    '''
 
     #
     from numpy import linspace,trapz,array,pi,sin
@@ -2564,7 +2639,7 @@ def slpm( jf,               # Dimentionless spin parameter
     #
     from positive import red
     from kerr import leaver as lvr
-    from kerr import rgb,lim,leaver_workfunction,cyan,alert,pylim,sYlm,error,ssprod
+    from kerr import rgb,lim,leaver_workfunction,cyan,alert,pylim,sYlm,error,internal_ssprod
     from numpy import complex256, cos, ones, mean, isinf, pi, exp, array, ndarray, unwrap, angle, linalg, sqrt, linspace, sin, float128
     from scipy.misc import factorial as f
     from scipy.integrate import trapz
@@ -2650,7 +2725,7 @@ def slpm( jf,               # Dimentionless spin parameter
             # Scale such that spherical counterpart is normalized
             C /= ysprod(jf,l,m,z)
         else:
-            C /= sqrt( ssprod(jf,z,z) )
+            C /= sqrt( internal_ssprod(jf,z,z) )
 
 
     # the sum part
@@ -2660,7 +2735,7 @@ def slpm( jf,               # Dimentionless spin parameter
     k = 1
     kmax = 5e3
     err,yy = [],[]
-    et2=1e-8
+    et2=1e-10
     max_a = max(abs(array([a0,a1])))
     while not done:
         k += 1
@@ -2728,7 +2803,7 @@ def slm(  jf,               # Dimentionless spin parameter
     # from kerr.formula.ksm2_slm_norm import CC as normcfit
     # from kerr.formula.ksm2_sc import SC as scfit
     # from kerr.formula.ksm2_cw import CW as cwfit
-    from positive import rgb,lim,leaver_workfunction,cyan,alert,pylim,sYlm,error,ssprod
+    from positive import rgb,lim,leaver_workfunction,cyan,alert,pylim,sYlm,error,internal_ssprod
     from numpy import complex256,cos,ones,mean,isinf,pi,exp,array,ndarray,unwrap,angle,linalg,sqrt,linspace,sin,float128
     from matplotlib.pyplot import subplot,gca,xlabel,ylabel,xlim,ylim,title,figure,sca
     from matplotlib.pyplot import plot as plot_
@@ -2995,13 +3070,14 @@ class cwbox:
                  verbose = False,   # be verbose
                  maxn = None,       # Overtones with n>maxn will be actively ignored. NOTE that by convention n>=0.
                  smallboxes = True, # Toggle for using small boxes for new solutions
+                 s = -2,            # Spin weight
                  **kwargs ):
         #
         from numpy import array,complex128,meshgrid,float128
         #
         this.verbose,this.res = verbose,res
         # Store QNM ideces
-        this.l,this.m = l,m
+        this.l,this.m,this.s = l,m,s
         # Set box params
         this.width,this.height = None,None
         this.setboxprops(cwr,cwc,wid,hig,res,sc=sc)
@@ -3055,6 +3131,7 @@ class cwbox:
                              this.center[1]+this.height/2.0])     # imag max
         this.wr_range = linspace( this.limit[0], this.limit[1], res )
         this.wc_range = linspace( this.limit[2], this.limit[3], res )
+        print 'wc_range limits = ',lim(this.wc_range)
         # Set patch object for plotting. NOTE the negative sign exists here per convention
         if None is pec: pec = 'k'
         this.patch = patches.Rectangle( (min(this.limit[0:2]), min(-this.limit[2:4]) ), this.width, this.height, fill=False, edgecolor=pec, alpha=0.4, linestyle='dotted' )
@@ -3238,7 +3315,7 @@ class cwbox:
             # use the box center for refined minimization
             CW = complex128( this.center[0] + 1j*this.center[1] )
             # SC = this.__sc__
-            SC = scberti( CW*jf, this.l, this.m )
+            SC = scberti( CW*jf, this.l, this.m, s=this.s )
             state = [ CW.real,CW.imag, SC.real,SC.imag ]
 
             #
@@ -3327,7 +3404,7 @@ class cwbox:
                 # Determine the resolution of the new box
                 res = int( max( 20, 1.5*float(this.res)/num_solutions ) )
                 # Create the new child. NOTE that the child's dimensions will be set below using a standard method.
-                child = cwbox( this.l,this.m,wr,wc,0,0, res, parent=this, sc=sc, verbose=this.verbose )
+                child = cwbox( this.l,this.m,wr,wc,0,0, res, parent=this, sc=sc, verbose=this.verbose,s=this.s )
                 # Add the new box to the current box's child list
                 this.children.append( child )
 
@@ -3378,7 +3455,7 @@ class cwbox:
         #
         from numpy import linalg,array
         from kerr import alert,yellow,cyan,blue,magenta
-        tol = 1e-5
+        tol = 1e-6
 
         #
         if not this.isfundamental():
@@ -3392,6 +3469,9 @@ class cwbox:
                 for b,tim in enumerate( children ):
                     if b>a:
                         if linalg.norm(array(tom.center)-array(tim.center)) < tol:
+                            if this.verbose:
+                                msg = 'Removing overtone '+yellow('%s'%list(tim.__label__))+' becuase it has a twin.'
+                                alert(msg,'validatechildren')
                             tim.parent.children.remove(tim)
                             del tim
                             break
@@ -3518,9 +3598,9 @@ class cwbox:
                 if fullopt is False:
 
                     # Define the intermediate work function to be used for this iteration
-                    fun = lambda SC: linalg.norm( array(leaver_workfunction( jf,this.l,this.m, [cw.real,cw.imag,SC[0],SC[1]] )) )
+                    fun = lambda SC: linalg.norm( array(leaver_workfunction( jf,this.l,this.m, [cw.real,cw.imag,SC[0],SC[1]], s=this.s )) )
                     # For this complex frequency, optimize over separation constant using initial guess
-                    SC0_= scberti( cw*jf, this.l, this.m ) # Use Berti's analytic prediction as a guess
+                    SC0_= scberti( cw*jf, this.l, this.m,s=this.s ) # Use Berti's analytic prediction as a guess
                     SC0 = [SC0_.real,SC0_.imag]
                     # Store work function value
                     x[j][i] = fun(SC0)
@@ -3529,10 +3609,10 @@ class cwbox:
 
                 else:
 
-                    SC0_= scberti( cw*jf, this.l, this.m ) # Use Berti's analytic prediction as a guess
+                    SC0_= scberti( cw*jf, this.l, this.m, s=this.s ) # Use Berti's analytic prediction as a guess
                     SC0 = [SC0_.real,SC0_.imag,0,0]
                     #cfun = lambda Y: [ Y[0]+abs(Y[3]), Y[1]+abs(Y[2]) ]
-                    fun = lambda SC:leaver_workfunction( jf,this.l,this.m, [cw.real,cw.imag,SC[0],SC[1]] )
+                    fun = lambda SC:leaver_workfunction( jf,this.l,this.m, [cw.real,cw.imag,SC[0],SC[1]], s=this.s )
                     X  = root( fun, SC0 )
                     scgrid[j][i] = X.x[0]+1j*X.x[1]
                     x[j][i] = linalg.norm( array(X.fun) )
@@ -3608,8 +3688,8 @@ class cwbox:
             guess2 = [ cw.real, cw.imag, sc.real, sc.imag ]
         # Determine the best guess
         if not ( allclose(guess1,guess2) ):
-            x1 = linalg.norm( leaver_workfunction( jf,this.l,this.m, guess1 ) )
-            x2 = linalg.norm( leaver_workfunction( jf,this.l,this.m, guess2 ) )
+            x1 = linalg.norm( leaver_workfunction( jf,this.l,this.m, guess1, s=this.s ) )
+            x2 = linalg.norm( leaver_workfunction( jf,this.l,this.m, guess2, s=this.s ) )
             alert(magenta('The function value at guess from grid is:   %s'%x1),'guess')
             alert(magenta('The function value at guess from extrap is: %s'%x2),'guess')
             if x2 is nan:
@@ -3621,7 +3701,7 @@ class cwbox:
                 guess = guess2
                 alert(magenta('Using the guess from extrapolation.'),'guess')
         else:
-            x1 = linalg.norm( leaver_workfunction( jf,this.l,this.m, guess1 ) )
+            x1 = linalg.norm( leaver_workfunction( jf,this.l,this.m, guess1, s=this.s ) )
             guess = guess1
             alert(magenta('The function value at guess from grid is %s'%x1),'guess')
 
@@ -3662,7 +3742,7 @@ class cwbox:
 
         # Try using root
         # Define the intermediate work function to be used for this iteration
-        fun = lambda STATE: log( 1.0 + abs(array(leaver_workfunction( jf,this.l,this.m, STATE ))) )
+        fun = lambda STATE: log( 1.0 + abs(array(leaver_workfunction( jf,this.l,this.m, STATE, s=this.s ))) )
         X  = root( fun, guess, tol=tol )
         cw1,sc1 = X.x[0]+1j*X.x[1], X.x[2]+1j*X.x[3]
         __lvrfmin1__ = linalg.norm(array( exp(X.fun)-1.0 ))
@@ -3671,7 +3751,7 @@ class cwbox:
 
         # Try using fmin
         # Define the intermediate work function to be used for this iteration
-        fun = lambda STATE: log(linalg.norm(  leaver_workfunction( jf,this.l,this.m, STATE )  ))
+        fun = lambda STATE: log(linalg.norm(  leaver_workfunction( jf,this.l,this.m, STATE, s=this.s )  ))
         X  = fmin( fun, guess, disp=False, full_output=True, ftol=tol )
         cw2,sc2 = X[0][0]+1j*X[0][1], X[0][2]+1j*X[0][3]
         __lvrfmin2__ = exp(X[1])
@@ -3715,7 +3795,7 @@ class cwbox:
         from kerr import alert,red,warning,error
 
         #
-        fun = lambda JF: linalg.norm(  leaver_workfunction( JF,this.l,this.m, solution )  )
+        fun = lambda JF: linalg.norm(  leaver_workfunction( JF,this.l,this.m, solution, s=this.s )  )
 
         f0 = fun( jf )
         djf = 1e-6
@@ -3803,10 +3883,12 @@ class cwbox:
 
 
 
-
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+'''Functions for calculating QNM freuqncies parameterized by BH spin'''
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
 
 # Try solving the 4D equation near a single guess value [ cw.real cw.imag sc.real sc.imag ]
-def lvrsolve(jf,l,m,guess,tol=1e-8):
+def lvrsolve(jf,l,m,guess,tol=1e-8,s=-2):
 
     '''
     Low-level function for numerically finding the root of leaver's equations
@@ -3819,7 +3901,7 @@ def lvrsolve(jf,l,m,guess,tol=1e-8):
 
     # Try using root
     # Define the intermediate work function to be used for this iteration
-    fun = lambda STATE: log( 1.0 + abs(array(leaver_workfunction( jf,l,m, STATE ))) )
+    fun = lambda STATE: log( 1.0 + abs(array(leaver_workfunction( jf,l,m, STATE, s ))) )
     X  = root( fun, guess, tol=tol )
     cw1,sc1 = X.x[0]+1j*X.x[1], X.x[2]+1j*X.x[3]
     __lvrfmin1__ = linalg.norm(array( exp(X.fun)-1.0 ))
@@ -3828,7 +3910,7 @@ def lvrsolve(jf,l,m,guess,tol=1e-8):
 
     # Try using fmin
     # Define the intermediate work function to be used for this iteration
-    fun = lambda STATE: log(linalg.norm(  leaver_workfunction( jf,l,m, STATE )  ))
+    fun = lambda STATE: log(linalg.norm(  leaver_workfunction( jf,l,m, STATE, s )  ))
     X  = fmin( fun, guess, disp=False, full_output=True, ftol=tol )
     cw2,sc2 = X[0][0]+1j*X[0][1], X[0][2]+1j*X[0][3]
     __lvrfmin2__ = exp(X[1])
@@ -3857,7 +3939,7 @@ def lvrsolve(jf,l,m,guess,tol=1e-8):
 
 
 # Extrapolative guess for gravitational perturbations. This function is best used within leaver_needle which solves leaver's equations for a range of spin values.
-def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1, verbose=False, plot=False, spline_order=3, monotomic_steps=False, boundary_spin=None ):
+def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1, verbose=False, plot=False, spline_order=3, monotomic_steps=False, boundary_spin=None, s=-2 ):
 
     '''
     Extrapolative guess for gravitational perturbations. This function is best used within leaver_needle which solves leaver's equations for a range of spin values.
@@ -3889,7 +3971,7 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
     initial_solution = [ cw[-1].real, cw[-1].imag, sc[-1].real, sc[-1].imag ]
 
     #
-    lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,m,STATE )  )
+    lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,m,STATE,s )  )
 
     # Make sure that starting piont satisfies the tolerance
     current_err = best_err = lvrwrk( current_j, initial_solution )
@@ -4038,7 +4120,7 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
 
 
 # Solve leaver's equations between two spin values given a solution at a starting point
-def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, initial_d2spin=1e-3, plot = False,verbose=False, use_feedback=True, spline_order=3 ):
+def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, initial_d2spin=1e-3, plot = False,verbose=False, use_feedback=True, spline_order=3, s=-2 ):
 
     '''
     Given an initial location and realted solution in the frequency-separation constant space,
@@ -4072,7 +4154,7 @@ def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, i
     while not done :
 
         #
-        current_j,current_guess,exit_code = leaver_extrap_guess( j, cw, sc, l, m, tol=tol, d2j=d2j, step_sign=step_sign, verbose=False, plot=plot, spline_order=spline_order, boundary_spin=final_spin )
+        current_j,current_guess,exit_code = leaver_extrap_guess( j, cw, sc, l, m, tol=tol, d2j=d2j, step_sign=step_sign, verbose=False, plot=plot, spline_order=spline_order, boundary_spin=final_spin,s=s )
         if (current_j == j[-1]) and (exit_code!=1):
             # If there has been no spin, then divinde the extrap step size by internal_res.
             # Here we use internal_res as a resolution heuristic.
@@ -4091,7 +4173,7 @@ def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, i
             d2j = abs(j[-1]-j[-2])/internal_res
             # if verbose: print 'j = ',j
             if verbose: print 'd2j = ',d2j
-            current_cw,current_sc,current_err,current_retry = lvrsolve(current_j,l,m,current_guess)
+            current_cw,current_sc,current_err,current_retry = lvrsolve(current_j,l,m,current_guess,s=s)
             if verbose: print k,current_j,current_cw,current_sc,current_err,current_retry
             cw.append( current_cw )
             sc.append( current_sc )
@@ -4111,7 +4193,7 @@ def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, i
     return j,cw,sc,err,retry
 
 #
-def greedy_leaver_needle( j,cw,sc,err,retry, l, m, plot = False, verbose=False, spline_order=3 ):
+def greedy_leaver_needle( j,cw,sc,err,retry, l, m, plot = False, verbose=False, spline_order=3, s=-2 ):
 
     #
     from positive import spline,leaver_needle,findpeaks
@@ -4125,7 +4207,7 @@ def greedy_leaver_needle( j,cw,sc,err,retry, l, m, plot = False, verbose=False, 
     # ------------------------------------------------------------ #
     nums = 501
     alert('Calculating the error of the resulting spline model between the boundaries',verbose=verbose)
-    lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,abs(m),STATE )  )
+    lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,abs(m),STATE,s=s )  )
     # js = linspace(min(j),max(j),nums)
     js =  sin( linspace(0,pi/2,nums) )*(max(j)-min(j)) + min(j)
     cwrspl = spline(j,cw.real,k=2)
@@ -4175,7 +4257,7 @@ def greedy_leaver_needle( j,cw,sc,err,retry, l, m, plot = False, verbose=False, 
         final_spin = jr
         initial_solution = [ cw[k_left].real, cw[k_left].imag, sc[k_left].real, sc[k_left].imag ]
 
-        j_,cw_,sc_,err_,retry_ = leaver_needle( initial_spin, final_spin, l,abs(m), initial_solution, tol=tols, verbose=verbose, spline_order=spline_order )
+        j_,cw_,sc_,err_,retry_ = leaver_needle( initial_spin, final_spin, l,abs(m), initial_solution, tol=tols, verbose=verbose, spline_order=spline_order,s=s )
 
         j,cw,sc,err,retry = [ hstack([u,v]) for u,v in [(j,j_),(cw,cw_),(sc,sc_),(err,err_),(retry,retry_)] ]
 
@@ -4187,7 +4269,7 @@ def greedy_leaver_needle( j,cw,sc,err,retry, l, m, plot = False, verbose=False, 
 
         #
         alert('Calculating the error of the resulting spline model between the boundaries',verbose=verbose)
-        lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,abs(m),STATE )  )
+        lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,abs(m),STATE,s=s )  )
         js = linspace(min(j),max(j),2e2)
         js = hstack([j,js])
         js = array(sort(js))
@@ -4254,10 +4336,10 @@ class leaver_solve_workflow:
     '''
 
     #
-    def __init__( this, initial_spin, final_spin, l, m, tol=1e-3, verbose=False, basedir=None, box_xywh=None, max_overtone=2, output=True, plot=True, initial_box_res=81, spline_order=3, initialize_only=False ):
+    def __init__( this, initial_spin, final_spin, l, m, tol=1e-3, verbose=False, basedir=None, box_xywh=None, max_overtone=6, output=True, plot=True, initial_box_res=81, spline_order=3, initialize_only=False, s=-2 ):
 
         #
-        this.__validate_inputs__(initial_spin, final_spin, l, m, tol, verbose, basedir, box_xywh, max_overtone, output, plot, initial_box_res, spline_order)
+        this.__validate_inputs__(initial_spin, final_spin, l, m, tol, verbose, basedir, box_xywh, max_overtone, output, plot, initial_box_res, spline_order, s)
 
 
         # ------------------------------------------------------------ #
@@ -4400,7 +4482,7 @@ class leaver_solve_workflow:
         # Extract box parameters
         x,y,wid,hig = this.box_xywh
         # Define the cwbox object
-        this.leaver_box = cwbox( this.l,this.m,x,y,wid,hig,res=this.initial_box_res,maxn=this.max_overtone,verbose=this.verbose )
+        this.leaver_box = cwbox( this.l,this.m,x,y,wid,hig,res=this.initial_box_res,maxn=this.max_overtone,verbose=this.verbose,s=this.s )
         # Shorthand
         a = this.leaver_box
 
@@ -4432,9 +4514,9 @@ class leaver_solve_workflow:
         solution_cw,solution_sc = this.leaver_box.data[z]['cw'][-1],this.leaver_box.data[z]['sc'][-1]
         initial_solution = [ solution_cw.real, solution_cw.imag, solution_sc.real, solution_sc.imag ]
         #
-        j,cw,sc,err,retry = leaver_needle( this.initial_spin, this.final_spin, l,abs(m), initial_solution, tol=this.tol*exp(-n), verbose=this.verbose, spline_order=this.spline_order )
+        j,cw,sc,err,retry = leaver_needle( this.initial_spin, this.final_spin, l,abs(m), initial_solution, tol=this.tol*exp(-n), verbose=this.verbose, spline_order=this.spline_order, s=this.s )
         #
-        j,cw,sc,err,retry = greedy_leaver_needle( j,cw,sc,err,retry, l, abs(m), plot = False, verbose=False, spline_order=this.spline_order )
+        j,cw,sc,err,retry = greedy_leaver_needle( j,cw,sc,err,retry, l, abs(m), plot = False, verbose=False, spline_order=this.spline_order, s=this.s )
         #
         this.results[z]['j'],this.results[z]['cw'],this.results[z]['sc'],this.results[z]['err'],this.results[z]['retry'] = j,cw,sc,err,retry
 
@@ -4478,7 +4560,7 @@ class leaver_solve_workflow:
 
 
     #
-    def __validate_inputs__( this, initial_spin, final_spin, l, m, tol, verbose, basedir, box_xywh, max_overtone, output, plot, initial_box_res, spline_order ):
+    def __validate_inputs__( this, initial_spin, final_spin, l, m, tol, verbose, basedir, box_xywh, max_overtone, output, plot, initial_box_res, spline_order, s ):
 
         # Save inputs as properties of the current object
         alert('Found inputs:',verbose=verbose)
@@ -4495,9 +4577,10 @@ class leaver_solve_workflow:
         alert('Making output directories ...',verbose=this.verbose)
         if this.basedir is None: this.basedir = ''
         this.basedir = expanduser(this.basedir)
-        this.outdir = ( join( this.basedir,'./l%im%i/' % (l,abs(m))) )
+        this.outdir = ( join( this.basedir,'./s%il%im%i/' % (s,l,abs(m))) ).replace('-','m')
         if this.outdir[-1] is not '/': this.outdir += '/'
         this.frm_outdir = this.outdir+'frames/'
+        this.s = s
         # Make directories if needed
         mkdir(this.outdir,rm = True,verbose=this.verbose)  # Make the directory if it doesnt already exist and remove the directory if it already exists. Dont remove if there is checkpint data.
         mkdir(this.frm_outdir,verbose=this.verbose)
@@ -4520,3 +4603,30 @@ class leaver_solve_workflow:
             this.box_xywh = [x,y,wid,hig]
             alert('Using default parameter space box for starting spin.',verbose=this.verbose)
             alert('this.box_xywh = %s'%(str(this.box_xywh)),verbose=this.verbose)
+
+
+#
+def tkangular( S, theta, acw, m, s=-2, separation_constant=0  ):
+    '''
+    Apply Teukolsy's angular operator to input
+    '''
+    #
+    from numpy import sin, cos
+    #
+    zero = 1e-10
+    theta[theta==0]=zero
+    A = separation_constant
+    #
+    sn = sin(theta)
+    cs = cos(theta)
+    #
+    dS = spline_diff(theta,S)
+    d2S = spline_diff( sn * dS ) / sn
+    #
+    mscs = m+s*cs
+    acwcs = acw*cs
+    VS = (  -mscs*mscs/(sn*sn) + s + acwcs*( acwcs - 2*s ) + A  ) * S
+    #
+    ans = d2S + VS
+    #
+    return ans

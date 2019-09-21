@@ -5,9 +5,65 @@ from positive import *
 from scipy.misc import factorial
 
 
+'''
+Useful Method for estimating QNM locations in leaver solution space: Estimate the
+local minima of a 2D array
+'''
+def localmins(arr,edge_ignore=False):
+
+    import numpy as np
+    import scipy.ndimage.filters as filters
+    import scipy.ndimage.morphology as morphology
+
+    # http://stackoverflow.com/questions/3684484/peak-detection-in-a-2d-array/3689710#3689710
+    """
+    Takes an array and detects the troughs using the local maximum filter.
+    Returns a boolean mask of the troughs (i.e. 1 when
+    the pixel's value is the neighborhood maximum, 0 otherwise)
+    """
+    # define an connected neighborhood
+    # http://www.scipy.org/doc/api_docs/SciPy.ndimage.morphology.html#generate_binary_structure
+    neighborhood = morphology.generate_binary_structure(len(arr.shape),2)
+    # apply the local minimum filter; all locations of minimum value
+    # in their neighborhood are set to 1
+    # http://www.scipy.org/doc/api_docs/SciPy.ndimage.filters.html#minimum_filter
+    local_min = (filters.minimum_filter(arr, footprint=neighborhood)==arr)
+    # local_min is a mask that contains the peaks we are
+    # looking for, but also the background.
+    # In order to isolate the peaks we must remove the background from the mask.
+    #
+    # we create the mask of the background
+    background = (arr==0)
+    #
+    # a little technicality: we must erode the background in order to
+    # successfully subtract it from local_min, otherwise a line will
+    # appear along the background border (artifact of the local minimum filter)
+    # http://www.scipy.org/doc/api_docs/SciPy.ndimage.morphology.html#binary_erosion
+    eroded_background = morphology.binary_erosion(
+        background, structure=neighborhood, border_value=1)
+    #
+    # we obtain the final mask, containing only peaks,
+    # by removing the background from the local_min mask
+    detected_minima = local_min ^ eroded_background
+    # detected_minima = local_min - eroded_background
+    __localmin__ =  list( np.where(detected_minima) )
+
+    # Option: Ignore mins on domain boundaries
+    if edge_ignore:
+        isonedge0 =  lambda x: (x==0) or (x==(len(arr[:,0])-1))
+        isonedge1 =  lambda x: (x==0) or (x==(len(arr[0,:])-1))
+        mask = np.ones( __localmin__[0].shape, dtype=bool )
+        for k in range(len(__localmin__[0])):
+            mask[k] = not ( isonedge0( __localmin__[0][k] ) or isonedge1( __localmin__[1][k] ) )
+        __localmin__[0] = __localmin__[0][mask]
+        __localmin__[1] = __localmin__[1][mask]
+
+    #
+    return __localmin__
+
 
 # Lentz's continued fration solver
-def lentz( aa, bb, tol=1e-12, tiny=1e-30, mpm=False ):
+def lentz( aa, bb, tol=1e-10, tiny=1e-30, mpm=False ):
     '''
     Lentz's method for accurate continued fraction calculation of a function
     f:
