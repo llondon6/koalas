@@ -1661,6 +1661,34 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
 ###
 
 
+def leaver_dev( a, l, m, n, s, M=1.0, verbose=False, solve=False ):
+
+    # Import usefuls
+    from numpy import ndarray,array
+
+    # Validate inputs
+
+
+    # construct string for loading data
+
+    # Define function to handle single spin and mass values
+    def helper( a, l, m, n, s, M, verbose, solve ):
+
+        # If requested, use loaded data as guess for full solver
+
+        # Return answer for single spin value
+        return (cw,sc)
+
+    #
+    if isinstance(jf,(tuple,list,ndarray)):
+        #
+        cw,sc = array( [ helper(a_, l, m, n, s, M, verbose, solve) for a_ in a ] )[:,:,0].T
+        return cw,sc
+    else:
+        #
+        return helper( a, l, m, n, s, M, verbose, solve )
+
+
 '''
 Method to load tabulated QNM data, interpolate and then output for input final spin
 '''
@@ -2260,6 +2288,10 @@ def leaver27( a, l, m, w, A, s=-2.0, vec=False, mpm=False, adjoint=False, tol=1e
     w = dtyp(w)
     A = dtyp(A)
 
+    # alert('s=%i'%s)
+    # if s != 2:
+    #     error('wrong spin')
+
     #
     pmax = 5e2
 
@@ -2328,6 +2360,9 @@ def leaver21( a, l, m, w, A, s=-2.0, vec=False, adjoint=False,tol=1e-10, **kwarg
 
     #
     pmax = 5e2
+    # alert('s=%i'%s)
+    # if s != 2:
+    #     error('wrong spin')
 
     # global k1, k2, alpha, beta, gamma, l_min
 
@@ -2372,6 +2407,35 @@ def leaver21( a, l, m, w, A, s=-2.0, vec=False, adjoint=False,tol=1e-10, **kwarg
     return x
 
 
+#
+def leaver_sc(j,l,m,cw,s,tol=1e-10):
+
+    #
+    return None
+
+#
+def leaver_2D_workfunction( j, l, m, cw, s, tol=1e-10 ):
+
+    # Import Maths
+    from numpy import log,exp,linalg,array
+    from scipy.optimize import root,fmin,minimize
+    from positive import alert,red,warning,leaver_workfunction
+
+    ''' use cw and leaver21 to find A(cw) '''
+    # Try using fmin
+    # Define the intermediate work function to be used for this iteration
+    fun = lambda X: log(linalg.norm(  leaver21( jf,l,m, cw, X[0]+1j*X[1], s=s )  ))
+    foo  = fmin( fun, guess, disp=False, full_output=True, ftol=tol )
+    sc = foo[0][0]+1j*foo[0][1]
+    __lvrfmin2__ = exp(foo[1])
+
+    # given A(cw), evaluate leaver27
+
+    # return output of leaver27
+    return None
+
+
+
 # Work function for QNM solver
 def leaver_workfunction( j, l, m, state, s=-2, mpm=False, adjoint=False, tol=1e-10, use21=True, use27=True ):
     '''
@@ -2388,6 +2452,9 @@ def leaver_workfunction( j, l, m, state, s=-2, mpm=False, adjoint=False, tol=1e-
         dtyp = mpmath.mpc
     else:
         from numpy import complex256 as dtyp
+
+
+    # alert('s=%i'%s)
 
     # Unpack inputs
     a = dtyp(j)/2.0                 # Change from M=1 to M=1/2 mass convention
@@ -2420,9 +2487,9 @@ def leaver_workfunction( j, l, m, state, s=-2, mpm=False, adjoint=False, tol=1e-
     x = [ complex128(e) for e in x ]
     # print x
 
-    if s!=2:
-        alert('s=%i'%s)
-        error('something is off with spin weight propogation')
+    # if s!=2:
+    #     alert('s=%i'%s)
+    #     error('something is off with spin weight propogation')
 
     #
     return x
@@ -2644,9 +2711,6 @@ def slpm( jf,               # Dimentionless spin parameter
     from scipy.misc import factorial as f
     from scipy.integrate import trapz
 
-    #
-    s = -2
-
     # Define an absolute error tolerance
     et = 1e-8
 
@@ -2668,7 +2732,7 @@ def slpm( jf,               # Dimentionless spin parameter
 
         # Validate the QNM frequency and separation constant used
         lvrtol=1e-4
-        lvrwrk = linalg.norm( leaver_workfunction(jf,l,m,[cw.real,cw.imag,sc.real,sc.imag]) )
+        lvrwrk = linalg.norm( leaver_workfunction(jf,l,m,[cw.real,cw.imag,sc.real,sc.imag],s=s) )
         if lvrwrk>lvrtol:
             msg = 'There is a problem in '+cyan('kerr.core.leaver')+'. The values output are not consistent with leaver''s characteristic equations within %f.\n%s\n# The mode is (jf,l,m,n)=(%f,%i,%i,%i)\n# The leaver_workfunction value is %s\n%s\n'%(lvrtol,'#'*40,jf,l,m,n,red(str(lvrwrk)),'#'*40)
             error(msg,'slm')
@@ -2735,7 +2799,7 @@ def slpm( jf,               # Dimentionless spin parameter
     k = 1
     kmax = 5e3
     err,yy = [],[]
-    et2=1e-10
+    et2=1e-8
     max_a = max(abs(array([a0,a1])))
     while not done:
         k += 1
@@ -3900,7 +3964,7 @@ def lvrsolve(jf,l,m,guess,tol=1e-8,s=-2):
 
     # Try using root
     # Define the intermediate work function to be used for this iteration
-    fun = lambda STATE: log( 1.0 + abs(array(leaver_workfunction( jf,l,m, STATE, s ))) )
+    fun = lambda STATE: log( 1.0 + abs(array(leaver_workfunction( jf,l,m, STATE, s=s ))) )
     X  = root( fun, guess, tol=tol )
     cw1,sc1 = X.x[0]+1j*X.x[1], X.x[2]+1j*X.x[3]
     __lvrfmin1__ = linalg.norm(array( exp(X.fun)-1.0 ))
@@ -3909,7 +3973,7 @@ def lvrsolve(jf,l,m,guess,tol=1e-8,s=-2):
 
     # Try using fmin
     # Define the intermediate work function to be used for this iteration
-    fun = lambda STATE: log(linalg.norm(  leaver_workfunction( jf,l,m, STATE, s )  ))
+    fun = lambda STATE: log(linalg.norm(  leaver_workfunction( jf,l,m, STATE, s=s )  ))
     X  = fmin( fun, guess, disp=False, full_output=True, ftol=tol )
     cw2,sc2 = X[0][0]+1j*X[0][1], X[0][2]+1j*X[0][3]
     __lvrfmin2__ = exp(X[1])
@@ -3970,10 +4034,11 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
     initial_solution = [ cw[-1].real, cw[-1].imag, sc[-1].real, sc[-1].imag ]
 
     #
-    lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,m,STATE,s )  )
+    lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,abs(m),STATE,s=s )  )
 
     # Make sure that starting piont satisfies the tolerance
     current_err = best_err = lvrwrk( current_j, initial_solution )
+
     # print current_err
     if current_err>tol:
         print j
@@ -3994,6 +4059,7 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
     yy = array(cw)[place:]
     zz = array(sc)[place:]
 
+    alert('order is: %i'%order)
     if order>0:
 
         ## NOTE that coupling the splines can sometimes cause unhandled nans
@@ -4038,6 +4104,7 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
     exit_code = 0
     near_bounary = False
     best_j = current_j = j[-1]
+    mind2j = 1e-7
     best_guess = guess_fit(current_j)
     if verbose: print '>> k,starting_j,starting_err = ',k,current_j,current_err
     while not done:
@@ -4059,8 +4126,8 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
                 print '** new_current_j = ',current_j
                 print '** old_tol = ',tol
                 tol *= 0.01
-                if tol<1e-6:
-                    tol = 1e-6
+                if tol<1e-7:
+                    tol = 1e-7
                     warning('Min value of tol reached')
                 print '** new_tol = ',tol
                 d2j = new_d2j
@@ -4070,7 +4137,7 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
 
 
         #
-        if d2j<1e-6: d2j = 1e-6
+        # if d2j<mind2j: d2j = mind2j
         current_guess = guess_fit(current_j)
 
         #
@@ -4094,10 +4161,17 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
 
         #
         if tolerance_is_exceeded: # or stepsize_may_increase:
-            done = True
-            print '* k,best_j,best_err = ',k,best_j,best_err
-            alert('Tolerance exceeded. Exiting.')
-            exit_code = 0
+            print '* k,best_j,best_err,tol,d2j = ',k,best_j,best_err,tol,d2j
+            if k>0:
+                done = True
+                alert('Tolerance exceeded. Exiting.')
+                exit_code = 0
+            else:
+                warning('Tolerance exceeded on first iteration. Shrinking intermediate step size.')
+                d2j = d2j/200
+                current_j = j[-1]
+                k = -1
+                best_guess = initial_solution
         else:
             if (k==kmax) and (not near_bounary):
                 done = True
@@ -4172,7 +4246,15 @@ def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, i
             d2j = abs(j[-1]-j[-2])/internal_res
             # if verbose: print 'j = ',j
             if verbose: print 'd2j = ',d2j
-            current_cw,current_sc,current_err,current_retry = lvrsolve(current_j,l,m,current_guess,s=s)
+            current_retry = True
+            tol2 = 1.0e-8
+            k2 = 0
+            while current_retry:
+                k2 += 1
+                current_cw,current_sc,current_err,current_retry = lvrsolve(current_j,l,m,current_guess,s=s,tol=tol2/k2**2)
+                if k2>6:
+                    current_retry = False
+                    warning('Exiting lvrsolve loop becuase a solution could not be found quickly enough.')
             if verbose: print k,current_j,current_cw,current_sc,current_err,current_retry
             cw.append( current_cw )
             sc.append( current_sc )
@@ -4356,7 +4438,8 @@ class leaver_solve_workflow:
         # Let's see what's in the box
         # ------------------------------------------------------------ #
         alert('The following QNMs have been found in the box:',header=True)
-        this.starting_solutions = { k:this.leaver_box.data[k] for k in sorted(this.leaver_box.data.keys(), key = lambda x: x[1], reverse=True ) }
+        this.starting_solutions = { k:this.leaver_box.data[k] for k in sorted(this.leaver_box.data.keys(), key = lambda x: x[1], reverse=True ) if k[2]<this.max_overtone }
+        # Note that it is here that we enforce the max_overtone input
         this.sorted_mode_list = sorted(this.starting_solutions.keys(), key = lambda x: -float(x[-1])/(x[2]+1), reverse=not True )
         for k in this.sorted_mode_list:
             print '(l,m,n,x,p) = %s'%(str(k))
@@ -4364,8 +4447,8 @@ class leaver_solve_workflow:
         # ------------------------------------------------------------ #
         # Plot the QNM solution space at an initial spin value
         # ------------------------------------------------------------ #
-        # alert('Plotting 2D start frame',verbose=this.verbose,header=True)
-        # if this.plot: this.__plot2Dframe__()
+        alert('Plotting 2D start frame',verbose=this.verbose,header=True)
+        if this.plot: this.__plot2Dframe__()
 
         #
         if not initialize_only:
@@ -4378,7 +4461,7 @@ class leaver_solve_workflow:
     #
     def solve_all_modes(this):
 
-        for z in [(2, -2, 2, 0, -1)]: # this.sorted_mode_list:
+        for z in this.sorted_mode_list:
             (l,m,n,x,p) = z
             if True:# m<0:
 
@@ -4493,7 +4576,7 @@ class leaver_solve_workflow:
 
         #
         if this.plot: from matplotlib.pyplot import savefig,plot,xlim,ylim,xlabel,ylabel,title,figure,gca,subplot,close,gcf,figaspect
-        from numpy import linspace,complex128,array,log,savetxt,vstack,pi,mod,cos,linalg,sign,exp
+        from numpy import linspace,complex128,array,log,savetxt,vstack,pi,mod,cos,linalg,sign,exp,hstack,argsort,diff
         from positive import spline,leaver_needle
         import dill
         import pickle
@@ -4511,11 +4594,23 @@ class leaver_solve_workflow:
         # ------------------------------------------------------------ #
         alert('Threading the solution from cwbox through parameter space',verbose=this.verbose)
         solution_cw,solution_sc = this.leaver_box.data[z]['cw'][-1],this.leaver_box.data[z]['sc'][-1]
+        print '>> ',this.leaver_box.data[z]['lvrfmin'][-1]
+        # forwards
         initial_solution = [ solution_cw.real, solution_cw.imag, solution_sc.real, solution_sc.imag ]
+        print '** ',leaver_workfunction( this.initial_spin, l, abs(m), initial_solution, s=this.s )
+        j,cw,sc,err,retry = leaver_needle( this.initial_spin, this.final_spin, l,abs(m), initial_solution, tol=this.tol/(n+1), verbose=this.verbose, spline_order=this.spline_order, s=this.s )
+
+        # backwards
+        alert('Now evaluating leaver_needle backwards!',header=True)
+        initial_solution = [ cw[-1].real, cw[-1].imag, sc[-1].real, sc[-1].imag ]
+        j_,cw_,sc_,err_,retry_ = leaver_needle( this.final_spin, this.initial_spin, l,abs(m), initial_solution, tol=this.tol/(n+1), verbose=this.verbose, spline_order=this.spline_order, s=this.s,initial_d2spin=abs(j[-1]-j[-2])/5 )
         #
-        j,cw,sc,err,retry = leaver_needle( this.initial_spin, this.final_spin, l,abs(m), initial_solution, tol=this.tol*exp(-n), verbose=this.verbose, spline_order=this.spline_order, s=this.s )
-        #
-        # j,cw,sc,err,retry = greedy_leaver_needle( j,cw,sc,err,retry, l, abs(m), plot = False, verbose=False, spline_order=this.spline_order, s=this.s )
+        j,cw,sc,err,retry = [ hstack([u,v]) for u,v in [(j,j_),(cw,cw_),(sc,sc_),(err,err_),(retry,retry_)] ]
+        sortmask = argsort(j)
+        j,cw,sc,err,retry = [ v[sortmask] for v in j,cw,sc,err,retry ]
+        uniquemask = hstack( [array([True]),diff(j)!=0] )
+        j,cw,sc,err,retry = [ v[uniquemask] for v in j,cw,sc,err,retry ]
+
         #
         this.results[z]['j'],this.results[z]['cw'],this.results[z]['sc'],this.results[z]['err'],this.results[z]['retry'] = j,cw,sc,err,retry
 
@@ -4551,7 +4646,7 @@ class leaver_solve_workflow:
                                     err ]  ).T
 
             fname = this.outdir+('l%im%1.0fn%i.txt'%z[:3]).replace('-','m')
-            savetxt( fname, data_array, fmt='%18.12e', delimiter='\t\t', header=r's=-2 Kerr QNM: [ jf reMw imMw reA imA error ], 2016/2019, londonl@mit, https://github.com/llondon6/' )
+            savetxt( fname, data_array, fmt='%18.12e', delimiter='\t\t', header=r's=%i Kerr QNM: [ jf reMw imMw reA imA error ], 2016/2019, londonl@mit, https://github.com/llondon6/'%this.s )
             # Save the current object
             alert('Saving the current object using pickle',verbose=this.verbose)
             with open( fname.replace('.txt','_splines.pickle') , 'wb') as object_file:
@@ -4582,7 +4677,7 @@ class leaver_solve_workflow:
         this.frm_outdir = this.outdir+'frames/'
         this.s = s
         # Make directories if needed
-        mkdir(this.outdir,rm = True,verbose=this.verbose)  # Make the directory if it doesnt already exist and remove the directory if it already exists. Dont remove if there is checkpint data.
+        mkdir(this.outdir,rm = False,verbose=this.verbose)  # Make the directory if it doesnt already exist and remove the directory if it already exists. Dont remove if there is checkpint data.
         mkdir(this.frm_outdir,verbose=this.verbose)
 
         #

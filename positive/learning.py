@@ -1435,9 +1435,10 @@ class mvpolyfit:
         funlabel = funlabel.replace('-','M')
 
         # Create a simple string representation of the fit
-        model_str = '%s = lambda %s:%s%s*(x%s)' % ( funlabel, ','.join(varlabel), (' %s('%prefix) if prefix else ' '  , complex2str(this.coeffs[0],precision=precision) if isinstance(this.coeffs[0],complex) else '%1.4e'%this.coeffs[0], '*x'.join( list(this.basis_symbols[0]) ) )
+        real_format_string = '%%1.%ie'%abs(precision)
+        model_str = '%s = lambda %s:%s%s*(x%s)' % ( funlabel, ','.join(varlabel), (' %s('%prefix) if prefix else ' '  , complex2str(this.coeffs[0],precision=precision) if isinstance(this.coeffs[0],complex) else real_format_string%this.coeffs[0], '*x'.join( list(this.basis_symbols[0]) ) )
         for k,b in enumerate(this.coeffs[1:]):
-            model_str += ' + %s*(x%s)' % ( complex2str(b,precision=precision) if isinstance(b,complex) else '%1.4e'%b , '*x'.join( list(this.basis_symbols[k+1]) ) )
+            model_str += ' + %s*(x%s)' % ( complex2str(b,precision=precision) if isinstance(b,complex) else real_format_string%b , '*x'.join( list(this.basis_symbols[k+1]) ) )
 
         # Correct for a lingering multiply sign
         model_str = model_str.replace('(*','(')
@@ -1471,6 +1472,7 @@ class mvpolyfit:
         latex_labels = ( this.labels['latex'] if 'latex' in this.labels else None ) if labels is None else labels
 
         # Extract desired labels and handle defaults
+        real_format_string = '%%1.%ie'%abs(precision)
         funlabel = r'f(\vec{x})' if latex_labels is None else latex_labels[0]
         varlabel = [ 'x%i'%k for k in range(this.domain_dimension) ] if latex_labels is None else latex_labels[1]
         prefix = '' if latex_labels is None else latex_labels[2]
@@ -1483,9 +1485,9 @@ class mvpolyfit:
         latex_str = r'%s  \; &= \; %s %s\,x%s%s' % ( funlabel,
                                                    (prefix+r' \, ( \,') if prefix else '',
                                                    complex2str(this.coeffs[0],
-                                                   latex=True,precision=precision) if isinstance(this.coeffs[0],complex) else '%1.4e'%this.coeffs[0], r'\,x'.join( list(this.basis_symbols[0]) ), '' if len(this.coeffs)>1 else (r' \; )' if prefix else '') )
+                                                   latex=True,precision=precision) if isinstance(this.coeffs[0],complex) else real_format_string%this.coeffs[0], r'\,x'.join( list(this.basis_symbols[0]) ), '' if len(this.coeffs)>1 else (r' \; )' if prefix else '') )
         for k,b in enumerate(this.coeffs[1:]):
-            latex_str += r' \; + \; (%s)\,x%s%s' % ( complex2str(b,latex=True,precision=precision) if isinstance(b,complex) else '%1.4e'%b ,
+            latex_str += r' \; + \; (%s)\,x%s%s' % ( complex2str(b,latex=True,precision=precision) if isinstance(b,complex) else real_format_string%b ,
                                                      r'\,x'.join( list(this.basis_symbols[k+1]) ),
                                                      (r' \; )' if prefix else '') if (k+1)==len(this.coeffs[1:]) else '' )
             #
