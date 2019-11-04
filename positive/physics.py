@@ -2270,6 +2270,159 @@ def mass_ratio_convention_sort(m1,m2,chi1,chi2):
     return (m1_,m2_,chi1_,chi2_)
 
 
+# Define function that return the recursion coefficients as functions of an integer index
+def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False ):
+    '''
+    Note that we will diver from Leaver's solution by handling the angular singular exponents differently than Leaver has. To use leaver's solution set london=False.
+    '''
+
+    # Import usefuls
+    from numpy import exp,sqrt
+
+    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
+    # ANGULAR
+    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
+    if london:
+
+        if london==1:
+
+            '''
+            S(u) = exp( a w u ) (1+u)^k1 (1-u)^k2 Sum( a[k](1+u)^k )
+            '''
+
+            # Use abs of singular exponents AND write recursion functions so that the
+            # appropriate physical solution is always used
+            k1 = 0.5*abs(m-s)
+            k2 = 0.5*abs(m+s)
+            # Use Leaver's form for the recurion functions (in London's take, these correspond to s<=0)
+            a_alpha = lambda k:	-2*(1 + k)*(1 + k + 2*k1)
+            a_beta  = lambda k:	-Alm - aw**2 - 2*aw*(1 + 2*k + 2*k1 + s) + (k + k1 + k2 - s)*(1 + k + k1 + k2 + s)
+            a_gamma = lambda k:  2.0*aw*( k + k1+k2 + s )
+            # Exponential pre scale for angular function evaluation
+            a_exp_scale = lambda COSTH: exp( aw * COSTH )
+
+        elif london==-1:
+
+            '''
+            S(u) = exp( - a w u ) (1+u)^k1 (1-u)^k2 Sum( a[k](1+u)^k )
+            '''
+
+            # Use abs of singular exponents AND write recursion functions so that the
+            # appropriate physical solution is always used
+            k1 = 0.5*abs(m-s)
+            k2 = 0.5*abs(m+s)
+            # Use Leaver's form for the recurion functions
+            a_alpha = lambda k:	-2*(1 + k)*(1 + k + 2*k1)
+            a_beta  = lambda k:	-Alm - aw**2 + aw*(2 + 4*k + 4*k1 - 2*s) + (k + k1 + k2 - s)*(1 + k + k1 + k2 + s)
+            a_gamma = lambda k: -2*aw*(k + k1 + k2 - s)
+            # Exponential pre scale for angular function evaluation
+            a_exp_scale = lambda COSTH: exp( -aw * COSTH )
+
+        else:
+
+            error('Unknown input option. Must be -1 or 1 corresponding to the sign of the exponent in the desired solution form.')
+
+    else:
+
+        '''
+        S(u) = exp( a w u ) (1+u)^k1 (1-u)^k2 Sum( a[k](1+u)^k )
+        '''
+
+        # Use abs of singular exponents AND write recursion functions so that the
+        # appropriate physical solution is always used
+        k1 = 0.5*abs(m-s)
+        k2 = 0.5*abs(m+s)
+        # Use Leaver's form for the recurion functions (in London's take, these correspond to s<=0)
+        a_alpha = lambda k:	-2.0 * (k+1.0) * (k+2.0*k1+1.0)
+        a_beta  = lambda k:	k*(k-1.0) \
+                            + 2.0*k*( k1+k2+1.0-2.0*aw ) \
+                            - ( 2.0*aw*(2.0*k1+s+1.0)-(k1+k2)*(k1+k2+1) ) \
+                            - ( aw*aw + s*(s+1.0) + Alm )
+        a_gamma = lambda k:   2.0*aw*( k + k1+k2 + s )
+        # Exponential pre scale for angular function evaluation
+        a_exp_scale = lambda COSTH: exp( aw * COSTH )
+
+    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
+    # Package for output
+    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
+    if (k1<0) or (k2<0):
+        print 'k1 = ',k1
+        print 'k2 = ',k2
+        error('negative singular exponent!')
+
+    # Construct answer
+    ans = (k1,k2,a_alpha,a_beta,a_gamma,a_exp_scale)
+
+    # Return answer
+    return ans
+
+
+# Define function that return the recursion coefficients as functions of an integer index
+def leaver_helper( l,m,s,a,w,Alm, london=True, verbose=False ):
+    '''
+    Note that we will diver from Leaver's solution by handling the angular singular exponents differently than Leaver has. To use leaver's solution set london=False.
+    '''
+
+    # Import usefuls
+    from numpy import exp,sqrt
+
+    # Predefine useful quantities
+    aw = a*w
+
+    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
+    # ANGULAR
+    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
+    # Use lower level module
+    k1,k2,a_alpha,a_beta,a_gamma,a_exp_scale = leaver_ahelper( l,m,s,aw,Alm, london=london, verbose=verbose )
+
+    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
+    # RADIAL
+    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
+    if london:
+        # There is only one solution that satisfies the boundary
+        # conditions at the event horizon and infinity.
+        p1 = p2 = 1
+        r_alpha = lambda k: a*m*(2j + 2j*n) + (-1j - 1j*n)*w + b*(1 + n**2 + n*(2 - s) - s + (-1j - 1j*n)*w)
+        r_beta  = lambda k: a*m*(-2j - 4j*n - 4*w) + (2j - 4j*a**2 + (4j - 8j*a**2)*n)*w + (4 - 8*a**2)*w**2 + b*(-1 - Alm - 2*n - 2*n**2 - s - 2*a*m*w + (2j + 4j*n)*w + (4 - a**2)*w**2)
+        r_gamma = lambda k: -1j*n*w - 2*w**2 + a*m*(2j*n + 4*w) + b*(n**2 + n*s + (-3j*n - 2j*s)*w - 2*w**2)
+        # Exponential pre scale for radial function evaluation
+        r_exp_scale = lambda r: exp( aw * r )
+    else:
+        # There is only one solution that satisfies the boundary
+        # conditions at the event horizon and infinity.
+        p1 = p2 = 1
+        # Precompute usefuls
+        b  = sqrt(1.0-4.0*a*a)
+        c_param = 0.5*w - a*m
+        #
+        c0    =         1.0 - s - 1.0j*w - (2.0j/b) * c_param
+        c1    =         -4.0 + 2.0j*w*(2.0+b) + (4.0j/b) * c_param
+        c2    =         s + 3.0 - 3.0j*w - (2.0j/b) * c_param
+        c3    =         w*w*(4.0+2.0*b-a*a) - 2.0*a*m*w - s - 1.0 \
+                        + (2.0+b)*1j*w - Alm + ((4.0*w+2.0j)/b) * c_param
+        c4    =         s + 1.0 - 2.0*w*w - (2.0*s+3.0)*1j*w - ((4.0*w+2.0*1j)/b)*c_param
+        # Define recursion functions
+        r_alpha = lambda k:	k*k + (c0+1)*k + c0
+        r_beta  = lambda k:   -2.0*k*k + (c1+2.0)*k + c3
+        r_gamma = lambda k:	k*k + (c2-3.0)*k + c4 - c2 + 2.0
+        # Exponential pre scale for radial function evaluation
+        r_exp_scale = lambda r: exp( aw * r )
+
+    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
+    # Package for output
+    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
+
+    # Construct answer
+    ans = { 'angulars':(k1,k2,a_alpha,a_beta,a_gamma,a_exp_scale),
+            'radials': (p1,p2,r_alpha,r_beta,r_gamma,r_exp_scale) }
+
+    # Return answer
+    return ans
+
+# Define parameter map between solutions of Teukolsky's angular equation
+def swap_rule_s(aw,s,l,m,Alm):
+    return (-aw,-s,l,-m,Alm+2*s)
+
 
 # Equation 27 of Leaver '86
 # Characteristic Eqn for Spheroidal Radial Functions
@@ -2351,7 +2504,7 @@ def leaver27( a, l, m, w, A, s=-2.0, vec=False, mpm=False, adjoint=False, tol=1e
 
 # Equation 21 of Leaver '86
 # Characteristic Eqn for Spheroidal Angular Functions
-def leaver21( a, l, m, w, A, s=-2.0, vec=False, adjoint=False,tol=1e-10, **kwargs ):
+def leaver21( a, l, m, w, A, s=-2.0, vec=False, adjoint=False,tol=1e-10,use_london_fix=True, **kwargs ):
     '''
     Equation 21 of Leaver '86
     Characteristic Eqn for Spheroidal Angular Functions
@@ -2360,11 +2513,6 @@ def leaver21( a, l, m, w, A, s=-2.0, vec=False, adjoint=False,tol=1e-10, **kwarg
 
     #
     pmax = 5e2
-    # alert('s=%i'%s)
-    # if s != 2:
-    #     error('wrong spin')
-
-    # global k1, k2, alpha, beta, gamma, l_min
 
     #
     l_min = l-max(abs(m),abs(s)) # VERY IMPORTANT
@@ -2375,11 +2523,16 @@ def leaver21( a, l, m, w, A, s=-2.0, vec=False, adjoint=False,tol=1e-10, **kwarg
     k1 = 0.5*abs(m-s)
     k2 = 0.5*abs(m+s)
 
+
     # If the related equations for the adjoint angular operator are requested, take conjugates
     if adjoint:
         w,A = w.conj(),A.conj()
 
     aw=a*w
+
+    #
+    # k1,k2,a_alpha,a_beta,a_gamma,a_exp_scale = leaver_ahelper( l,m,s,aw,Alm, london=True )
+
     alpha = lambda k:	-2.0 * (k+1.0) * (k+2.0*k1+1.0)
     beta  = lambda k:	k*(k-1.0) \
                         + 2.0*k*( k1+k2+1.0-2.0*aw ) \
@@ -2407,11 +2560,6 @@ def leaver21( a, l, m, w, A, s=-2.0, vec=False, adjoint=False,tol=1e-10, **kwarg
     return x
 
 
-#
-def leaver_sc(j,l,m,cw,s,tol=1e-10):
-
-    #
-    return None
 
 #
 def leaver_2D_workfunction( j, l, m, cw, s, tol=1e-10 ):
@@ -2471,7 +2619,7 @@ def leaver_workfunction( j, l, m, state, s=-2, mpm=False, adjoint=False, tol=1e-
     # concat list outputs
     #print adjoint
 
-    x = leaver21(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,adjoint=adjoint,tol=tol) +  leaver27(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,adjoint=adjoint,tol=tol)
+    # x = leaver21(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,adjoint=adjoint,tol=tol) +  leaver27(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,adjoint=adjoint,tol=tol)
 
     x = []
     if use21:
@@ -2494,6 +2642,69 @@ def leaver_workfunction( j, l, m, state, s=-2, mpm=False, adjoint=False, tol=1e-
     #
     return x
 
+
+# Compute perturbed Kerr separation constant given a frequency
+def sc_leaver( aw, l, m, s,tol=1e-9, london=True, verbose=False  ):
+    '''
+    Given (aw, l, m, s), compute and return separation constant.
+    '''
+
+    # Import Maths
+    from numpy import log,exp,linalg,array
+    from scipy.optimize import root,fmin,minimize
+    from positive import alert,red,warning,leaver_workfunction
+    from numpy import complex128 as dtyp
+
+    #
+    l_min = l-max(abs(m),abs(s)) # VERY IMPORTANT
+
+    #
+    def action(Alm):
+        _,_,alpha,beta,gamma,_ = leaver_ahelper( l,m,s,aw,Alm, london=london, verbose=verbose )
+        v = 1.0
+        for p in range(l_min+1):
+            v = beta(p) - (alpha(p-1.0)*gamma(p) / v)
+        aa = lambda p: -alpha(p-1.0+l_min)*gamma(p+l_min)
+        bb = lambda p: beta(p+l_min)
+        u,state = lentz(aa,bb,tol)
+        u = beta(l_min) - u
+        x = v-u
+        if verbose: print 'err = ',abs(x)
+        x = array([x.real,x.imag],dtype=float).ravel()
+        return x
+
+    if verbose: print ''
+
+    # Try using root
+    # Define the intermediate work function to be used for this iteration
+    indirect_action = lambda STATE: action(STATE[0]+1j*STATE[1])
+    # indirect_action = lambda STATE: log( 1.0 + abs( array(  action(STATE[0]+1j*STATE[1])  ) ) )
+    Alm_guess = scberti(aw,l,m,s)
+    guess = [Alm_guess.real,Alm_guess.imag]
+    foo  = root( indirect_action, guess, tol=tol )
+    Alm = foo.x[0]+1j*foo.x[1]
+    fmin = indirect_action( foo.fun )
+    retry = ( 'not making good progress' in foo.message.lower() ) or ( 'error' in foo.message.lower() )
+
+    # # Try using fmin
+    # # Define the intermediate work function to be used for this iteration
+    # indirect_action = lambda STATE: linalg.norm(action(STATE[0]+1j*STATE[1]))**2
+    # Alm_guess = scberti(aw,l,m,s)
+    # guess = [Alm_guess.real,Alm_guess.imag]
+    # foo  = fmin( indirect_action, guess, disp=False, full_output=True, ftol=tol )
+    # Alm = foo[0][0]+1j*foo[0][1]
+    # fmin = foo[1]
+    # retry = fmin>1e-3
+
+    # alert('err = '+str(fmin))
+    if retry:
+        warning('retry!')
+
+    return (Alm,fmin,retry,foo)
+
+
+
+
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
 ''' Implement Berti's approximation for the separation constants '''
 # NOTE that Beuer et all 1977 also did it
@@ -2502,8 +2713,7 @@ def leaver_workfunction( j, l, m, state, s=-2, mpm=False, adjoint=False, tol=1e-
 # * Proc. R. Soc. Lond. A-1977-Breuer-71-86
 # * E_Seidel_1989_Class._Quantum_Grav._6_012
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
-def scberti(acw,          # dimensionless cw*jf
-            l,m,s=-2):
+def scberti(acw, l,m,s=-2):
 
     '''
     Estimate the Shpheroidal Harmonic separation constant using results of a general perturbative expansion. Primary reference: arxiv:0511111v4 Equation 2.3
