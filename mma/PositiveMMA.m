@@ -29,9 +29,50 @@ StandardizeSumTerm::usage="Method to put sum prefector inside sigma";
 (* Method to standardize all terms in multiple sum expression *)
 StandardizeSumTerms::usage="Method to standardize all terms in multiple sum expression";
 
+(* Given a sum of the form \!\(
+\*UnderoverscriptBox[\(\[Sum]\), \(n = 0\), \(\[Infinity]\)]\(
+\*SuperscriptBox[\(\[Xi]\), \(n\)]\ d[n]\)\), take its derivative such that the correct minimum index is used *)
+DerivativeOfSimpleSum::usage="Given a sum of the form \!\(\*UnderoverscriptBox[\(\[Sum]\), \(n = 0\), \(\[Infinity]\)]\)\!\(\*SuperscriptBox[\(\[Xi]\), \(n\)]\) d[n], take its derivative such that the correct minimum index is used";
+
 (* Given linear differential equation with known singular points, determine singular exponents *)
 DeriveIndicialSolutions::usage="Given linear differential equation with known singular points, determine singular exponents."
 
+(* Keep largest exponent terms in a sum *)
+TakeLargestExponent::usage="Keep largest exponent terms in a sum"
+
+(* Make approximations using in the WKB way *)
+WKBApproximate::usage="Make approximations using in the WKB way"
+
+
+
+Remove[TakeLargestExponent];
+TakeLargestExponent[Terms_,var_]:=Module[
+	{Ans,MaxDeg,Terms2},
+	(* Define holder for output *)
+	Terms2 = Terms;
+	(* Find largest exponent *)
+	MaxDeg = Max@Table[ Exponent[Terms[[k]],var], {k,Length[Terms]} ];
+	(* *)
+	Do[
+		If[Exponent[Terms[[j]][[k]],var] != MaxDeg,
+			(*Remove the term*)
+			Terms2[[j]][[k]]=0;
+		];
+		,
+		{j,Length[Terms]},{k,Length[Terms[[j]]]}
+	];
+	(* Handle constant numerical entries in Terms *)
+	Do[
+		If[Length[Terms[[j]]] == 0,
+			(*Remove the term*)
+			Terms2[[j]]=0;
+		];
+		,
+		{j,Length[Terms]}
+	];
+	Ans = Simplify@Terms2;
+	Return[Ans]
+]
 
 
 (* Method to relabel index of infinite sum such that there is no external power explicit *)
@@ -81,17 +122,42 @@ StandardizeSumTerms[Terms_,var_:v]:=Module[ {Ans,ExpandedTerms},
 	Table[ Ans[[INDEX]] = StandardizeSumTerm[ExpandedTerms[[INDEX]],var];, {INDEX,Length[ExpandedTerms]} ];
 	Return[Ans];
 ]
+(* Given a sum of the form \!\(
+\*UnderoverscriptBox[\(\[Sum]\), \(n = 0\), \(\[Infinity]\)]\(
+\*SuperscriptBox[\(\[Xi]\), \(n\)]\ d[n]\)\), take its derivative such that the correct minimum index is used *)
+Remove[DerivativeOfSimpleSum];
+DerivativeOfSimpleSum[S_,DInputs_:None]:=Module[
+
+	(* Internals *)
+	{Answer,RawDS,Order,dex,min,max,var,MinDex},
+
+	(* Determine the correct minimum index *)
+	RawDS = D[S,DInputs];
+	{dex,min,max} = S[[2]];
+	var = S[[1]]/.{dex ->1}/.{_[1]->1};
+	Order = Exponent[RawDS[[1]],var];
+	MinDex = dex/.Solve[Order==0,dex][[1]];
+	
+	(* Apply the correct minimum index to the sum *)
+	Answer = RawDS;
+	Answer[[2]][[2]] = MinDex;
+
+	(* Return *)
+	Return[Answer];
+
+]
 
 
 Remove[DeriveIndicialSolutions];
-DeriveIndicialSolutions[Dy_,y_,x_,SingularPoints_,order_:2,f_:f]:=Module[
+Options[DeriveIndicialSolutions] = {PreScale->1};
+DeriveIndicialSolutions[Dy_,y_,x_,SingularPoints_,order_:2,f_:f,opts:OptionsPattern[]]:=Module[
 
 	(* Internal variables *)
 	{Ans,SingularScale,xSingular,SingularIndex,xRef,IndicialSolution,
 	yTest,yDelta,TestDy,IndicialPolynomial,g,IndEqnK,SingularExponent},
 	
 	(*Determine a singular scaling for the solution ansatz*)
-	SingularScale = 1; SingularIndex = {}; yDelta = 1;
+	SingularScale = OptionValue[PreScale]; SingularIndex = {}; yDelta = 1;
 	Do[
 		(* Create expressions for singular indices *)
 		SingularIndex = Join[SingularIndex,{ToExpression["k"<>ToString[k]]}];
@@ -130,33 +196,88 @@ DeriveIndicialSolutions[Dy_,y_,x_,SingularPoints_,order_:2,f_:f]:=Module[
 	];
 	
 	(* Return answer: The singular exponents and the singular scale function and associated Delta quantity *)
-	Clear[f];
 	Ans = Join[{SingularExponent},{ SingularScale f[x] }];
 	Return[Ans];
 ]
 
 
 Remove[DeriveIndicialSolutions2];
-DeriveIndicialSolutions2[Dy_,y_,x_,SingularPoints_]:=Module[
+DeriveIndicialSolutions2[DyFunctions_,y_,x_,SingularPoints_,f_:f]:=Module[
 	
 	(* Internal variables *)
-	{Ans,SingularScale,xSingular,SingularIndex,f,xRef,IndicialSolution,
-	yTest,yDelta,TestDy,IndicialPolynomial,IndEqnK,SingularExponent},
+	{Ans,p,SingularScale,xSingular,SingularIndex,IndicialSolution,Dy,IndicialEquation,
+	A,B,C1,C2,Delta,V,IndEqnK,SingularExponent,TestDy,yTest,xRef,Df},
+	
+	(* Check for correct 1st input format *)
+	Catch[
+		If[ Simplify[4==Length[DyFunctions]],
+			(* Unpack *)
+			{A,B,C1,C2} = DyFunctions;
+			, (* Otherwise *)
+			Print["
+				ERROR: The first input should be a table of 4 functions of the dependent variable. 
+				These functions, {A,B,C1,C2}, should correspond to a differential equation of the form
+				----------------------------------------------------------------------------------------
+				Dy = (C1[x]+\!\(\*FractionBox[\(C2[x]\), \(Delta[x]\)]\)) y[x]+B[x] \!\(\*SuperscriptBox[\(y\), \(\[Prime]\),\nMultilineFunction->None]\)[x]+Delta[x] A[x] \!\(\*SuperscriptBox[\(y\), \(\[Prime]\[Prime]\),\nMultilineFunction->None]\)[x]
+				----------------------------------------------------------------------------------------
+				Where Delta[x] is the product of x minus all singular pionts: (x-x1)(x-x2)...(x-xN).
+			"];
+			Return[{0,0}];
+		];
+	];
+	
+	(* Use DyFunctions to construct the differential equation *)
+	Delta = 1;
+	Do[
+		xSingular = SingularPoints[[k]];
+		Delta = Delta (x-xSingular);
+		,
+		{k,Length[SingularPoints]}
+	];
+	(* Define a list containing the coefficitents of the defferential equation *)
+	p = {  C1+C2/Delta, B, Delta A };
+	
+	(* Construct the differential equation *)
+	Dy =Sum[p[[k]]D[y[x],{x,k-1}],{k,Length[p]}];
 	
 	(*Determine a singular scaling for the solution ansatz*)
-	SingularScale = 1; SingularIndex = {}; yDelta = 1;
+	SingularScale = 1; SingularIndex = {};
 	Do[
 		(* Create expressions for singular indices *)
 		SingularIndex = Join[SingularIndex,{ToExpression["k"<>ToString[k]]}];
 		(* Construct singular scaling based on singular points and indices *)
 		xSingular = SingularPoints[[k]];
 		SingularScale = (x-xSingular)^SingularIndex[[k]] SingularScale;
-		yDelta = (x-xSingular) yDelta;
 		, 
 		{k,Length[SingularPoints]}
 	];
 	
+	(* Apply test ansatz to differential equation *)
+	yTest = SingularScale f[x];
+	TestDy = Simplify[
+				Dy  /.  Table[ D[y[x],{x,k-1}]-> D[yTest,{x,k-1}], {k,Length[p]} ]
+			 ];
+	(* Derive indicial polynomial *)
+	Df = Collect[Simplify[(Delta/SingularScale)TestDy],{Derivative[1][f][x],f[x]}];
+	p = Simplify@Coefficient[Df,Table[D[f[x],{x,k-1}],{k,Length[p]}]];
+	(* We wish to define the trasformed potential, V = p[[1]], so that it is zero
+	   at the singular points. *)
+	V = p[[1]];
+	(* Solve indicial equation at evenery singular point *)
+	SingularExponent = {};
+	IndicialEquation = {};
+	Do[
+		xSingular = SingularPoints[[k]];
+		IndEqnK = (V/.{x -> xSingular})==0;
+		IndicialSolution = Solve[ IndEqnK, SingularIndex[[k]] ];
+		SingularExponent = Join[SingularExponent,{IndicialSolution}];
+		, 
+		{k,Length[SingularPoints]}
+	];
+	
+	
 	(* Return answer *)
+	Ans = Join[{SingularExponent},{ SingularScale f[x] }];
 	Return[Ans];
 	
 ]

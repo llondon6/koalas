@@ -2903,7 +2903,7 @@ def ysprod( jf,
 # Calculate inner product of two spheroidal harmonics at a a given spin
 # NOTE that this inner product does not rescale the spheroidal functions so that the spherical normalization is recovered
 # ------------------------------------------------------------------ #
-def ssprod(jf, z1, z2, N=2**8,verbose=False, london=False):
+def ssprod(jf, z1, z2, N=2**8,verbose=False, london=False,s=-2,aw=None, use_nr_convention=True ):
 
     '''
     To be used outside of slm for general calculation of inner-products. This is NOT the function slm uses to normalize the spheroidal harmonics.
@@ -2914,25 +2914,33 @@ def ssprod(jf, z1, z2, N=2**8,verbose=False, london=False):
     from numpy import linspace,pi,sqrt
 
     #
-    l1,m1,n1 = z1
-    l2,m2,n2 = z2
-
-    #
-    if m1 == m2 :
-        th, phi = pi*linspace(0,1,N), 0
-        s1 = slm( jf, l1, m1, n1, th, phi, norm=False, __rescale__=False, london=london )
-        s2 = slm( jf, l2, m2, n2, th, phi, norm=False, __rescale__=False, london=london ) if (l2,m2,n2) != (l1,m1,n1) else s1
-        #
-        c1 = sqrt( prod(s1,s1,th) )
-        c2 = sqrt( prod(s2,s2,th) )
-        # c1 = 1.0
-        # c2 = 1.0
+    def helper(x1,x2,th=None):
+        if th is None: th = linspace(0,pi,len(x1))
+        c1 = sqrt( prod(x1,x1,th) )
+        c2 = sqrt( prod(x2,x2,th) )
         s1_ = s1/c1
         s2_ = s2/c2
+        return prod(s1_,s2_,th)
+
+    #
+    if len(z1)==len(z2)==3:
         #
-        ans = prod(s1_,s2_,th)
+        l1,m1,n1 = z1
+        l2,m2,n2 = z2
+        #
+        if m1 == m2 :
+            th, phi = pi*linspace(0,1,N), 0
+            s1 = slm( jf, l1, m1, n1, th, phi, norm=False, __rescale__=False, london=london,aw=aw, use_nr_convention=use_nr_convention,s=s )
+            s2 = slm( jf, l2, m2, n2, th, phi, norm=False, __rescale__=False, london=london,aw=aw, use_nr_convention=use_nr_convention,s=s ) if (l2,m2,n2) != (l1,m1,n1) else s1
+            #
+            ans = helper(s1,s2,th)
+        else:
+            ans = 0
     else:
-        ans = 0
+        s1,s2 = z1,z2
+        if len(s1)!=len(s2):
+            error('If 2nd and 3rd inputs are spheroidal function then they must be the ame length, and it is assumed that the span theta between 0 and pi')
+        ans = helper(s1,s2)
 
     return ans
 
@@ -2974,6 +2982,61 @@ def internal_ssprod( jf, z1, z2, s=-2, verbose=False, N=2**9, london=False,aw=No
 
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+''' Calculate set of spheroidal harmonic duals '''
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+def slm_dual_set( jf, l, m, n, theta, phi, s=-2, lmax=8, lmin=2, aw=None, verbose=False ):
+    '''
+    Construct set of dual-spheroidals
+    Things that could spped this function up:
+    * calculate Sspace first, and then use it to directly calculate gramian rather than calling ssprod
+    '''
+    # Import usefuls
+    from numpy import array,pi,arange,linalg,dot,conj,zeros
+    #error('This function is still being written')
+    # -------------------------------------- #
+    # Construct a space of spheroidals as a starting basis
+    # -------------------------------------- #
+    lnspace = []; nmin=0; nmax=0
+    lspace = arange( lmin,lmax+1 )
+    nspace = arange( nmin,nmax+1 )
+    for j,ll in enumerate(lspace):
+        for k,nn in enumerate(nspace):
+            lnspace.append( (ll,nn) )
+    Sspace = []
+    for ln in lnspace:
+        ll,nn = ln
+        Sspace.append( slm( jf, ll, m, nn, theta, phi, s=s, verbose=verbose, aw=aw, use_nr_convention=False ) )
+    Sspace = array(Sspace)
+    # -------------------------------------- #
+    # Construct Gram matrix for spheroidals
+    # -------------------------------------- #
+    u = zeros( (len(lnspace),len(lnspace)), dtype=complex )
+    for j,ln1 in enumerate(lnspace):
+        for k,ln2 in enumerate(lnspace):
+            s1 = Sspace[j,:]
+            s2 = Sspace[k,:]
+            u[j,k] = ssprod(jf, s1, s2, aw=aw, use_nr_convention=False )
+    # -------------------------------------- #
+    # Invert and conjugate
+    # -------------------------------------- #
+    v = conj(linalg.pinv(u))
+    # -------------------------------------- #
+    # Use v to project dual functions out of regular ones
+    # -------------------------------------- #
+    aSspace = dot(v,Sspace)
+    #
+    foo,bar = {},{}
+    for k,(l,n) in enumerate(lnspace):
+        foo[ (l,n) if len(nspace)>1 else l ] = aSspace[k,:]
+        bar[ (l,n) if len(nspace)>1 else l ] =  Sspace[k,:]
+    #
+    ans = {}
+    ans['Slm'] = bar
+    ans['AdjSlm'] = foo
+    return ans
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
 ''' Spheroidal Harmonic angular function via leaver's sum FOR m>0 '''
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
 def slpm( jf,               # Dimentionless spin parameter
@@ -2986,8 +3049,8 @@ def slpm( jf,               # Dimentionless spin parameter
           __rescale__ = True, # Internal usage only: Recover scaling of spherical harmonics in zero spin limit
           norm = True,     # If true, normalize the waveform
           output_iterations = False,
-          __aw_sc__ = None,
-          london = False,
+          __aw_sc__ = None, # optional frequency and separation parameter pair
+          london = False,   # toggle for which series solution to use (they are all largely equivalent)
           aw = None,        # when not none, the separation constant will be found automatically
           verbose = False ):# Be verbose
 
@@ -3049,7 +3112,11 @@ def slpm( jf,               # Dimentionless spin parameter
     #
     from numpy import complex128 as dtyp
     sc2 = sc_leaver( dtyp(aw), l, m, s, verbose=verbose)[0]
-    if abs(sc2-sc)>1e-6:
+    if abs(sc2-sc)>1e-3:
+        print 'aw  = ',aw
+        print 'sc  = ',sc
+        print 'sc2 = ',sc2
+        print 'err = ',abs(sc2-sc)
         warning('input separation constant nont consistent with angular consteraint, and so we will use a different one to give you an answer that converges.')
         sc = sc2
 
