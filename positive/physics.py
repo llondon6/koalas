@@ -1707,8 +1707,9 @@ def leaver( jf,                     # Dimensionless BH Spin
     #
     if isinstance(jf,(tuple,list,ndarray)):
         #
-     cw,sc = array( [ __leaver_helper__(jf_, l, m, n, p , s, Mf, verbose) for jf_ in jf ] )[:,:,0].T
-     return cw,sc
+        cw,sc = array( [ __leaver_helper__(jf_, l, m, n, p , abs(s), Mf, verbose) for jf_ in jf ] )[:,:,0].T
+        return cw,sc
+
     else:
         #
         return __leaver_helper__(jf, l, m, n, p , s, Mf, verbose)
@@ -1785,6 +1786,9 @@ def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = F
 
     # Here we scale the frequency by the BH mass according to the optional Mf input
     cw /= Mf
+
+    # Handle positive spin weight
+    if s>0: cs -= 2*abs(s)
 
     #
     return cw,cs
@@ -2300,6 +2304,8 @@ def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False ):
             a_gamma = lambda k:  2.0*aw*( k + k1+k2 + s )
             # Exponential pre scale for angular function evaluation
             a_exp_scale = lambda COSTH: exp( aw * COSTH )
+            # Define how the exopansion variable relates to u=cos(theta)
+            u2v_map = lambda U: 1+U
 
         elif london==-1:
 
@@ -2312,11 +2318,13 @@ def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False ):
             k1 = 0.5*abs(m-s)
             k2 = 0.5*abs(m+s)
             # Use Leaver's form for the recurion functions
-            a_alpha = lambda k:	-2*(1 + k)*(1 + k + 2*k1)
-            a_beta  = lambda k:	-Alm - aw**2 + aw*(2 + 4*k + 4*k1 - 2*s) + (k + k1 + k2 - s)*(1 + k + k1 + k2 + s)
+            a_alpha = lambda k:	2*(1 + k)*(1 + k + 2*k2)
+            a_beta  = lambda k:	-Alm - aw**2 - 2*aw*(1 + 2*k + 2*k2 - s) + (k + k1 + k2 - s)*(1 + k + k1 + k2 + s)
             a_gamma = lambda k: -2*aw*(k + k1 + k2 - s)
             # Exponential pre scale for angular function evaluation
             a_exp_scale = lambda COSTH: exp( -aw * COSTH )
+            # Define how the exopansion variable relates to u=cos(theta)
+            u2v_map = lambda U: U-1
 
         else:
 
@@ -2341,6 +2349,8 @@ def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False ):
         a_gamma = lambda k:   2.0*aw*( k + k1+k2 + s )
         # Exponential pre scale for angular function evaluation
         a_exp_scale = lambda COSTH: exp( aw * COSTH )
+        # Define how the exopansion variable relates to u=cos(theta)
+        u2v_map = lambda U: 1+U
 
     # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
     # Package for output
@@ -2351,7 +2361,7 @@ def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False ):
         error('negative singular exponent!')
 
     # Construct answer
-    ans = (k1,k2,a_alpha,a_beta,a_gamma,a_exp_scale)
+    ans = (k1,k2,a_alpha,a_beta,a_gamma,a_exp_scale,u2v_map)
 
     # Return answer
     return ans
@@ -2418,10 +2428,6 @@ def leaver_helper( l,m,s,a,w,Alm, london=True, verbose=False ):
 
     # Return answer
     return ans
-
-# Define parameter map between solutions of Teukolsky's angular equation
-def swap_rule_s(aw,s,l,m,Alm):
-    return (-aw,-s,l,-m,Alm+2*s)
 
 
 # Equation 27 of Leaver '86
@@ -2643,8 +2649,73 @@ def leaver_workfunction( j, l, m, state, s=-2, mpm=False, adjoint=False, tol=1e-
     return x
 
 
+
+
+# Given a separation constant, find a frequency*spin such that the spheroidal series expansion converges
+def cw_leaver( Alm, l, m, s,tol=1e-9, london=True, verbose=False  ):
+    '''
+    Given a separation constant, find a frequency*spin such that the spheroidal series expansion converges
+    '''
+
+    # Import Maths
+    from numpy import log,exp,linalg,array
+    from scipy.optimize import root,fmin,minimize
+    from positive import alert,red,warning,leaver_workfunction
+    from numpy import complex128 as dtyp
+
+    #
+    l_min = l-max(abs(m),abs(s)) # VERY IMPORTANT
+
+    #
+    def action(aw):
+        _,_,alpha,beta,gamma,_,_ = leaver_ahelper( l,m,s,aw,Alm, london=london, verbose=verbose )
+        v = 1.0
+        for p in range(l_min+1):
+            v = beta(p) - (alpha(p-1.0)*gamma(p) / v)
+        aa = lambda p: -alpha(p-1.0+l_min)*gamma(p+l_min)
+        bb = lambda p: beta(p+l_min)
+        u,state = lentz(aa,bb,tol)
+        u = beta(l_min) - u
+        x = v-u
+        if verbose: print 'err = ',abs(x)
+        x = array([x.real,x.imag],dtype=float).ravel()
+        return x
+
+    if verbose: print ''
+
+    # Try using root
+    # Define the intermediate work function to be used for this iteration
+    indirect_action = lambda STATE: action(STATE[0]+1j*STATE[1])
+    # indirect_action = lambda STATE: log( 1.0 + abs( array(  action(STATE[0]+1j*STATE[1])  ) ) )
+    aw_guess = 0.5 + 1j * 0.01
+    guess = [aw_guess.real,aw_guess.imag]
+    foo  = root( indirect_action, guess, tol=tol )
+    aw = foo.x[0]+1j*foo.x[1]
+    fmin = indirect_action( foo.fun )
+    retry = ( 'not making good progress' in foo.message.lower() ) or ( 'error' in foo.message.lower() )
+
+    # # Try using fmin
+    # # Define the intermediate work function to be used for this iteration
+    # indirect_action = lambda STATE: linalg.norm(action(STATE[0]+1j*STATE[1]))**2
+    # Alm_guess = scberti(aw,l,m,s)
+    # guess = [Alm_guess.real,Alm_guess.imag]
+    # foo  = fmin( indirect_action, guess, disp=False, full_output=True, ftol=tol )
+    # Alm = foo[0][0]+1j*foo[0][1]
+    # fmin = foo[1]
+    # retry = fmin>1e-3
+
+    # alert('err = '+str(fmin))
+    if retry:
+        warning('retry!')
+
+    return (aw,fmin,retry,foo)
+
+
+
+
+
 # Compute perturbed Kerr separation constant given a frequency
-def sc_leaver( aw, l, m, s,tol=1e-9, london=True, verbose=False  ):
+def sc_leaver( aw, l, m, s,tol=1e-9, london=True, s_included=False, verbose=False  ):
     '''
     Given (aw, l, m, s), compute and return separation constant.
     '''
@@ -2660,7 +2731,7 @@ def sc_leaver( aw, l, m, s,tol=1e-9, london=True, verbose=False  ):
 
     #
     def action(Alm):
-        _,_,alpha,beta,gamma,_ = leaver_ahelper( l,m,s,aw,Alm, london=london, verbose=verbose )
+        _,_,alpha,beta,gamma,_,_ = leaver_ahelper( l,m,s,aw,Alm, london=london, verbose=verbose )
         v = 1.0
         for p in range(l_min+1):
             v = beta(p) - (alpha(p-1.0)*gamma(p) / v)
@@ -2695,6 +2766,10 @@ def sc_leaver( aw, l, m, s,tol=1e-9, london=True, verbose=False  ):
     # Alm = foo[0][0]+1j*foo[0][1]
     # fmin = foo[1]
     # retry = fmin>1e-3
+
+    # Given the structure of the spheroidal harmonic differential equation for perturbed Kerr, we have a choice to include a factor of s in the potential, or in the eigenvalue. There's good reason to consider it a part of the latter as s->-s has the action of leaving the eigenvalue unchanged.
+    if s_included:
+        Alm = Alm + s
 
     # alert('err = '+str(fmin))
     if retry:
@@ -2776,6 +2851,7 @@ def ysprod( jf,
             ll,
             mm,
             lmn,
+            s = -2,
             N=2**9,         # Number of points in theta to use for trapezoidal integration
             theta = None,   # Pre computed theta domain
             verbose=False):
@@ -2811,10 +2887,10 @@ def ysprod( jf,
     #
     if m_eff==mm:
         #
-        y = ylm(-2,ll,mm,th,ph)
-        _s = slm(jf,l,m,n,th,ph,norm=False,__rescale__=False) if not so else slm(jf,l,m,n,th,ph,norm=False,__rescale__=False)*slm(jf,l2,m2,n2,th,ph,norm=False,__rescale__=False)
-        s = _s / sqrt(prod(_s,_s,th))
-        ans = prod( y,s,th ) # note that this is consistent with the matlab implementation modulo the 2*pi convention
+        y = ylm(s,ll,mm,th,ph)
+        _s = slm(jf,l,m,n,th,ph,s=s,norm=False,__rescale__=False) if not so else slm(jf,l,m,n,th,ph,norm=False,__rescale__=False)*slm(jf,l2,m2,n2,th,ph,norm=False,__rescale__=False)
+        ss = _s / sqrt(prod(_s,_s,th))
+        ans = prod( y,ss,th ) # note that this is consistent with the matlab implementation modulo the 2*pi convention
     else:
         # print m,m_eff,mm,list(lmnp)
         ans = 0
@@ -2827,7 +2903,7 @@ def ysprod( jf,
 # Calculate inner product of two spheroidal harmonics at a a given spin
 # NOTE that this inner product does not rescale the spheroidal functions so that the spherical normalization is recovered
 # ------------------------------------------------------------------ #
-def ssprod(jf, z1, z2, N=2**8,verbose=False):
+def ssprod(jf, z1, z2, N=2**8,verbose=False, london=False):
 
     '''
     To be used outside of slm for general calculation of inner-products. This is NOT the function slm uses to normalize the spheroidal harmonics.
@@ -2844,8 +2920,8 @@ def ssprod(jf, z1, z2, N=2**8,verbose=False):
     #
     if m1 == m2 :
         th, phi = pi*linspace(0,1,N), 0
-        s1 = slm( jf, l1, m1, n1, th, phi, norm=False, __rescale__=False )
-        s2 = slm( jf, l2, m2, n2, th, phi, norm=False, __rescale__=False ) if (l2,m2,n2) != (l1,m1,n1) else s1
+        s1 = slm( jf, l1, m1, n1, th, phi, norm=False, __rescale__=False, london=london )
+        s2 = slm( jf, l2, m2, n2, th, phi, norm=False, __rescale__=False, london=london ) if (l2,m2,n2) != (l1,m1,n1) else s1
         #
         c1 = sqrt( prod(s1,s1,th) )
         c2 = sqrt( prod(s2,s2,th) )
@@ -2865,7 +2941,7 @@ def ssprod(jf, z1, z2, N=2**8,verbose=False):
 # Calculate inner product of two spheroidal harmonics at a a given spin
 # NOTE that this inner product does not rescale the spheroidal functions so that the spherical normalization is recovered
 # ------------------------------------------------------------------ #
-def internal_ssprod( jf, z1, z2, verbose=False, N=2**9 ):
+def internal_ssprod( jf, z1, z2, s=-2, verbose=False, N=2**9, london=False,aw=None ):
     '''
     To be used by slm to normalize output
     '''
@@ -2885,8 +2961,8 @@ def internal_ssprod( jf, z1, z2, verbose=False, N=2**9 ):
         # if prod is None:
         #     prod = lambda A,B: 2*pi * trapz( A.conj()*B*sin(th), x=th )
         #
-        s1 = slm( jf, l1, m1, n1, th, phi, norm=False, __rescale__=False )
-        s2 = slm( jf, l2, m2, n2, th, phi, norm=False, __rescale__=False ) if (l2,m2,n2) != (l1,m1,n1) else s1
+        s1 = slm( jf, l1, m1, n1, th, phi,s=s, norm=False, __rescale__=False, london=london,aw=aw )
+        s2 = slm( jf, l2, m2, n2, th, phi,s=s, norm=False, __rescale__=False, london=london,aw=aw ) if (l2,m2,n2) != (l1,m1,n1) else s1
         #
         ans = prod(s1,s2,th)
     else:
@@ -2911,6 +2987,8 @@ def slpm( jf,               # Dimentionless spin parameter
           norm = True,     # If true, normalize the waveform
           output_iterations = False,
           __aw_sc__ = None,
+          london = False,
+          aw = None,        # when not none, the separation constant will be found automatically
           verbose = False ):# Be verbose
 
     #
@@ -2934,42 +3012,53 @@ def slpm( jf,               # Dimentionless spin parameter
     #
     if __aw_sc__ is None:
 
-        # Validate the spin input
-        if isinstance(jf,int): jf = float(jf)
+        if aw is None:
 
-        # Use tabulated cw and sc values from the core package
-        cw,sc = lvr( jf, l, m, n )
+            # Validate the spin input
+            if isinstance(jf,int): jf = float(jf)
 
-        # Validate the QNM frequency and separation constant used
-        lvrtol=1e-4
-        lvrwrk = linalg.norm( leaver_workfunction(jf,l,m,[cw.real,cw.imag,sc.real,sc.imag],s=s) )
-        if lvrwrk>lvrtol:
-            msg = 'There is a problem in '+cyan('kerr.core.leaver')+'. The values output are not consistent with leaver''s characteristic equations within %f.\n%s\n# The mode is (jf,l,m,n)=(%f,%i,%i,%i)\n# The leaver_workfunction value is %s\n%s\n'%(lvrtol,'#'*40,jf,l,m,n,red(str(lvrwrk)),'#'*40)
-            error(msg,'slm')
-        # If verbose, check the consisitency of the values used
-        if verbose:
-            msg = 'Checking consistency of QNM frequncy and separation constant used against Leaver''s constraint equations:\n\t*  '+cyan('leaver_workfunction(jf=%1.4f,l,m,[cw,sc]) = %s'%(jf,lvrwrk))+'\n\t*  cw = %s\n\t*  sc = %s'%(cw,sc)
-            alert(msg,'slm')
+            # Use tabulated cw and sc values from the core package
+            cw,sc = lvr( jf, l, m, n, s=s )
 
-        # Define dimensionless deformation parameter
-        aw = complex256( jf*cw )
+            # Validate the QNM frequency and separation constant used
+            lvrtol=1e-4
+            lvrwrk = linalg.norm( leaver_workfunction(jf,l,m,[cw.real,cw.imag,sc.real,sc.imag],s=s) )
+            if lvrwrk>lvrtol:
+                msg = 'There is a problem in '+cyan('kerr.core.leaver')+'. The values output are not consistent with leaver''s characteristic equations within %f.\n%s\n# The mode is (jf,l,m,n)=(%f,%i,%i,%i)\n# The leaver_workfunction value is %s\n%s\n'%(lvrtol,'#'*40,jf,l,m,n,red(str(lvrwrk)),'#'*40)
+                error(msg,'slm')
+            # If verbose, check the consisitency of the values used
+            if verbose:
+                msg = 'Checking consistency of QNM frequncy and separation constant used against Leaver''s constraint equations:\n\t*  '+cyan('leaver_workfunction(jf=%1.4f,l,m,[cw,sc]) = %s'%(jf,lvrwrk))+'\n\t*  cw = %s\n\t*  sc = %s'%(cw,sc)
+                alert(msg,'slm')
+
+            # Define dimensionless deformation parameter
+            aw = complex256( jf*cw )
+
+        else:
+
+            #
+            from numpy import complex128 as dtyp
+            sc = sc_leaver( dtyp(aw), l, m, s, verbose=verbose)[0]
 
     else:
 
         # Use input values
         aw,sc = __aw_sc__
 
+
+    #
+    from numpy import complex128 as dtyp
+    sc2 = sc_leaver( dtyp(aw), l, m, s, verbose=verbose)[0]
+    if abs(sc2-sc)>1e-6:
+        warning('input separation constant nont consistent with angular consteraint, and so we will use a different one to give you an answer that converges.')
+        sc = sc2
+
     # ------------------------------------------------ #
     # Angular parameter functions
     # ------------------------------------------------ #
-    k1 = 0.5*abs(m-s)
-    k2 = 0.5*abs(m+s)
-    alpha = lambda p:           -2.0*(p+1.0)*(p+2.0*k1+1.0)
-    beta  = lambda p,A_lm: p*(p-1.0)+2.0*p*(k1+k2+1.0-2.0*aw)\
-                                -( 2.0*aw*(2.0*k1+s+1.0)-(k1+k2)*\
-                                (k1+k2+1.0) ) - ( aw*aw + \
-                                s*(s+1.0) + A_lm)
-    gamma = lambda p:      2.0*aw*(p+k1+k2+s)
+
+    # Retrieve desired information from central location
+    k1,k2,alpha,beta,gamma,exp_scale_fun,u2v_map = leaver_ahelper( l,m,s,aw,sc, london=london, verbose=verbose )
 
     # ------------------------------------------------ #
     # Calculate the angular eighenfunction
@@ -2977,16 +3066,20 @@ def slpm( jf,               # Dimentionless spin parameter
 
     # Variable map for theta
     u = float128( cos(theta) )
+    # Calculate the variable used for the series solution
+    v = u2v_map( u )
 
     # the non-sum part of eq 18
     X = ones(u.shape,dtype=complex256)
-    X = X * exp(aw*u) * (1.0+u)**k1
+    exp_scale = exp_scale_fun(u)
+    X = X * exp_scale # exp(aw*u)
+    X = X * (1.0+u)**k1
     X = X * (1.0-u)**k2
 
     # initial series values
     a0 = 1.0 # a choice, setting the norm of Slm
 
-    a1 = -beta(0,sc)/alpha(0)
+    a1 = -beta(0)/alpha(0)
 
     C = 1.0
     C = C*((-1)**(max(-m,-s)))*((-1)**l)
@@ -2997,25 +3090,27 @@ def slpm( jf,               # Dimentionless spin parameter
         z = (l,m,n)
         if norm == -1:
             # Scale such that spherical counterpart is normalized
-            C /= ysprod(jf,l,m,z)
+            C /= ysprod(jf,l,m,z,s,london=london)
         else:
-            C /= sqrt( internal_ssprod(jf,z,z) )
+            C /= sqrt( internal_ssprod(jf,z,z,s,london=london,aw=aw) )
 
 
     # the sum part
     done = False
     Y = a0*ones(u.shape,dtype=complex256)
-    Y = Y + a1*(1.0+u)
+    Y = Y + a1*v
     k = 1
     kmax = 5e3
     err,yy = [],[]
     et2=1e-8
     max_a = max(abs(array([a0,a1])))
+    v_pow_k = v
     while not done:
         k += 1
         j = k-1
-        a2 = -1.0*( beta(j,sc)*a1 + gamma(j)*a0 ) / alpha(j)
-        dY = a2*(1.0+u)**k
+        a2 = -1.0*( beta(j)*a1 + gamma(j)*a0 ) / alpha(j)
+        v_pow_k = v_pow_k*v
+        dY = a2*v_pow_k
         Y += dY
         xx = max(abs( dY ))
 
@@ -3061,6 +3156,9 @@ def slm(  jf,               # Dimentionless spin parameter
           norm = True,     # If true, normalize the waveform
           ax = None,        # axes handles for plotting to; must be length 1(single theta) or 2(many theta)
           __aw_sc__ = None,
+          aw = None,        # when not none, the separation constant will be found automatically
+          london = False,
+          use_nr_convention = True, # Toggle whether to use NR convention for multipoles
           verbose = False ):# Be verbose
 
     # Setup plotting backend
@@ -3086,10 +3184,17 @@ def slm(  jf,               # Dimentionless spin parameter
 
     #
     if m<0:
-        S,yy,err = slpm( jf, l, -m, n, pi-theta, pi+phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__ )
-        S = ((-1)**(l+m)) * S.conj()
+        if use_nr_convention:
+            S,yy,err = slpm( jf, l, -m, n, pi-theta, pi+phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw )
+            S = ((-1)**(l+m)) * S.conj()
+            warning('NR convention being used for m<0 multipole. This results in a spheroidal function that does not satisfy Teukolsky\'s equation with the given labeling. To disable this warning, use keyword input use_nr_convention=False.')
+        else:
+            aw = -aw
+            m = -m
+            s = -s
+            S,yy,err = slpm( jf, l, m, n, theta, phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw )
     else:
-        S,yy,err = slpm( jf, l, m, n, theta, phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__ )
+        S,yy,err = slpm( jf, l, m, n, theta, phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw )
 
     #
     if plot:
@@ -4911,27 +5016,31 @@ class leaver_solve_workflow:
 
 
 #
-def tkangular( S, theta, acw, m, s=-2, separation_constant=0  ):
+def tkangular( S, theta, acw, m, s=-2, separation_constant=None  ):
     '''
     Apply Teukolsy's angular operator to input
     '''
     #
-    from numpy import sin, cos
+    from numpy import sin, cos, isnan, diff,sign
     #
     zero = 1e-10
     theta[theta==0]=zero
+    if separation_constant is None:
+        separation_constant = sc_leaver( acw, 2, m, s,verbose=False)[0]
     A = separation_constant
     #
     sn = sin(theta)
     cs = cos(theta)
-    #
+
     dS = spline_diff(theta,S)
-    d2S = spline_diff( sn * dS ) / sn
+    D2S = spline_diff( theta, sn * dS ) / sn
     #
     mscs = m+s*cs
     acwcs = acw*cs
     VS = (  -mscs*mscs/(sn*sn) + s + acwcs*( acwcs - 2*s ) + A  ) * S
+
     #
-    ans = d2S + VS
+    ans = D2S + VS
+
     #
     return ans
