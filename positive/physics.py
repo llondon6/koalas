@@ -2903,7 +2903,7 @@ def ysprod( jf,
 # Calculate inner product of two spheroidal harmonics at a a given spin
 # NOTE that this inner product does not rescale the spheroidal functions so that the spherical normalization is recovered
 # ------------------------------------------------------------------ #
-def ssprod(jf, z1, z2, N=2**8,verbose=False, london=False,s=-2,aw=None, use_nr_convention=True ):
+def ssprod(jf, z1, z2, N=2**8,verbose=False,theta=None, london=False,s=-2,aw=None, use_nr_convention=True ):
 
     '''
     To be used outside of slm for general calculation of inner-products. This is NOT the function slm uses to normalize the spheroidal harmonics.
@@ -2938,9 +2938,11 @@ def ssprod(jf, z1, z2, N=2**8,verbose=False, london=False,s=-2,aw=None, use_nr_c
             ans = 0
     else:
         s1,s2 = z1,z2
+        if theta is None:
+            error('must input theta vals when inputting vectors')
         if len(s1)!=len(s2):
             error('If 2nd and 3rd inputs are spheroidal function then they must be the ame length, and it is assumed that the span theta between 0 and pi')
-        ans = helper(s1,s2)
+        ans = helper(s1,s2,theta)
 
     return ans
 
@@ -2987,8 +2989,6 @@ def internal_ssprod( jf, z1, z2, s=-2, verbose=False, N=2**9, london=False,aw=No
 def slm_dual_set( jf, l, m, n, theta, phi, s=-2, lmax=8, lmin=2, aw=None, verbose=False ):
     '''
     Construct set of dual-spheroidals
-    Things that could spped this function up:
-    * calculate Sspace first, and then use it to directly calculate gramian rather than calling ssprod
     '''
     # Import usefuls
     from numpy import array,pi,arange,linalg,dot,conj,zeros
@@ -3015,7 +3015,7 @@ def slm_dual_set( jf, l, m, n, theta, phi, s=-2, lmax=8, lmin=2, aw=None, verbos
         for k,ln2 in enumerate(lnspace):
             s1 = Sspace[j,:]
             s2 = Sspace[k,:]
-            u[j,k] = ssprod(jf, s1, s2, aw=aw, use_nr_convention=False )
+            u[j,k] = ssprod(jf, s1, s2, theta=theta, aw=aw, use_nr_convention=False )
     # -------------------------------------- #
     # Invert and conjugate
     # -------------------------------------- #
@@ -3033,6 +3033,70 @@ def slm_dual_set( jf, l, m, n, theta, phi, s=-2, lmax=8, lmin=2, aw=None, verbos
     ans = {}
     ans['Slm'] = bar
     ans['AdjSlm'] = foo
+    ans['lnspace'] = lnspace
+    ans['Sspace'] = Sspace
+    ans['aSspace'] = aSspace
+    ans['SGramian'] = u
+    return ans
+
+
+
+
+def depreciated_slm_dual_set_slow( jf, l, m, n, theta, phi, s=-2, lmax=8, lmin=2, aw=None, verbose=False ):
+    '''
+    Construct set of dual-spheroidals
+    Things that could spped this function up:
+    * calculate Sspace first, and then use it to directly calculate gramian rather than calling ssprod
+    '''
+    # Import usefuls
+    from numpy import array,pi,arange,linalg,dot,conj,zeros
+    #error('This function is still being written')
+    # -------------------------------------- #
+    # Construct Gram matrix for spheroidals
+    # -------------------------------------- #
+    lnspace = []; nmin=0; nmax=0
+    lspace = arange( lmin,lmax+1 )
+    nspace = arange( nmin,nmax+1 )
+    for j,ll in enumerate(lspace):
+        for k,nn in enumerate(nspace):
+            lnspace.append( (ll,nn) )
+    u = zeros( (len(lnspace),len(lnspace)), dtype=complex )
+    for j,ln1 in enumerate(lnspace):
+        for k,ln2 in enumerate(lnspace):
+            l1,n1 = ln1
+            l2,n2 = ln2
+            z1 = (l1,m,n1)
+            z2 = (l2,m,n2)
+            u[j,k] = ssprod(jf, z1, z2, N=2**10, aw=aw, use_nr_convention=False)
+    # -------------------------------------- #
+    # Invert and conjugate
+    # -------------------------------------- #
+    v = conj(linalg.pinv(u))
+    # -------------------------------------- #
+    # Construct a space of spheroidals as a starting basis
+    # -------------------------------------- #
+    Sspace = []
+    for ln in lnspace:
+        ll,nn = ln
+        Sspace.append( slm( jf, ll, m, nn, theta, phi, s=s, verbose=verbose, aw=aw, use_nr_convention=False ) )
+    Sspace = array(Sspace)
+    # -------------------------------------- #
+    # Use v to project dual functions out of regular ones
+    # -------------------------------------- #
+    aSspace = dot(v,Sspace)
+    #
+    foo,bar = {},{}
+    for k,(l,n) in enumerate(lnspace):
+        foo[ (l,n) if len(nspace)>1 else l ] = aSspace[k,:]
+        bar[ (l,n) if len(nspace)>1 else l ] =  Sspace[k,:]
+    #
+    ans = {}
+    ans['Slm'] = bar
+    ans['AdjSlm'] = foo
+    ans['lnspace'] = lnspace
+    ans['Sspace'] = Sspace
+    ans['aSspace'] = aSspace
+    ans['SGramian'] = u
     return ans
 
 
