@@ -2275,6 +2275,80 @@ def mass_ratio_convention_sort(m1,m2,chi1,chi2):
 
 
 # Define function that return the recursion coefficients as functions of an integer index
+def leaver_mixed_ahelper( l,m,s,awk,awj,Alm,london=1,verbose=False ):
+    '''
+    Let L(awj) be the spheroidal angular operator without the eigenvalue.
+    Let Sk be the eigenvector of L(awk)
+    Here we store the recursion functions needed to solve:
+    ( L(awj) + Bjk ) Sk == 0
+    Where Bjk is a complex valued constant.
+    The implication here is that while L(awk)Sk = -Ak as is handled in leaver_ahelper,
+    Sk is also an aigenvector of L(awj)
+    '''
+
+    # Import usefuls
+    from numpy import exp,sqrt
+
+    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
+    # ANGULAR
+    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
+    if london==1:
+
+        '''
+        S(u) = exp( a w u ) (1+u)^k1 (1-u)^k2 Sum( a[k](1+u)^k )
+        '''
+
+        # Use abs of singular exponents AND write recursion functions so that the
+        # appropriate physical solution is always used
+        k1 = 0.5*abs(m-s)
+        k2 = 0.5*abs(m+s)
+        # As output from Mathematica
+        a_alpha = lambda k:	-2*(1 + k)*(1 + k + 2*k1)
+        a_beta  = lambda k:	-Bjk + k + k1 - 2*awk*(1 + 2*k + 2*k1) + k2 + (k + k1 + k2)**2 - s - (awj + s)**2
+        a_gamma = lambda k:  2*(awk*(-awk + k + k1 + k2) + awj*(awj + s))
+        # Exponential pre scale for angular function evaluation
+        a_exp_scale = lambda COSTH: exp( awk * COSTH )
+        # Define how the exopansion variable relates to u=cos(theta)
+        u2v_map = lambda U: 1+U
+
+    elif london==-1:
+
+        '''
+        S(u) = exp( - a w u ) (1+u)^k1 (1-u)^k2 Sum( a[k](1+u)^k )
+        '''
+
+        # Use abs of singular exponents AND write recursion functions so that the
+        # appropriate physical solution is always used
+        k1 = 0.5*abs(m-s)
+        k2 = 0.5*abs(m+s)
+        # As output from Mathematica
+        a_alpha = lambda k:	2*(1 + k)*(1 + k + 2*k2)
+        a_beta  = lambda k:	-Bjk + k + k1 + k2 + (k + k1 + k2)**2 - 2*awk*(1 + 2*k + 2*k2) - (awj - s)**2 - s
+        a_gamma = lambda k: -2*(awj**2 + awk*(-awk + k + k1 + k2) - awj*s)
+        # Exponential pre scale for angular function evaluation
+        a_exp_scale = lambda COSTH: exp( -awk * COSTH )
+        # Define how the exopansion variable relates to u=cos(theta)
+        u2v_map = lambda U: U-1
+
+    else:
+
+        error('Unknown input option. Must be -1 or 1 corresponding to the sign of the exponent in the desired solution form.')
+
+    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
+    # Package for output
+    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
+    if (k1<0) or (k2<0):
+        print 'k1 = ',k1
+        print 'k2 = ',k2
+        error('negative singular exponent!')
+
+    # Construct answer
+    ans = (k1,k2,a_alpha,a_beta,a_gamma,a_exp_scale,u2v_map)
+
+    # Return answer
+    return ans
+
+# Define function that return the recursion coefficients as functions of an integer index
 def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False ):
     '''
     Note that we will diver from Leaver's solution by handling the angular singular exponents differently than Leaver has. To use leaver's solution set london=False.
@@ -2298,7 +2372,7 @@ def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False ):
             # appropriate physical solution is always used
             k1 = 0.5*abs(m-s)
             k2 = 0.5*abs(m+s)
-            # Use Leaver's form for the recurion functions (in London's take, these correspond to s<=0)
+            # Use Leaver's form for the recurion functions
             a_alpha = lambda k:	-2*(1 + k)*(1 + k + 2*k1)
             a_beta  = lambda k:	-Alm - aw**2 - 2*aw*(1 + 2*k + 2*k1 + s) + (k + k1 + k2 - s)*(1 + k + k1 + k2 + s)
             a_gamma = lambda k:  2.0*aw*( k + k1+k2 + s )
@@ -2340,7 +2414,7 @@ def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False ):
         # appropriate physical solution is always used
         k1 = 0.5*abs(m-s)
         k2 = 0.5*abs(m+s)
-        # Use Leaver's form for the recurion functions (in London's take, these correspond to s<=0)
+        # Use Leaver's form for the recurion functions
         a_alpha = lambda k:	-2.0 * (k+1.0) * (k+2.0*k1+1.0)
         a_beta  = lambda k:	k*(k-1.0) \
                             + 2.0*k*( k1+k2+1.0-2.0*aw ) \
@@ -2652,7 +2726,7 @@ def leaver_workfunction( j, l, m, state, s=-2, mpm=False, adjoint=False, tol=1e-
 
 
 # Given a separation constant, find a frequency*spin such that the spheroidal series expansion converges
-def cw_leaver( Alm, l, m, s,tol=1e-9, london=True, verbose=False  ):
+def aw_leaver( Alm, l, m, s,tol=1e-9, london=True, verbose=False, guess=None  ):
     '''
     Given a separation constant, find a frequency*spin such that the spheroidal series expansion converges
     '''
@@ -2687,7 +2761,7 @@ def cw_leaver( Alm, l, m, s,tol=1e-9, london=True, verbose=False  ):
     # Define the intermediate work function to be used for this iteration
     indirect_action = lambda STATE: action(STATE[0]+1j*STATE[1])
     # indirect_action = lambda STATE: log( 1.0 + abs( array(  action(STATE[0]+1j*STATE[1])  ) ) )
-    aw_guess = 0.5 + 1j * 0.01
+    aw_guess = 0.5 + 1j * 0.01 if guess is None else guess
     guess = [aw_guess.real,aw_guess.imag]
     foo  = root( indirect_action, guess, tol=tol )
     aw = foo.x[0]+1j*foo.x[1]
