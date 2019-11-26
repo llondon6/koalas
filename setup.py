@@ -11,7 +11,7 @@ with open('README.md', 'r') as f:
 #
 setup(
     name='positive',
-    version='0.2.2',
+    version='0.2.2.1',
     description='Low level python API for NR+LIGO packages.',
     long_description=readme,
     long_description_content_type='text/markdown',
