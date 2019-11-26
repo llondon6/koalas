@@ -261,11 +261,16 @@ def sYlm_mollweide_plot(l,m,ax=None,title=None,N=100,form=None,s=-2,colorbar_shr
 
 
 # Plot a 3d meshed sphere
-def plot_3d_mesh_sphere(ax=None,nth=30,nph=30,r=1,color='k',lw=1,alpha=0.1):
+def plot_3d_mesh_sphere(ax=None,nth=30,nph=30,r=1,color='k',lw=1,alpha=0.1,axes_on=True,axes_alpha=0.35,view=None):
     #
     from numpy import sin,cos,linspace,ones_like,array,pi
     from mpl_toolkits.mplot3d import Axes3D
-    from matplotlib.pyplot import figure,plot,figaspect,text
+    from matplotlib.pyplot import figure,plot,figaspect,text,axis
+
+    #
+    if view is None:
+        view = (30,-60)
+
     #
     if ax is None:
         fig = figure( figsize=4*figaspect(1) )
@@ -291,17 +296,19 @@ def plot_3d_mesh_sphere(ax=None,nth=30,nph=30,r=1,color='k',lw=1,alpha=0.1):
         z = r*cos(th_)
         plot(x,y,z,color=color,alpha=alpha,lw=lw)
     #
-    for ph in [ 0, pi, pi/2, 3*pi/2 ]:
-        x = r*sin(th_)*cos(ph)
-        y = r*sin(th_)*sin(ph)
-        z = r*cos(th_)
-        plot(x,y,z,color='k',alpha=0.35,lw=lw,ls='--')
-    #
-    for th in [ pi/2 ]:
-        x = r*sin(th)*cos(ph_)
-        y = r*sin(th)*sin(ph_)
-        z = r*cos(th)*ones_like(ph_)
-        plot(x,y,z,color='k',alpha=0.35,lw=lw,ls='--')
+    if axes_on:
+        #
+        for ph in [ 0, pi, pi/2, 3*pi/2 ]:
+            x = r*sin(th_)*cos(ph)
+            y = r*sin(th_)*sin(ph)
+            z = r*cos(th_)
+            plot(x,y,z,color='k',alpha=axes_alpha,lw=lw,ls='--')
+        #
+        for th in [ pi/2 ]:
+            x = r*sin(th)*cos(ph_)
+            y = r*sin(th)*sin(ph_)
+            z = r*cos(th)*ones_like(ph_)
+            plot(x,y,z,color='k',alpha=axes_alpha,lw=lw,ls='--')
 
     # Label axes
     text_r = r*1.1
@@ -311,3 +318,59 @@ def plot_3d_mesh_sphere(ax=None,nth=30,nph=30,r=1,color='k',lw=1,alpha=0.1):
 
     # Plot the origin
     plot([0],[0],[0],'k+',alpha=0.35)
+
+    #
+    ax.view_init(view[0],view[1])
+
+
+#
+def plot_single_3d_trajectory( xx, yy, zz, color='black', alpha=0.6, lw=2, plot_start=False, plot_end=False, label=None, ax=None):
+
+    #
+    from numpy import sin,cos,linspace,ones_like,array,pi,max,sqrt,linalg
+    from mpl_toolkits.mplot3d import Axes3D
+    from matplotlib.pyplot import figure,plot,figaspect,text,axis
+
+    #
+    if ax is None:
+        fig = figure( figsize=4*figaspect(1) )
+        ax = fig.add_subplot(111,projection='3d')
+        plot_3d_mesh_sphere( ax, color='k', alpha=0.025, lw=1, axes_alpha=0.1, view=view )
+
+    plot(xx,yy,zz,color=color,alpha=alpha,lw=lw,label=label if plot_end else None)
+    if plot_start: ax.scatter( xx[0], yy[0], zz[0],  label=r'Initial %s (Dynamics)'%label, color=color, marker='o', s=20 )
+    if plot_end:   ax.scatter( xx[-1],yy[-1],zz[-1], label=r'Final %s (Dynamics)'%label,   color=color, marker='v', s=20 )
+
+    return ax
+
+#
+def alpha_plot_trajectory( xx,yy,zz, nmasks=10, color='b', lw=1,label=None, ax=None,alpha_min=0.05,alpha_max=0.99 ):
+
+    #
+    from numpy import sin,cos,linspace,ones_like,array,pi,max,sqrt,linalg
+    from mpl_toolkits.mplot3d import Axes3D
+    from matplotlib.pyplot import figure,plot,figaspect,text,axis
+
+    #
+    if ax is None:
+        fig = figure( figsize=4*figaspect(1) )
+        ax = fig.add_subplot(111,projection='3d')
+        plot_3d_mesh_sphere( ax, color='k', alpha=0.025, lw=1, axes_alpha=0.1, view=view )
+
+    nmask_len = int(float(len(xx))/nmasks)
+    masks = []; startdex,enddex = 0,nmask_len
+    for k in range(nmasks):
+        masks.append( range( startdex, enddex ) )
+        startdex=enddex
+        enddex = enddex+nmask_len
+        if k+1 == nmasks-1:
+            enddex = len(xx)
+
+    #
+    for k,mask in enumerate(masks):
+        alpha = alpha_min+k*(alpha_max-alpha_min)/(len(masks)-1)
+        plot_end=(k==len(masks)-1)
+        plot_start=(k==0)
+        plot_single_trajectory(xx[mask],yy[mask],zz[mask],color=color,alpha=alpha,lw=lw,plot_start=plot_start,plot_end=plot_end,label=label if (plot_end or plot_start) else None)
+
+    return ax

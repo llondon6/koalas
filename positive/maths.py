@@ -2,7 +2,10 @@
 from positive import *
 
 # Reference factorial from scipy
-from scipy.misc import factorial
+try:
+    from scipy.misc import factorial
+except:
+    from scipy.special import factorial
 
 
 '''

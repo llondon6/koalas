@@ -1603,7 +1603,7 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     hf = hf_raw
 
     #----------------------------------------------#
-    # Calculate Time Donaim Waveform
+    # Calculate Time Domain Waveform
     #----------------------------------------------#
     ht = ifft( hf ) * df*N
     # ht *= window
@@ -1707,7 +1707,7 @@ def leaver( jf,                     # Dimensionless BH Spin
     #
     if isinstance(jf,(tuple,list,ndarray)):
         #
-        cw,sc = array( [ __leaver_helper__(jf_, l, m, n, p , abs(s), Mf, verbose) for jf_ in jf ] )[:,:,0].T
+        cw,sc = array( [ __leaver_helper__(jf_, l, m, n, p , s, Mf, verbose) for jf_ in jf ] )[:,:,0].T
         return cw,sc
 
     else:
@@ -1788,7 +1788,8 @@ def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = F
     cw /= Mf
 
     # Handle positive spin weight
-    if s>0: cs -= 2*abs(s)
+    if s>0:
+        cs = cs - 2*abs(s)
 
     #
     return cw,cs
@@ -2274,8 +2275,26 @@ def mass_ratio_convention_sort(m1,m2,chi1,chi2):
     return (m1_,m2_,chi1_,chi2_)
 
 
-# Define function that return the recursion coefficients as functions of an integer index
-def leaver_mixed_ahelper( l,m,s,awk,awj,Alm,london=1,verbose=False ):
+#
+def teukolsky_angular_adjoint_rule(aw,Alm,allow_warning=True):
+    '''
+    The adjoint of teukolskys angular equation is simply its complex conjugate
+    '''
+    from numpy import conj
+    warning('The angular ajoint should only be envoked when there is no interest in the radial problem. If this is indeed the setting in which we wish to use the angular adjoint, then please turn adjoint off via "adjoint=False", and manually conjugate the output of angular related quantities (ie frequency and separation constant). Applying radial and angular adjoint options concurrently happens to be redundant.')
+    return ( conj(aw), conj(Alm) )
+
+#
+def teukolsky_radial_adjoint_rule(s,w,Alm):
+    '''
+    The adjoint of teukolskys radial equation is ( s->-s,A->conj(A)+2s )
+    '''
+    from numpy import conj
+    return ( -s, w, 2*s+conj(Alm) )
+
+
+# Define function that returns the recursion coefficients as functions of an integer index
+def leaver_mixed_ahelper( l,m,s,awj,awk,Bjk,london=1,verbose=False,adjoint=False ):
     '''
     Let L(awj) be the spheroidal angular operator without the eigenvalue.
     Let Sk be the eigenvector of L(awk)
@@ -2286,8 +2305,14 @@ def leaver_mixed_ahelper( l,m,s,awk,awj,Alm,london=1,verbose=False ):
     Sk is also an aigenvector of L(awj)
     '''
 
+    warning('This functionality is based on an incorrect premise. Do not use related functions and options.')
+
     # Import usefuls
     from numpy import exp,sqrt
+
+    # If the adjoint equation is of interest, apply the adjoint rule
+    if adjoint:
+        awj,Alm = teukolsky_angular_adjoint_rule(awj,Alm)
 
     # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
     # ANGULAR
@@ -2307,7 +2332,7 @@ def leaver_mixed_ahelper( l,m,s,awk,awj,Alm,london=1,verbose=False ):
         a_beta  = lambda k:	-Bjk + k + k1 - 2*awk*(1 + 2*k + 2*k1) + k2 + (k + k1 + k2)**2 - s - (awj + s)**2
         a_gamma = lambda k:  2*(awk*(-awk + k + k1 + k2) + awj*(awj + s))
         # Exponential pre scale for angular function evaluation
-        a_exp_scale = lambda COSTH: exp( awk * COSTH )
+        scale_fun_u = lambda COSTH: exp( awk * COSTH )
         # Define how the exopansion variable relates to u=cos(theta)
         u2v_map = lambda U: 1+U
 
@@ -2326,7 +2351,7 @@ def leaver_mixed_ahelper( l,m,s,awk,awj,Alm,london=1,verbose=False ):
         a_beta  = lambda k:	-Bjk + k + k1 + k2 + (k + k1 + k2)**2 - 2*awk*(1 + 2*k + 2*k2) - (awj - s)**2 - s
         a_gamma = lambda k: -2*(awj**2 + awk*(-awk + k + k1 + k2) - awj*s)
         # Exponential pre scale for angular function evaluation
-        a_exp_scale = lambda COSTH: exp( -awk * COSTH )
+        scale_fun_u = lambda COSTH: exp( -awk * COSTH )
         # Define how the exopansion variable relates to u=cos(theta)
         u2v_map = lambda U: U-1
 
@@ -2343,19 +2368,37 @@ def leaver_mixed_ahelper( l,m,s,awk,awj,Alm,london=1,verbose=False ):
         error('negative singular exponent!')
 
     # Construct answer
-    ans = (k1,k2,a_alpha,a_beta,a_gamma,a_exp_scale,u2v_map)
+    ans = (k1,k2,a_alpha,a_beta,a_gamma,scale_fun_u,u2v_map)
 
     # Return answer
     return ans
 
-# Define function that return the recursion coefficients as functions of an integer index
-def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False ):
+
+# Define function that returns the recursion coefficients as functions of an integer index
+def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False,adjoint=False ):
     '''
     Note that we will diver from Leaver's solution by handling the angular singular exponents differently than Leaver has. To use leaver's solution set london=False.
     '''
 
     # Import usefuls
-    from numpy import exp,sqrt
+    from numpy import exp,sqrt,ndarray,cos,array
+
+    # Determine if the user wishes to consider the mixed problem
+    mixed = isinstance(aw,(tuple,list,ndarray))
+    if mixed:
+        mixed = 2==len(aw)
+        if len(aw)>2: error('Iterable aw found, but it is not of length 2 as requirede to consider the mixed eigenvalue problem.')
+    # Interface with leaver_mixed_ahelper
+    if mixed:
+        # Unpack aw values. Note that awj lives in the operator, awk lives in the eigenfunction
+        awj,awk = aw
+        if london==False: london=1
+        alert('Retrieving recurion functions for mixed the problem',verbose=verbose)
+        return leaver_mixed_ahelper( l,m,s,awj,awk,Alm,london=london,verbose=verbose,adjoint=adjoint )
+
+    # If the adjoint equation is of interest, apply the adjoint rule
+    if adjoint:
+        aw,Alm = teukolsky_angular_adjoint_rule(aw,Alm)
 
     # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
     # ANGULAR
@@ -2376,15 +2419,17 @@ def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False ):
             a_alpha = lambda k:	-2*(1 + k)*(1 + k + 2*k1)
             a_beta  = lambda k:	-Alm - aw**2 - 2*aw*(1 + 2*k + 2*k1 + s) + (k + k1 + k2 - s)*(1 + k + k1 + k2 + s)
             a_gamma = lambda k:  2.0*aw*( k + k1+k2 + s )
-            # Exponential pre scale for angular function evaluation
-            a_exp_scale = lambda COSTH: exp( aw * COSTH )
             # Define how the exopansion variable relates to u=cos(theta)
             u2v_map = lambda U: 1+U
+            # Define starting variable transformation variable
+            theta2u_map = lambda TH: cos(TH)
+            #
+            scale_fun_u = lambda U: (1+U)**k1 * (1-U)**k2 * exp( aw * U )
 
         elif london==-1:
 
             '''
-            S(u) = exp( - a w u ) (1+u)^k1 (1-u)^k2 Sum( a[k](1+u)^k )
+            S(u) = exp( - a w u ) (1+u)^k1 (1-u)^k2 Sum( a[k](u-1)^k )
             '''
 
             # Use abs of singular exponents AND write recursion functions so that the
@@ -2395,10 +2440,56 @@ def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False ):
             a_alpha = lambda k:	2*(1 + k)*(1 + k + 2*k2)
             a_beta  = lambda k:	-Alm - aw**2 - 2*aw*(1 + 2*k + 2*k2 - s) + (k + k1 + k2 - s)*(1 + k + k1 + k2 + s)
             a_gamma = lambda k: -2*aw*(k + k1 + k2 - s)
-            # Exponential pre scale for angular function evaluation
-            a_exp_scale = lambda COSTH: exp( -aw * COSTH )
             # Define how the exopansion variable relates to u=cos(theta)
             u2v_map = lambda U: U-1
+            # Define starting variable transformation variable
+            theta2u_map = lambda TH: cos(TH)
+            #
+            scale_fun_u = lambda U: (1+U)**k1 * (1-U)**k2 * exp( -aw * U )
+
+        elif london==2:
+
+            '''
+            u = aw*cos(theta)
+            S(u) = exp( u ) (aw+u)^k1 (aw-u)^k2 Sum( a[k](aw+u)^k )
+            '''
+
+            # Use abs of singular exponents AND write recursion functions so that the
+            # appropriate physical solution is always used
+            k1 = 0.5*abs(m-s)
+            k2 = 0.5*abs(m+s)
+            # Use Leaver's form for the recurion functions
+            a_alpha = lambda k:	-2*aw*(1 + k)*(1 + k + 2*k1)
+            a_beta  = lambda k:	-Alm - aw**2 - 2*aw*(1 + 2*k + 2*k1 + s) + (k + k1 + k2 - s)*(1 + k + k1 + k2 + s)
+            a_gamma = lambda k: 2*(k + k1 + k2 + s)
+            # Define starting variable transformation variable
+            theta2u_map = lambda TH: aw*cos(TH)
+            # Define how the exopansion variable relates to u=cos(theta)
+            u2v_map = lambda U: U+aw
+            #
+            scale_fun_u = lambda U: (array(aw+U,dtype=complex))**k1 * (array(aw-U,dtype=complex))**k2 * exp( U )
+
+        elif london==-2:
+
+            '''
+            u = aw*cos(theta)
+            S(u) = exp( -u ) (aw+u)^k1 (aw-u)^k2 Sum( a[k](-aw+u)^k )
+            '''
+
+            # Use abs of singular exponents AND write recursion functions so that the
+            # appropriate physical solution is always used
+            k1 = 0.5*abs(m-s)
+            k2 = 0.5*abs(m+s)
+            # Use Leaver's form for the recurion functions
+            a_alpha = lambda k:	2*aw*(1 + k)*(1 + k + 2*k2)
+            a_beta  = lambda k:	-Alm - aw**2 - 2*aw*(1 + 2*k + 2*k2 - s) + (k + k1 + k2 - s)*(1 + k + k1 + k2 + s)
+            a_gamma = lambda k: -2*(k + k1 + k2 - s)
+            # Define starting variable transformation variable
+            theta2u_map = lambda TH: aw*cos(TH)
+            # Define how the exopansion variable relates to u=cos(theta)
+            u2v_map = lambda U: U-aw
+            #
+            scale_fun_u = lambda U: (array(aw+U,dtype=complex))**k1 * (array(aw-U,dtype=complex))**k2 * exp( -U )
 
         else:
 
@@ -2421,10 +2512,12 @@ def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False ):
                             - ( 2.0*aw*(2.0*k1+s+1.0)-(k1+k2)*(k1+k2+1) ) \
                             - ( aw*aw + s*(s+1.0) + Alm )
         a_gamma = lambda k:   2.0*aw*( k + k1+k2 + s )
-        # Exponential pre scale for angular function evaluation
-        a_exp_scale = lambda COSTH: exp( aw * COSTH )
         # Define how the exopansion variable relates to u=cos(theta)
         u2v_map = lambda U: 1+U
+        # Define starting variable transformation variable
+        theta2u_map = lambda TH: cos(TH)
+        #
+        scale_fun_u = lambda U: (1+U)**k1 * (1-U)**k2 * exp( aw * U )
 
     # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
     # Package for output
@@ -2435,40 +2528,34 @@ def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False ):
         error('negative singular exponent!')
 
     # Construct answer
-    ans = (k1,k2,a_alpha,a_beta,a_gamma,a_exp_scale,u2v_map)
+    ans = (k1,k2,a_alpha,a_beta,a_gamma,scale_fun_u,u2v_map,theta2u_map)
 
     # Return answer
     return ans
 
 
-# Define function that return the recursion coefficients as functions of an integer index
-def leaver_helper( l,m,s,a,w,Alm, london=True, verbose=False ):
-    '''
-    Note that we will diver from Leaver's solution by handling the angular singular exponents differently than Leaver has. To use leaver's solution set london=False.
-    '''
+#
+def leaver_rhelper( l,m,s,a,w,Alm, london=True, verbose=False, adjoint=False ):
 
     # Import usefuls
-    from numpy import exp,sqrt
+    from numpy import sqrt, exp
 
-    # Predefine useful quantities
-    aw = a*w
-
-    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
-    # ANGULAR
-    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
-    # Use lower level module
-    k1,k2,a_alpha,a_beta,a_gamma,a_exp_scale = leaver_ahelper( l,m,s,aw,Alm, london=london, verbose=verbose )
+    #
+    if adjoint:
+        s,w,Alm = teukolsky_radial_adjoint_rule(s,w,Alm)
 
     # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
     # RADIAL
     # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
+    london=False # set london false here becuase we expect leaver's version to be faster
     if london:
         # There is only one solution that satisfies the boundary
         # conditions at the event horizon and infinity.
         p1 = p2 = 1
-        r_alpha = lambda k: a*m*(2j + 2j*n) + (-1j - 1j*n)*w + b*(1 + n**2 + n*(2 - s) - s + (-1j - 1j*n)*w)
-        r_beta  = lambda k: a*m*(-2j - 4j*n - 4*w) + (2j - 4j*a**2 + (4j - 8j*a**2)*n)*w + (4 - 8*a**2)*w**2 + b*(-1 - Alm - 2*n - 2*n**2 - s - 2*a*m*w + (2j + 4j*n)*w + (4 - a**2)*w**2)
-        r_gamma = lambda k: -1j*n*w - 2*w**2 + a*m*(2j*n + 4*w) + b*(n**2 + n*s + (-3j*n - 2j*s)*w - 2*w**2)
+        b  = sqrt(1.0-4.0*a*a)
+        r_alpha = lambda k: 1 + k**2 - s + k*(2 - s - 1j*w) + ((2*1j)*a*m + k*((2*1j)*a*m - 1j*w) - 1j*w)/b - 1j*w
+        r_beta  = lambda k: lambda k: -1 - Alm - 2*k**2 - s + k*(-2 + (4*1j)*w) + (2*1j)*w - 2*a*m*w + (4 - a**2)*w**2 + ((-2*1j)*a*m + (2*1j)*w - (4*1j)*a**2*w - 4*a*m*w + (4 - 8*a**2)*w**2 + k*((-4*1j)*a*m + (4*1j - (8*1j)*a**2)*w))/b
+        r_gamma = lambda k: k**2 + k*(s - (3*1j)*w) - (2*1j)*s*w - 2*w**2 + (k*((2*1j)*a*m - 1j*w) + 4*a*m*w - 2*w**2)/b
         # Exponential pre scale for radial function evaluation
         r_exp_scale = lambda r: exp( aw * r )
     else:
@@ -2492,12 +2579,39 @@ def leaver_helper( l,m,s,a,w,Alm, london=True, verbose=False ):
         # Exponential pre scale for radial function evaluation
         r_exp_scale = lambda r: exp( aw * r )
 
+    return p1,p2,r_alpha,r_beta,r_gamma,r_exp_scale
+
+
+# Define function that returns the recursion coefficients as functions of an integer index
+def leaver_helper( l,m,s,a,w,Alm, london=True, verbose=False, adjoint=False ):
+    '''
+    Note that we will diver from Leaver's solution by handling the angular singular exponents differently than Leaver has. To use leaver's solution set london=False.
+    '''
+
+    # Import usefuls
+    from numpy import exp,sqrt
+
+    # Predefine useful quantities
+    aw = a*w
+
+    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
+    # ANGULAR
+    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
+    # Use lower level module
+    k1,k2,a_alpha,a_beta,a_gamma,scale_fun_u,u2v_map,theta2u_map = leaver_ahelper( l,m,s,a*w,Alm, london=london, verbose=verbose, adjoint=adjoint )
+
+    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
+    # RADIAL
+    # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
+    # Use lower level module
+    p1,p2,r_alpha,r_beta,r_gamma,r_exp_scale = leaver_rhelper( l,m,s,a,w,Alm, london=london, verbose=verbose, adjoint=adjoint )
+
     # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
     # Package for output
     # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
 
     # Construct answer
-    ans = { 'angulars':(k1,k2,a_alpha,a_beta,a_gamma,a_exp_scale),
+    ans = { 'angulars':(k1,k2,a_alpha,a_beta,a_gamma,scale_fun_u,u2v_map,theta2u_map),
             'radials': (p1,p2,r_alpha,r_beta,r_gamma,r_exp_scale) }
 
     # Return answer
@@ -2506,7 +2620,7 @@ def leaver_helper( l,m,s,a,w,Alm, london=True, verbose=False ):
 
 # Equation 27 of Leaver '86
 # Characteristic Eqn for Spheroidal Radial Functions
-def leaver27( a, l, m, w, A, s=-2.0, vec=False, mpm=False, adjoint=False, tol=1e-10, **kwargs ):
+def leaver27( a, l, m, w, Alm, s=-2.0, vec=False, mpm=False, adjoint=False, tol=1e-10,london=True,verbose=False, **kwargs ):
 
     '''
     Equation 27 of Leaver '86
@@ -2519,7 +2633,7 @@ def leaver27( a, l, m, w, A, s=-2.0, vec=False, mpm=False, adjoint=False, tol=1e
     # Enforce Data Type
     a = dtyp(a)
     w = dtyp(w)
-    A = dtyp(A)
+    Alm = dtyp(Alm)
 
     # alert('s=%i'%s)
     # if s != 2:
@@ -2534,7 +2648,7 @@ def leaver27( a, l, m, w, A, s=-2.0, vec=False, mpm=False, adjoint=False, tol=1e
     else:
         from numpy import sqrt
 
-    # global c0, c1, c2, c3, c4, Alpha, Beta, Gamma, l_min
+    # global c0, c1, c2, c3, c4, alpha, beta, gamma, l_min
 
     #
     l_min = l-max(abs(m),abs(s)) # VERY IMPORTANT
@@ -2543,35 +2657,35 @@ def leaver27( a, l, m, w, A, s=-2.0, vec=False, mpm=False, adjoint=False, tol=1e
     # ------------------------------------------------ #
     # Radial parameter defs
     # ------------------------------------------------ #
-    #b  = complex(numpy.sqrt(1.0-4.0*a*a))
-    b  = sqrt(1.0-4.0*a*a)
-    c_param = 0.5*w - a*m
-
-    c0    =         1.0 - s - 1.0j*w - (2.0j/b) * c_param
-    c1    =         -4.0 + 2.0j*w*(2.0+b) + (4.0j/b) * c_param
-    c2    =         s + 3.0 - 3.0j*w - (2.0j/b) * c_param
-    c3    =         w*w*(4.0+2.0*b-a*a) - 2.0*a*m*w - s - 1.0 \
-                    + (2.0+b)*1j*w - A + ((4.0*w+2.0j)/b) * c_param
-    c4    =         s + 1.0 - 2.0*w*w - (2.0*s+3.0)*1j*w - ((4.0*w+2.0*1j)/b)*c_param
-
-    # If the related equations for the adjoint radial operator are requested, take conjugates
-    if adjoint:
-        c0,c1,c2,c3,c4 = [ q.conj() for q in (c0,c1,c2,c3,c4) ]
-
-    Alpha = lambda k:	k*k + (c0+1)*k + c0
-    Beta  = lambda k:   -2.0*k*k + (c1+2.0)*k + c3
-    Gamma = lambda k:	k*k + (c2-3.0)*k + c4 - c2 + 2.0
+    _,_,alpha,beta,gamma,_ = leaver_rhelper( l,m,s,a,w,Alm, london=london, verbose=verbose, adjoint=adjoint )
+    # b  = sqrt(1.0-4.0*a*a)
+    # c_param = 0.5*w - a*m
+    #
+    # c0    =         1.0 - s - 1.0j*w - (2.0j/b) * c_param
+    # c1    =         -4.0 + 2.0j*w*(2.0+b) + (4.0j/b) * c_param
+    # c2    =         s + 3.0 - 3.0j*w - (2.0j/b) * c_param
+    # c3    =         w*w*(4.0+2.0*b-a*a) - 2.0*a*m*w - s - 1.0 \
+    #                 + (2.0+b)*1j*w - A + ((4.0*w+2.0j)/b) * c_param
+    # c4    =         s + 1.0 - 2.0*w*w - (2.0*s+3.0)*1j*w - ((4.0*w+2.0*1j)/b)*c_param
+    #
+    # # If the related equations for the adjoint radial operator are requested, take conjugates
+    # if adjoint:
+    #     c0,c1,c2,c3,c4 = [ q.conj() for q in (c0,c1,c2,c3,c4) ]
+    #
+    # alpha = lambda k:	k*k + (c0+1)*k + c0
+    # beta  = lambda k:   -2.0*k*k + (c1+2.0)*k + c3
+    # gamma = lambda k:	k*k + (c2-3.0)*k + c4 - c2 + 2.0
 
     #
     v = 1.0
     for p in range(l_min+1):
-        v = Beta(p) - ( Alpha(p-1.0)*Gamma(p) / v )
+        v = beta(p) - ( alpha(p-1.0)*gamma(p) / v )
 
     #
-    aa = lambda p:   -Alpha(p-1.0+l_min)*Gamma(p+l_min)
-    bb = lambda p:   Beta(p+l_min)
+    aa = lambda p:   -alpha(p-1.0+l_min)*gamma(p+l_min)
+    bb = lambda p:   beta(p+l_min)
     u,state = lentz(aa,bb,tol)
-    u = Beta(l_min) - u
+    u = beta(l_min) - u
 
     #
     x = v-u
@@ -2584,7 +2698,7 @@ def leaver27( a, l, m, w, A, s=-2.0, vec=False, mpm=False, adjoint=False, tol=1e
 
 # Equation 21 of Leaver '86
 # Characteristic Eqn for Spheroidal Angular Functions
-def leaver21( a, l, m, w, A, s=-2.0, vec=False, adjoint=False,tol=1e-10,use_london_fix=True, **kwargs ):
+def leaver21( a, l, m, w, Alm, s=-2.0, vec=False, adjoint=False,tol=1e-10,london=True,verbose=False, **kwargs ):
     '''
     Equation 21 of Leaver '86
     Characteristic Eqn for Spheroidal Angular Functions
@@ -2597,28 +2711,8 @@ def leaver21( a, l, m, w, A, s=-2.0, vec=False, adjoint=False,tol=1e-10,use_lond
     #
     l_min = l-max(abs(m),abs(s)) # VERY IMPORTANT
 
-    # ------------------------------------------------ #
-    # Angular parameter functions
-    # ------------------------------------------------ #
-    k1 = 0.5*abs(m-s)
-    k2 = 0.5*abs(m+s)
-
-
-    # If the related equations for the adjoint angular operator are requested, take conjugates
-    if adjoint:
-        w,A = w.conj(),A.conj()
-
-    aw=a*w
-
-    #
-    # k1,k2,a_alpha,a_beta,a_gamma,a_exp_scale = leaver_ahelper( l,m,s,aw,Alm, london=True )
-
-    alpha = lambda k:	-2.0 * (k+1.0) * (k+2.0*k1+1.0)
-    beta  = lambda k:	k*(k-1.0) \
-                        + 2.0*k*( k1+k2+1.0-2.0*aw ) \
-                        - ( 2.0*aw*(2.0*k1+s+1.0)-(k1+k2)*(k1+k2+1) ) \
-                        - ( aw*aw + s*(s+1.0) + A )
-    gamma = lambda k:   2.0*aw*( k + k1+k2 + s )
+    '''# NOTE: Here we do NOT pass the adjoint keyword, as it we will adjuncticate(?) in leaver27 for the radial equation, and it would be redundant to adjuncticate(??) twice. '''
+    k1,k2,alpha,beta,gamma,_,_,_ = leaver_ahelper( l,m,s,a*w,Alm, london=london, verbose=verbose, adjoint=False )
 
     #
     v = 1.0
@@ -2649,7 +2743,7 @@ def leaver_2D_workfunction( j, l, m, cw, s, tol=1e-10 ):
     from scipy.optimize import root,fmin,minimize
     from positive import alert,red,warning,leaver_workfunction
 
-    ''' use cw and leaver21 to find A(cw) '''
+    error('function must be rewritten to evaluate the angular constraint given possible frequency values, and using sc_leaver to estimate the separation constant (with a guess?)')
     # Try using fmin
     # Define the intermediate work function to be used for this iteration
     fun = lambda X: log(linalg.norm(  leaver21( jf,l,m, cw, X[0]+1j*X[1], s=s )  ))
@@ -2726,7 +2820,7 @@ def leaver_workfunction( j, l, m, state, s=-2, mpm=False, adjoint=False, tol=1e-
 
 
 # Given a separation constant, find a frequency*spin such that the spheroidal series expansion converges
-def aw_leaver( Alm, l, m, s,tol=1e-9, london=True, verbose=False, guess=None  ):
+def aw_leaver( Alm, l, m, s,tol=1e-9, london=True, verbose=False, guess=None, awj=None, awk=None, adjoint=False  ):
     '''
     Given a separation constant, find a frequency*spin such that the spheroidal series expansion converges
     '''
@@ -2741,8 +2835,18 @@ def aw_leaver( Alm, l, m, s,tol=1e-9, london=True, verbose=False, guess=None  ):
     l_min = l-max(abs(m),abs(s)) # VERY IMPORTANT
 
     #
+    if awj and awk:
+        error('When specifying spin-frequencies for the mixed problem, only one of the two frequencies must specified.')
+    if awj:
+        internal_leaver_ahelper = lambda AWK: leaver_ahelper( l,m,s,[awj,AWK],Alm+s, london=london, verbose=verbose, adjoint=adjoint )
+    elif awk:
+        internal_leaver_ahelper = lambda AWJ: leaver_ahelper( l,m,s,[AWJ,awk],Alm+s, london=london, verbose=verbose, adjoint=adjoint )
+    else:
+        internal_leaver_ahelper = lambda AW: leaver_ahelper( l,m,s,AW,Alm+s, london=london, verbose=verbose, adjoint=adjoint )
+
+    #
     def action(aw):
-        _,_,alpha,beta,gamma,_,_ = leaver_ahelper( l,m,s,aw,Alm, london=london, verbose=verbose )
+        _,_,alpha,beta,gamma,_,_ = internal_leaver_ahelper(aw)
         v = 1.0
         for p in range(l_min+1):
             v = beta(p) - (alpha(p-1.0)*gamma(p) / v)
@@ -2765,7 +2869,8 @@ def aw_leaver( Alm, l, m, s,tol=1e-9, london=True, verbose=False, guess=None  ):
     guess = [aw_guess.real,aw_guess.imag]
     foo  = root( indirect_action, guess, tol=tol )
     aw = foo.x[0]+1j*foo.x[1]
-    fmin = indirect_action( foo.fun )
+    fmin = foo.fun
+    foo.action = indirect_action
     retry = ( 'not making good progress' in foo.message.lower() ) or ( 'error' in foo.message.lower() )
 
     # # Try using fmin
@@ -2789,7 +2894,7 @@ def aw_leaver( Alm, l, m, s,tol=1e-9, london=True, verbose=False, guess=None  ):
 
 
 # Compute perturbed Kerr separation constant given a frequency
-def sc_leaver( aw, l, m, s,tol=1e-9, london=True, s_included=False, verbose=False  ):
+def sc_leaver( aw, l, m, s,tol=1e-9, london=True, s_included=False, verbose=False, adjoint=False  ):
     '''
     Given (aw, l, m, s), compute and return separation constant.
     '''
@@ -2805,7 +2910,7 @@ def sc_leaver( aw, l, m, s,tol=1e-9, london=True, s_included=False, verbose=Fals
 
     #
     def action(Alm):
-        _,_,alpha,beta,gamma,_,_ = leaver_ahelper( l,m,s,aw,Alm, london=london, verbose=verbose )
+        _,_,alpha,beta,gamma,_,_,_ = leaver_ahelper( l,m,s,aw,Alm, london=london, verbose=verbose, adjoint=False )
         v = 1.0
         for p in range(l_min+1):
             v = beta(p) - (alpha(p-1.0)*gamma(p) / v)
@@ -2824,7 +2929,8 @@ def sc_leaver( aw, l, m, s,tol=1e-9, london=True, s_included=False, verbose=Fals
     # Define the intermediate work function to be used for this iteration
     indirect_action = lambda STATE: action(STATE[0]+1j*STATE[1])
     # indirect_action = lambda STATE: log( 1.0 + abs( array(  action(STATE[0]+1j*STATE[1])  ) ) )
-    Alm_guess = scberti(aw,l,m,s)
+    aw_guess = aw if isinstance(aw,(float,complex)) else aw
+    Alm_guess = scberti(aw_guess,l,m,s,adjoint=False)
     guess = [Alm_guess.real,Alm_guess.imag]
     foo  = root( indirect_action, guess, tol=tol )
     Alm = foo.x[0]+1j*foo.x[1]
@@ -2862,7 +2968,7 @@ def sc_leaver( aw, l, m, s,tol=1e-9, london=True, s_included=False, verbose=Fals
 # * Proc. R. Soc. Lond. A-1977-Breuer-71-86
 # * E_Seidel_1989_Class._Quantum_Grav._6_012
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
-def scberti(acw, l,m,s=-2):
+def scberti(acw, l,m,s=-2,adjoint=False):
 
     '''
     Estimate the Shpheroidal Harmonic separation constant using results of a general perturbative expansion. Primary reference: arxiv:0511111v4 Equation 2.3
@@ -2870,6 +2976,11 @@ def scberti(acw, l,m,s=-2):
 
     #
     from numpy import zeros,array,sum
+
+    # If the adjoint equation is of interest, apply the adjoint rule
+    if adjoint:
+        acw,_ = teukolsky_angular_adjoint_rule(acw,0)
+
 
     # NOTE that the input here is acw = jf*complex_w
     f = zeros((6,),dtype='complex128')
@@ -3190,6 +3301,7 @@ def slpm( jf,               # Dimentionless spin parameter
           __aw_sc__ = None, # optional frequency and separation parameter pair
           london = False,   # toggle for which series solution to use (they are all largely equivalent)
           aw = None,        # when not none, the separation constant will be found automatically
+          adjoint=False,
           verbose = False ):# Be verbose
 
     #
@@ -3223,7 +3335,7 @@ def slpm( jf,               # Dimentionless spin parameter
 
             # Validate the QNM frequency and separation constant used
             lvrtol=1e-4
-            lvrwrk = linalg.norm( leaver_workfunction(jf,l,m,[cw.real,cw.imag,sc.real,sc.imag],s=s) )
+            lvrwrk = linalg.norm( leaver_workfunction(jf,l,m,[cw.real,cw.imag,sc.real,sc.imag],adjoint=adjoint,s=s) )
             if lvrwrk>lvrtol:
                 msg = 'There is a problem in '+cyan('kerr.core.leaver')+'. The values output are not consistent with leaver''s characteristic equations within %f.\n%s\n# The mode is (jf,l,m,n)=(%f,%i,%i,%i)\n# The leaver_workfunction value is %s\n%s\n'%(lvrtol,'#'*40,jf,l,m,n,red(str(lvrwrk)),'#'*40)
                 error(msg,'slm')
@@ -3239,7 +3351,7 @@ def slpm( jf,               # Dimentionless spin parameter
 
             #
             from numpy import complex128 as dtyp
-            sc = sc_leaver( dtyp(aw), l, m, s, verbose=verbose)[0]
+            sc = sc_leaver( dtyp(aw), l, m, s, verbose=verbose, adjoint=False)[0]
 
     else:
 
@@ -3249,7 +3361,7 @@ def slpm( jf,               # Dimentionless spin parameter
 
     #
     from numpy import complex128 as dtyp
-    sc2 = sc_leaver( dtyp(aw), l, m, s, verbose=verbose)[0]
+    sc2 = sc_leaver( dtyp(aw), l, m, s, verbose=verbose,adjoint=False)[0]
     if abs(sc2-sc)>1e-3:
         print 'aw  = ',aw
         print 'sc  = ',sc
@@ -3263,23 +3375,20 @@ def slpm( jf,               # Dimentionless spin parameter
     # ------------------------------------------------ #
 
     # Retrieve desired information from central location
-    k1,k2,alpha,beta,gamma,exp_scale_fun,u2v_map = leaver_ahelper( l,m,s,aw,sc, london=london, verbose=verbose )
+    k1,k2,alpha,beta,gamma,scale_fun_u,u2v_map,theta2u_map = leaver_ahelper( l,m,s,aw,sc, london=london, verbose=verbose )
 
     # ------------------------------------------------ #
     # Calculate the angular eighenfunction
     # ------------------------------------------------ #
 
     # Variable map for theta
-    u = float128( cos(theta) )
+    u = theta2u_map(theta)
     # Calculate the variable used for the series solution
     v = u2v_map( u )
 
     # the non-sum part of eq 18
     X = ones(u.shape,dtype=complex256)
-    exp_scale = exp_scale_fun(u)
-    X = X * exp_scale # exp(aw*u)
-    X = X * (1.0+u)**k1
-    X = X * (1.0-u)**k2
+    X = X * scale_fun_u(u)
 
     # initial series values
     a0 = 1.0 # a choice, setting the norm of Slm
@@ -3655,6 +3764,7 @@ class cwbox:
                  maxn = None,       # Overtones with n>maxn will be actively ignored. NOTE that by convention n>=0.
                  smallboxes = True, # Toggle for using small boxes for new solutions
                  s = -2,            # Spin weight
+                 adjoint = False,
                  **kwargs ):
         #
         from numpy import array,complex128,meshgrid,float128
@@ -3688,6 +3798,8 @@ class cwbox:
         this.__sc__ = 4.0
         # Maximum overtone label allowed.  NOTE that by convention n>=0.
         this.__maxn__ = maxn
+        #
+        this.adjoint = adjoint
         #
         this.__removeme__ = False
         #
@@ -4181,9 +4293,9 @@ class cwbox:
                 if fullopt is False:
 
                     # Define the intermediate work function to be used for this iteration
-                    fun = lambda SC: linalg.norm( array(leaver_workfunction( jf,this.l,this.m, [cw.real,cw.imag,SC[0],SC[1]], s=this.s )) )
+                    fun = lambda SC: linalg.norm( array(leaver_workfunction( jf,this.l,this.m, [cw.real,cw.imag,SC[0],SC[1]], s=this.s, adjoint=this.adjoint )) )
                     # For this complex frequency, optimize over separation constant using initial guess
-                    SC0_= scberti( cw*jf, this.l, this.m,s=this.s ) # Use Berti's analytic prediction as a guess
+                    SC0_= sc_leaver( cw*jf, this.l, this.m, s=this.s, adjoint=False )[0]
                     SC0 = [SC0_.real,SC0_.imag]
                     # Store work function value
                     x[j][i] = fun(SC0)
@@ -4192,10 +4304,10 @@ class cwbox:
 
                 else:
 
-                    SC0_= scberti( cw*jf, this.l, this.m, s=this.s ) # Use Berti's analytic prediction as a guess
+                    SC0_= sc_leaver( cw*jf, this.l, this.m, s=this.s, adjoint=False )[0]
                     SC0 = [SC0_.real,SC0_.imag,0,0]
                     #cfun = lambda Y: [ Y[0]+abs(Y[3]), Y[1]+abs(Y[2]) ]
-                    fun = lambda SC:leaver_workfunction( jf,this.l,this.m, [cw.real,cw.imag,SC[0],SC[1]], s=this.s )
+                    fun = lambda SC:leaver_workfunction( jf,this.l,this.m, [cw.real,cw.imag,SC[0],SC[1]], s=this.s, adjoint=this.adjoint )
                     X  = root( fun, SC0 )
                     scgrid[j][i] = X.x[0]+1j*X.x[1]
                     x[j][i] = linalg.norm( array(X.fun) )
@@ -4271,8 +4383,8 @@ class cwbox:
             guess2 = [ cw.real, cw.imag, sc.real, sc.imag ]
         # Determine the best guess
         if not ( allclose(guess1,guess2) ):
-            x1 = linalg.norm( leaver_workfunction( jf,this.l,this.m, guess1, s=this.s ) )
-            x2 = linalg.norm( leaver_workfunction( jf,this.l,this.m, guess2, s=this.s ) )
+            x1 = linalg.norm( leaver_workfunction( jf,this.l,this.m, guess1, s=this.s, adjoint=this.adjoint ) )
+            x2 = linalg.norm( leaver_workfunction( jf,this.l,this.m, guess2, s=this.s, adjoint=this.adjoint ) )
             alert(magenta('The function value at guess from grid is:   %s'%x1),'guess')
             alert(magenta('The function value at guess from extrap is: %s'%x2),'guess')
             if x2 is nan:
@@ -4284,7 +4396,7 @@ class cwbox:
                 guess = guess2
                 alert(magenta('Using the guess from extrapolation.'),'guess')
         else:
-            x1 = linalg.norm( leaver_workfunction( jf,this.l,this.m, guess1, s=this.s ) )
+            x1 = linalg.norm( leaver_workfunction( jf,this.l,this.m, guess1, s=this.s, adjoint=this.adjoint ) )
             guess = guess1
             alert(magenta('The function value at guess from grid is %s'%x1),'guess')
 
@@ -4325,7 +4437,7 @@ class cwbox:
 
         # Try using root
         # Define the intermediate work function to be used for this iteration
-        fun = lambda STATE: log( 1.0 + abs(array(leaver_workfunction( jf,this.l,this.m, STATE, s=this.s ))) )
+        fun = lambda STATE: log( 1.0 + abs(array(leaver_workfunction( jf,this.l,this.m, STATE, s=this.s, adjoint=this.adjoint ))) )
         X  = root( fun, guess, tol=tol )
         cw1,sc1 = X.x[0]+1j*X.x[1], X.x[2]+1j*X.x[3]
         __lvrfmin1__ = linalg.norm(array( exp(X.fun)-1.0 ))
@@ -4334,7 +4446,7 @@ class cwbox:
 
         # Try using fmin
         # Define the intermediate work function to be used for this iteration
-        fun = lambda STATE: log(linalg.norm(  leaver_workfunction( jf,this.l,this.m, STATE, s=this.s )  ))
+        fun = lambda STATE: log(linalg.norm(  leaver_workfunction( jf,this.l,this.m, STATE, s=this.s, adjoint=this.adjoint )  ))
         X  = fmin( fun, guess, disp=False, full_output=True, ftol=tol )
         cw2,sc2 = X[0][0]+1j*X[0][1], X[0][2]+1j*X[0][3]
         __lvrfmin2__ = exp(X[1])
@@ -4378,7 +4490,7 @@ class cwbox:
         from kerr import alert,red,warning,error
 
         #
-        fun = lambda JF: linalg.norm(  leaver_workfunction( JF,this.l,this.m, solution, s=this.s )  )
+        fun = lambda JF: linalg.norm(  leaver_workfunction( JF,this.l,this.m, solution, s=this.s, adjoint=this.adjoint )  )
 
         f0 = fun( jf )
         djf = 1e-6
@@ -4471,7 +4583,7 @@ class cwbox:
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
 
 # Try solving the 4D equation near a single guess value [ cw.real cw.imag sc.real sc.imag ]
-def lvrsolve(jf,l,m,guess,tol=1e-8,s=-2):
+def lvrsolve(jf,l,m,guess,tol=1e-8,s=-2, adjoint=False):
 
     '''
     Low-level function for numerically finding the root of leaver's equations
@@ -4484,7 +4596,7 @@ def lvrsolve(jf,l,m,guess,tol=1e-8,s=-2):
 
     # Try using root
     # Define the intermediate work function to be used for this iteration
-    fun = lambda STATE: log( 1.0 + abs(array(leaver_workfunction( jf,l,m, STATE, s=s ))) )
+    fun = lambda STATE: log( 1.0 + abs(array(leaver_workfunction( jf,l,m, STATE, s=s, adjoint=adjoint ))) )
     X  = root( fun, guess, tol=tol )
     cw1,sc1 = X.x[0]+1j*X.x[1], X.x[2]+1j*X.x[3]
     __lvrfmin1__ = linalg.norm(array( exp(X.fun)-1.0 ))
@@ -4493,7 +4605,7 @@ def lvrsolve(jf,l,m,guess,tol=1e-8,s=-2):
 
     # Try using fmin
     # Define the intermediate work function to be used for this iteration
-    fun = lambda STATE: log(linalg.norm(  leaver_workfunction( jf,l,m, STATE, s=s )  ))
+    fun = lambda STATE: log(linalg.norm(  leaver_workfunction( jf,l,m, STATE, s=s, adjoint=adjoint )  ))
     X  = fmin( fun, guess, disp=False, full_output=True, ftol=tol )
     cw2,sc2 = X[0][0]+1j*X[0][1], X[0][2]+1j*X[0][3]
     __lvrfmin2__ = exp(X[1])
@@ -4522,7 +4634,7 @@ def lvrsolve(jf,l,m,guess,tol=1e-8,s=-2):
 
 
 # Extrapolative guess for gravitational perturbations. This function is best used within leaver_needle which solves leaver's equations for a range of spin values.
-def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1, verbose=False, plot=False, spline_order=3, monotomic_steps=False, boundary_spin=None, s=-2 ):
+def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1, verbose=False, plot=False, spline_order=3, monotomic_steps=False, boundary_spin=None, s=-2, adjoint=False ):
 
     '''
     Extrapolative guess for gravitational perturbations. This function is best used within leaver_needle which solves leaver's equations for a range of spin values.
@@ -4531,7 +4643,7 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
     '''
 
     #
-    from numpy import complex128,polyfit,linalg,ndarray,array,linspace,polyval,diff,sign,ones_like,linalg, hstack
+    from numpy import complex128, polyfit, linalg, ndarray, array, linspace, polyval, diff, sign, ones_like, linalg, hstack, sqrt
     if plot: from matplotlib.pyplot import figure,show,plot,xlim
     from scipy.interpolate import InterpolatedUnivariateSpline as spline
 
@@ -4554,7 +4666,7 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
     initial_solution = [ cw[-1].real, cw[-1].imag, sc[-1].real, sc[-1].imag ]
 
     #
-    lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,abs(m),STATE,s=s )  )
+    lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,abs(m),STATE,s=s, adjoint=adjoint )  )
 
     # Make sure that starting piont satisfies the tolerance
     current_err = best_err = lvrwrk( current_j, initial_solution )
@@ -4625,6 +4737,8 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
     near_bounary = False
     best_j = current_j = j[-1]
     mind2j = 1e-7
+    max_dj = sqrt(5)/42
+    starting_j = j[-1]
     best_guess = guess_fit(current_j)
     if verbose: print '>> k,starting_j,starting_err = ',k,current_j,current_err
     while not done:
@@ -4668,6 +4782,7 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
 
         #
         tolerance_is_exceeded = (current_err>tol)
+        max_dj_exceeded = abs(current_j-starting_j)>max_dj
 
         # #
         # if (len(j)>3) and monotomic_steps:
@@ -4689,6 +4804,8 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
             else:
                 warning('Tolerance exceeded on first iteration. Shrinking intermediate step size.')
                 d2j = d2j/200
+                if d2j<1e-20:
+                    error('d2j<1e-20 -- something is wrong with the underlying equations setup')
                 current_j = j[-1]
                 k = -1
                 best_guess = initial_solution
@@ -4697,6 +4814,11 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
                 done = True
                 warning('Max iterations exceeded. Exiting.')
                 exit_code = 1
+
+        if max_dj_exceeded:
+            alert('Exiting because max_dj=%f has been exceeded'%max_dj)
+            done = True
+            exit_code = 0
 
         if abs(current_j-boundary_spin)<1e-10:
             alert('We are close enough to the boundary to stop.')
@@ -4713,7 +4835,7 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
 
 
 # Solve leaver's equations between two spin values given a solution at a starting point
-def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, initial_d2spin=1e-3, plot = False,verbose=False, use_feedback=True, spline_order=3, s=-2 ):
+def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, initial_d2spin=1e-3, plot = False,verbose=False, use_feedback=True, spline_order=3, s=-2, adjoint=False ):
 
     '''
     Given an initial location and realted solution in the frequency-separation constant space,
@@ -4747,7 +4869,7 @@ def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, i
     while not done :
 
         #
-        current_j,current_guess,exit_code = leaver_extrap_guess( j, cw, sc, l, m, tol=tol, d2j=d2j, step_sign=step_sign, verbose=False, plot=plot, spline_order=spline_order, boundary_spin=final_spin,s=s )
+        current_j,current_guess,exit_code = leaver_extrap_guess( j, cw, sc, l, m, tol=tol, d2j=d2j, step_sign=step_sign, verbose=False, plot=plot, spline_order=spline_order, boundary_spin=final_spin,s=s, adjoint=adjoint )
         if (current_j == j[-1]) and (exit_code!=1):
             # If there has been no spin, then divinde the extrap step size by internal_res.
             # Here we use internal_res as a resolution heuristic.
@@ -4771,7 +4893,7 @@ def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, i
             k2 = 0
             while current_retry:
                 k2 += 1
-                current_cw,current_sc,current_err,current_retry = lvrsolve(current_j,l,m,current_guess,s=s,tol=tol2/k2**2)
+                current_cw,current_sc,current_err,current_retry = lvrsolve(current_j,l,m,current_guess,s=s,tol=tol2/k2**2, adjoint=adjoint)
                 if k2>6:
                     current_retry = False
                     warning('Exiting lvrsolve loop becuase a solution could not be found quickly enough.')
@@ -4794,7 +4916,7 @@ def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, i
     return j,cw,sc,err,retry
 
 #
-def greedy_leaver_needle( j,cw,sc,err,retry, l, m, plot = False, verbose=False, spline_order=3, s=-2 ):
+def greedy_leaver_needle( j,cw,sc,err,retry, l, m, plot = False, verbose=False, spline_order=3, s=-2, adjoint=False ):
 
     #
     from positive import spline,leaver_needle,findpeaks
@@ -4808,7 +4930,7 @@ def greedy_leaver_needle( j,cw,sc,err,retry, l, m, plot = False, verbose=False, 
     # ------------------------------------------------------------ #
     nums = 501
     alert('Calculating the error of the resulting spline model between the boundaries',verbose=verbose)
-    lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,abs(m),STATE,s=s )  )
+    lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,abs(m),STATE,s=s, adjoint=adjoint )  )
     # js = linspace(min(j),max(j),nums)
     js =  sin( linspace(0,pi/2,nums) )*(max(j)-min(j)) + min(j)
     cwrspl = spline(j,cw.real,k=2)
@@ -4858,7 +4980,7 @@ def greedy_leaver_needle( j,cw,sc,err,retry, l, m, plot = False, verbose=False, 
         final_spin = jr
         initial_solution = [ cw[k_left].real, cw[k_left].imag, sc[k_left].real, sc[k_left].imag ]
 
-        j_,cw_,sc_,err_,retry_ = leaver_needle( initial_spin, final_spin, l,abs(m), initial_solution, tol=tols, verbose=verbose, spline_order=spline_order,s=s )
+        j_,cw_,sc_,err_,retry_ = leaver_needle( initial_spin, final_spin, l,abs(m), initial_solution, tol=tols, verbose=verbose, spline_order=spline_order,s=s, adjoint=adjoint )
 
         j,cw,sc,err,retry = [ hstack([u,v]) for u,v in [(j,j_),(cw,cw_),(sc,sc_),(err,err_),(retry,retry_)] ]
 
@@ -4870,7 +4992,7 @@ def greedy_leaver_needle( j,cw,sc,err,retry, l, m, plot = False, verbose=False, 
 
         #
         alert('Calculating the error of the resulting spline model between the boundaries',verbose=verbose)
-        lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,abs(m),STATE,s=s )  )
+        lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,abs(m),STATE,s=s, adjoint=adjoint )  )
         js = linspace(min(j),max(j),2e2)
         js = hstack([j,js])
         js = array(sort(js))
@@ -4937,10 +5059,10 @@ class leaver_solve_workflow:
     '''
 
     #
-    def __init__( this, initial_spin, final_spin, l, m, tol=1e-3, verbose=False, basedir=None, box_xywh=None, max_overtone=6, output=True, plot=True, initial_box_res=81, spline_order=3, initialize_only=False, s=-2 ):
+    def __init__( this, initial_spin, final_spin, l, m, tol=1e-3, verbose=False, basedir=None, box_xywh=None, max_overtone=6, output=True, plot=True, initial_box_res=81, spline_order=3, initialize_only=False, s=-2, adjoint=False ):
 
         #
-        this.__validate_inputs__(initial_spin, final_spin, l, m, tol, verbose, basedir, box_xywh, max_overtone, output, plot, initial_box_res, spline_order, s)
+        this.__validate_inputs__(initial_spin, final_spin, l, m, tol, verbose, basedir, box_xywh, max_overtone, output, plot, initial_box_res, spline_order, s, adjoint)
 
 
         # ------------------------------------------------------------ #
@@ -5084,7 +5206,7 @@ class leaver_solve_workflow:
         # Extract box parameters
         x,y,wid,hig = this.box_xywh
         # Define the cwbox object
-        this.leaver_box = cwbox( this.l,this.m,x,y,wid,hig,res=this.initial_box_res,maxn=this.max_overtone,verbose=this.verbose,s=this.s )
+        this.leaver_box = cwbox( this.l,this.m,x,y,wid,hig,res=this.initial_box_res,maxn=this.max_overtone,verbose=this.verbose,s=this.s, adjoint=this.adjoint )
         # Shorthand
         a = this.leaver_box
 
@@ -5117,13 +5239,13 @@ class leaver_solve_workflow:
         print '>> ',this.leaver_box.data[z]['lvrfmin'][-1]
         # forwards
         initial_solution = [ solution_cw.real, solution_cw.imag, solution_sc.real, solution_sc.imag ]
-        print '** ',leaver_workfunction( this.initial_spin, l, abs(m), initial_solution, s=this.s )
-        j,cw,sc,err,retry = leaver_needle( this.initial_spin, this.final_spin, l,abs(m), initial_solution, tol=this.tol/(n+1), verbose=this.verbose, spline_order=this.spline_order, s=this.s )
+        print '** ',leaver_workfunction( this.initial_spin, l, abs(m), initial_solution, s=this.s, adjoint=this.adjoint )
+        j,cw,sc,err,retry = leaver_needle( this.initial_spin, this.final_spin, l,abs(m), initial_solution, tol=this.tol/( n+1 + 2*(1-p) ), verbose=this.verbose, spline_order=this.spline_order, s=this.s, adjoint=this.adjoint )
 
         # backwards
         alert('Now evaluating leaver_needle backwards!',header=True)
         initial_solution = [ cw[-1].real, cw[-1].imag, sc[-1].real, sc[-1].imag ]
-        j_,cw_,sc_,err_,retry_ = leaver_needle( this.final_spin, this.initial_spin, l,abs(m), initial_solution, tol=this.tol/(n+1), verbose=this.verbose, spline_order=this.spline_order, s=this.s,initial_d2spin=abs(j[-1]-j[-2])/5 )
+        j_,cw_,sc_,err_,retry_ = leaver_needle( this.final_spin, this.initial_spin, l,abs(m), initial_solution, tol=this.tol/( n+1 + 2*(1-p) ), verbose=this.verbose, spline_order=this.spline_order, s=this.s,initial_d2spin=abs(j[-1]-j[-2])/5, adjoint=this.adjoint )
         #
         j,cw,sc,err,retry = [ hstack([u,v]) for u,v in [(j,j_),(cw,cw_),(sc,sc_),(err,err_),(retry,retry_)] ]
         sortmask = argsort(j)
@@ -5138,13 +5260,15 @@ class leaver_solve_workflow:
         # Calculate the error of the resulting spline model between the boundaries
         # ------------------------------------------------------------ #
         alert('Calculating the error of the resulting spline model between the boundaries',verbose=this.verbose)
-        lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,abs(m),STATE,s=this.s )  )
+        lvrwrk = lambda J,STATE: linalg.norm(  leaver_workfunction( J,l,abs(m),STATE,s=this.s, adjoint=this.adjoint )  )
         js = linspace(min(j),max(j),1e3)
+
         cwrspl = spline(j,cw.real,k=this.spline_order)
         cwcspl = spline(j,cw.imag,k=this.spline_order)
         scrspl = spline(j,sc.real,k=this.spline_order)
         sccspl = spline(j,sc.imag,k=this.spline_order)
         statespl = lambda J: [ cwrspl(J), cwcspl(J), scrspl(J), sccspl(J) ]
+
         # Store spline related quantities
         this.results[z]['errs'] = array( [ lvrwrk(J,statespl(J)) for J in js ] )
         this.results[z]['js'] = js
@@ -5174,7 +5298,7 @@ class leaver_solve_workflow:
 
 
     #
-    def __validate_inputs__( this, initial_spin, final_spin, l, m, tol, verbose, basedir, box_xywh, max_overtone, output, plot, initial_box_res, spline_order, s ):
+    def __validate_inputs__( this, initial_spin, final_spin, l, m, tol, verbose, basedir, box_xywh, max_overtone, output, plot, initial_box_res, spline_order, s, adjoint ):
 
         # Save inputs as properties of the current object
         alert('Found inputs:',verbose=verbose)
@@ -5221,7 +5345,7 @@ class leaver_solve_workflow:
 
 
 #
-def tkangular( S, theta, acw, m, s=-2, separation_constant=None  ):
+def tkangular( S, theta, acw, m, s=-2, separation_constant=None,adjoint=False  ):
     '''
     Apply Teukolsy's angular operator to input
     '''
@@ -5231,7 +5355,7 @@ def tkangular( S, theta, acw, m, s=-2, separation_constant=None  ):
     zero = 1e-10
     theta[theta==0]=zero
     if separation_constant is None:
-        separation_constant = sc_leaver( acw, 2, m, s,verbose=False)[0]
+        separation_constant = sc_leaver( acw, 2, m, s,verbose=False,adjoint=False)[0]
     A = separation_constant
     #
     sn = sin(theta)

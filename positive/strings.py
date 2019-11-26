@@ -184,7 +184,6 @@ def complex2str( x, precision=None, latex=False ):
     precision = 8 if precision is None else precision
     precision = -precision if precision<0 else precision
     # Create function to convert single number to string
-    print '>> ',str(precision)
     def c2s(y):
 
         # Check type
