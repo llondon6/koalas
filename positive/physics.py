@@ -1647,7 +1647,6 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
         plot( t, ht.imag, color=0.4*white )
         plot( t,abs(ht), color=clr[0] )
         plot( t,-abs(ht), color=clr[0] )
-        # print '..> %g'%t[k_start]
         axvline( t[k_start], color='k', alpha=0.5, linestyle=':' )
         plot( t, window*0.9*max(ylim()),':k',alpha=0.5 )
         xlim(lim(t))
@@ -2363,8 +2362,8 @@ def leaver_mixed_ahelper( l,m,s,awj,awk,Bjk,london=1,verbose=False,adjoint=False
     # Package for output
     # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
     if (k1<0) or (k2<0):
-        print 'k1 = ',k1
-        print 'k2 = ',k2
+        print( 'k1 = '+str(k1))
+        print( 'k2 = '+str(k2))
         error('negative singular exponent!')
 
     # Construct answer
@@ -2523,8 +2522,8 @@ def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False,adjoint=False ):
     # Package for output
     # ~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~ #
     if (k1<0) or (k2<0):
-        print 'k1 = ',k1
-        print 'k2 = ',k2
+        print( 'k1 = '+str(k1))
+        print( 'k2 = '+str(k2))
         error('negative singular exponent!')
 
     # Construct answer
@@ -2803,7 +2802,6 @@ def leaver_workfunction( j, l, m, state, s=-2, mpm=False, adjoint=False, tol=1e-
     if not x:
         error('use21 or/and use27 must be true')
 
-    # print 'x = ',x
 
     #
     x = [ complex128(e) for e in x ]
@@ -2855,11 +2853,11 @@ def aw_leaver( Alm, l, m, s,tol=1e-9, london=True, verbose=False, guess=None, aw
         u,state = lentz(aa,bb,tol)
         u = beta(l_min) - u
         x = v-u
-        if verbose: print 'err = ',abs(x)
+        if verbose: print('err = '+str(abs(x)))
         x = array([x.real,x.imag],dtype=float).ravel()
         return x
 
-    if verbose: print ''
+    if verbose: print('')
 
     # Try using root
     # Define the intermediate work function to be used for this iteration
@@ -2919,11 +2917,11 @@ def sc_leaver( aw, l, m, s,tol=1e-9, london=True, s_included=False, verbose=Fals
         u,state = lentz(aa,bb,tol)
         u = beta(l_min) - u
         x = v-u
-        if verbose: print 'err = ',abs(x)
+        if verbose: print('err = '+str(abs(x)))
         x = array([x.real,x.imag],dtype=float).ravel()
         return x
 
-    if verbose: print ''
+    if verbose: print('')
 
     # Try using root
     # Define the intermediate work function to be used for this iteration
@@ -3363,10 +3361,10 @@ def slpm( jf,               # Dimentionless spin parameter
     from numpy import complex128 as dtyp
     sc2 = sc_leaver( dtyp(aw), l, m, s, verbose=verbose,adjoint=False)[0]
     if abs(sc2-sc)>1e-3:
-        print 'aw  = ',aw
-        print 'sc  = ',sc
-        print 'sc2 = ',sc2
-        print 'err = ',abs(sc2-sc)
+        print('aw  = '+str(aw))
+        print('sc  = '+str(sc))
+        print('sc2 = '+str(sc2))
+        print('err = '+str(abs(sc2-sc)))
         warning('input separation constant nont consistent with angular consteraint, and so we will use a different one to give you an answer that converges.')
         sc = sc2
 
@@ -3710,7 +3708,7 @@ def calc_spheroidal_multipoles( domain_vals, spherical_multipole_dict, dimension
         #
         q += 1
         if 0==mod(q,51):
-            if verbose: print '.',
+            if verbose: print('.',end='')
 
         # Construct spherical basis vector
         spherical_basis_vector = [ spherical_multipole_dict[j][u] for j in j_space ]
@@ -3856,7 +3854,7 @@ class cwbox:
             if this.parent is None:
                 alert('\n\n# '+'--'*40+' #\n'+blue(bold('Attempting to map qnm solutions for: jf = %1.8f'%(jf)))+'\n# '+'--'*40+' #\n','map')
             else:
-                print '\n# '+'..'*40+' #\n'+blue('jf = %1.8f,  label = %s'%(jf,this.__label__))+'\n# '+'..'*40+' #'
+                print('\n# '+'..'*40+' #\n'+blue('jf = %1.8f,  label = %s'%(jf,this.__label__))+'\n# '+'..'*40+' #')
 
         # Map solutions using discrete grid
         if this.isfundamental():
@@ -4053,14 +4051,14 @@ class cwbox:
                     # state = this.grids2states()[0]
 
             # if this.verbose: print X.message+' The final function value is %s'%(this.__lvrfmin__)
-            if this.verbose: print 'The final function value is '+green(bold('%s'%(this.__lvrfmin__)))
+            if this.verbose: print('The final function value is '+green(bold('%s'%(this.__lvrfmin__))))
 
             if this.verbose:
-                print '\n\t Geuss   cw: %s' % CW
-                print '\t Optimal cw: %s' % cw
-                print '\t Approx  sc: %s' % scberti( CW*jf, this.l, this.m )
-                print '\t Geuss   sc: %s' % (state[2]+1j*state[3])
-                print '\t Optimal sc: %s\n' % sc
+                print( '\n\t Geuss   cw: %s' % CW)
+                print( '\t Optimal cw: %s' % cw)
+                print( '\t Approx  sc: %s' % scberti( CW*jf, this.l, this.m ))
+                print( '\t Geuss   sc: %s' % (state[2]+1j*state[3]))
+                print( '\t Optimal sc: %s\n' % sc)
 
             # Set the core properties of the new box
             this.setboxprops( cw.real, cw.imag, this.width,this.height,this.res,sc=sc )
@@ -4315,9 +4313,9 @@ class cwbox:
 
             if this.verbose:
                 sys.stdout.flush()
-                print '.',
+                print('.',end='')
 
-        if this.verbose: print 'Done.'
+        if this.verbose: print('Done.')
         # return work function values AND the optimal separation constants
         return x,scgrid
 
@@ -4673,19 +4671,16 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
 
     # print current_err
     if current_err>tol:
-        print j
-        print current_j
-        print initial_solution
-        print current_err
+        print(j)
+        print(current_j)
+        print(initial_solution)
+        print(current_err)
         warning('Current solution does not satisfy the input tolerance value.')
 
     # Determine the polynomial order to use based on the total number of points
     nn = len(j)
     order = min( nn-1, spline_order ) # NOTE that 4 and 5 don't work as well, especially near extremal values of spin; 3may also have problems
     place = -order-1
-    # if m<0: tol *= 1e-4
-    # print 'm,tol = ',m,tol
-    # print 'nn,order,place = ',nn,order,place
 
     xx = array(j)[place:]
     yy = array(cw)[place:]
@@ -4724,8 +4719,8 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
         plot( xs, yrspl_fun(xs), 'r' )
         xlim(lim(xs))
         if verbose:
-            print lim(xs)
-            print lim(yrspl_fun(xs))
+            print(lim(xs))
+            print(lim(yrspl_fun(xs)))
         show()
 
     guess_fit = lambda J: [ yrspl_fun(J), ycspl_fun(J), zrspl_fun(J), zcspl_fun(J) ]
@@ -4740,7 +4735,7 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
     max_dj = sqrt(5)/42
     starting_j = j[-1]
     best_guess = guess_fit(current_j)
-    if verbose: print '>> k,starting_j,starting_err = ',k,current_j,current_err
+    if verbose: print('>> k,starting_j,starting_err = ',k,current_j,current_err)
     while not done:
 
         #
@@ -4750,20 +4745,20 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
             if (boundary_spin-current_j)*step_sign < 0:
                 alert('We\'re quite close to the specified boundary, so we will reduce the internal step size as to not exceed the boundary.')
                 current_j -= d2j*step_sign
-                print '** current_j = ',current_j
-                print '** boundary_spin = ',boundary_spin
+                print('** current_j = ',current_j)
+                print('** boundary_spin = ',boundary_spin)
                 new_d2j = max( min( d2j/21.0, abs( ( boundary_spin-current_j ) /21.0) ), 1e-6 )
                 if new_d2j == 1e-6:
                     warning('Min value of d2j reached')
-                print '** new_d2j = ',new_d2j
+                print('** new_d2j = ',new_d2j)
                 current_j = current_j + new_d2j*step_sign
-                print '** new_current_j = ',current_j
-                print '** old_tol = ',tol
+                print('** new_current_j = ',current_j)
+                print('** old_tol = ',tol)
                 tol *= 0.01
                 if tol<1e-7:
                     tol = 1e-7
                     warning('Min value of tol reached')
-                print '** new_tol = ',tol
+                print('** new_tol = ',tol)
                 d2j = new_d2j
                 if not near_bounary:
                     near_bounary = True
@@ -4778,7 +4773,7 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
         current_err = lvrwrk( current_j, current_guess )
 
         #
-        if verbose: print '* k,best_j,best_err = ',k,best_j,best_err
+        if verbose: print('* k,best_j,best_err = ',k,best_j,best_err)
 
         #
         tolerance_is_exceeded = (current_err>tol)
@@ -4796,7 +4791,7 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
 
         #
         if tolerance_is_exceeded: # or stepsize_may_increase:
-            print '* k,best_j,best_err,tol,d2j = ',k,best_j,best_err,tol,d2j
+            print('* k,best_j,best_err,tol,d2j = ',k,best_j,best_err,tol,d2j)
             if k>0:
                 done = True
                 alert('Tolerance exceeded. Exiting.')
@@ -4822,9 +4817,9 @@ def leaver_extrap_guess( j, cw, sc, l, m, tol = 1e-3, d2j = 1e-6, step_sign = 1,
 
         if abs(current_j-boundary_spin)<1e-10:
             alert('We are close enough to the boundary to stop.')
-            print '$$ start_spin = ',j[-1]
-            print '$$ boundary_spin = ',boundary_spin
-            print '$$ current_j = ',current_j
+            print('$$ start_spin = ',j[-1])
+            print('$$ boundary_spin = ',boundary_spin)
+            print('$$ current_j = ',current_j)
             k = kmax
             done = True
             exit_code = -1
@@ -4886,8 +4881,7 @@ def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, i
             # Set the dynamic step size based on previous step sizes
             # Here we use internal_res as a resolution heuristic.
             d2j = abs(j[-1]-j[-2])/internal_res
-            # if verbose: print 'j = ',j
-            if verbose: print 'd2j = ',d2j
+            if verbose: print('d2j = ',d2j)
             current_retry = True
             tol2 = 1.0e-8
             k2 = 0
@@ -4897,7 +4891,7 @@ def leaver_needle( initial_spin, final_spin, l, m, initial_solution, tol=1e-3, i
                 if k2>6:
                     current_retry = False
                     warning('Exiting lvrsolve loop becuase a solution could not be found quickly enough.')
-            if verbose: print k,current_j,current_cw,current_sc,current_err,current_retry
+            if verbose: print(k,current_j,current_cw,current_sc,current_err,current_retry)
             cw.append( current_cw )
             sc.append( current_sc )
             err.append( current_err )
@@ -4953,7 +4947,7 @@ def greedy_leaver_needle( j,cw,sc,err,retry, l, m, plot = False, verbose=False, 
     #
     # j,cw,sc,err,retry = [ list(v) for v in [j,cw,sc,err,retry] ]
     done = ((max(errs)/tols) < 10) or (max(errs)<1e-4)
-    print done, 'max(errs) = ',max(errs),' tols = ',tols
+    print(done, 'max(errs) = ',max(errs),' tols = ',tols)
     if done:
         alert('The data seems to have no significant errors due to interpolation. Exiting.')
     while not done:
@@ -4986,9 +4980,9 @@ def greedy_leaver_needle( j,cw,sc,err,retry, l, m, plot = False, verbose=False, 
 
         #
         sortmask = argsort(j)
-        j,cw,sc,err,retry = [ v[sortmask] for v in j,cw,sc,err,retry ]
+        j,cw,sc,err,retry = [ v[sortmask] for v in (j,cw,sc,err,retry) ]
         uniquemask = hstack( [array([True]),diff(j)!=0] )
-        j,cw,sc,err,retry = [ v[uniquemask] for v in j,cw,sc,err,retry ]
+        j,cw,sc,err,retry = [ v[uniquemask] for v in (j,cw,sc,err,retry) ]
 
         #
         alert('Calculating the error of the resulting spline model between the boundaries',verbose=verbose)
@@ -5042,8 +5036,8 @@ def greedy_leaver_needle( j,cw,sc,err,retry, l, m, plot = False, verbose=False, 
         # axvline( js[k], color='r' )
         #
         # done = max(errs)<=(tols)
-        # print 'max(errs) = ',max(errs)
-        # print 'tols = ',tols
+        # print('max(errs) = ',max(errs))
+        # print('tols = ',tols)
         # show()
 
 
@@ -5084,7 +5078,7 @@ class leaver_solve_workflow:
         # Note that it is here that we enforce the max_overtone input
         this.sorted_mode_list = sorted(this.starting_solutions.keys(), key = lambda x: -float(x[-1])/(x[2]+1), reverse=not True )
         for k in this.sorted_mode_list:
-            print '(l,m,n,x,p) = %s'%(str(k))
+            print('(l,m,n,x,p) = %s'%(str(k)))
 
         # ------------------------------------------------------------ #
         # Plot the QNM solution space at an initial spin value
@@ -5236,10 +5230,10 @@ class leaver_solve_workflow:
         # ------------------------------------------------------------ #
         alert('Threading the solution from cwbox through parameter space',verbose=this.verbose)
         solution_cw,solution_sc = this.leaver_box.data[z]['cw'][-1],this.leaver_box.data[z]['sc'][-1]
-        print '>> ',this.leaver_box.data[z]['lvrfmin'][-1]
+        print('>> ',this.leaver_box.data[z]['lvrfmin'][-1])
         # forwards
         initial_solution = [ solution_cw.real, solution_cw.imag, solution_sc.real, solution_sc.imag ]
-        print '** ',leaver_workfunction( this.initial_spin, l, abs(m), initial_solution, s=this.s, adjoint=this.adjoint )
+        print('** ',leaver_workfunction( this.initial_spin, l, abs(m), initial_solution, s=this.s, adjoint=this.adjoint ))
         j,cw,sc,err,retry = leaver_needle( this.initial_spin, this.final_spin, l,abs(m), initial_solution, tol=this.tol/( n+1 + 2*(1-p) ), verbose=this.verbose, spline_order=this.spline_order, s=this.s, adjoint=this.adjoint )
 
         # backwards
@@ -5249,9 +5243,9 @@ class leaver_solve_workflow:
         #
         j,cw,sc,err,retry = [ hstack([u,v]) for u,v in [(j,j_),(cw,cw_),(sc,sc_),(err,err_),(retry,retry_)] ]
         sortmask = argsort(j)
-        j,cw,sc,err,retry = [ v[sortmask] for v in j,cw,sc,err,retry ]
+        j,cw,sc,err,retry = [ v[sortmask] for v in (j,cw,sc,err,retry) ]
         uniquemask = hstack( [array([True]),diff(j)!=0] )
-        j,cw,sc,err,retry = [ v[uniquemask] for v in j,cw,sc,err,retry ]
+        j,cw,sc,err,retry = [ v[uniquemask] for v in (j,cw,sc,err,retry) ]
 
         #
         this.results[z]['j'],this.results[z]['cw'],this.results[z]['sc'],this.results[z]['err'],this.results[z]['retry'] = j,cw,sc,err,retry
@@ -5305,7 +5299,7 @@ class leaver_solve_workflow:
         for k in dir():
             if k != 'this':
                 this.__dict__[k] = eval(k)
-                if verbose: print '  ->  %s = %s'%( k, blue(str(eval(k))) )
+                if verbose: print('  ->  %s = %s'%( k, blue(str(eval(k))) ))
 
         # Import usefuls
         from os.path import join,expanduser
