@@ -43,6 +43,38 @@ TakeLargestExponent::usage="Keep largest exponent terms in a sum"
 (* Make approximations using in the WKB way *)
 WKBApproximate::usage="Make approximations using in the WKB way"
 
+(* Create list of derivatives up to a given order *)
+TableD::usage="Create list of derivatives up to a given order"
+
+(* Create rule to replace derivatives *)
+MapRuleD::usage="Create rule to replace derivatives"
+
+(* Simplfy terms independently *)
+CoeffSimplify::usage="Simplfy terms independently"
+
+(* FullSimplfy terms independently *)
+CoeffFullSimplify::usage="FullSimplfy terms independently"
+
+(* Simplfy a product using Log *)
+LogSimplify::usage="Simplfy a product using Log"
+
+(* Simplfy terms independently *)
+CollectSimplify::usage="Wrapper for CoeffSimplify"
+CollectFullSimplify::usage="Wrapper for CoeffFullSimplify"
+
+(* Commutator for methods with one input *)
+Commutator::usage="Commutator[A,B,Y] = (AB-BA)Y"
+
+(* Given a Riccati equation (expressiion that hould equal zero), linearize it *)
+RiccatiLinearize::usage="Given a Riccati equation (expressiion that hould equal zero), linearize it"
+
+(* Method to compute adjoint of linear differential operator *)
+Adjoint::usage="Method to compute adjoint of linear differential operator"
+
+(* Elegant function to return python string of MMA expressions *)
+PythonForm::usage="Elegant function to return python string of MMA expressions"
+PyForm::usage="Elegant function to return python string of MMA expressions"
+
 
 
 Remove[TakeLargestExponent];
@@ -146,6 +178,24 @@ DerivativeOfSimpleSum[S_,DInputs_:None]:=Module[
 	Return[Answer];
 
 ]
+(*(* Simplify coefficients of power expansion in select variable *)
+Remove[CoeffSimplify];
+CoeffSimplify[A_,var_]:=Module[
+	(* Define Internal Vars *)
+	{ans,MaxPow,A1,A2,A3,Coeffs},
+	
+	(* Determine Max Power in desired variable *)
+	MaxPow = Exponent[A,var];
+	(* Find corresponding Series Expansion *)
+	A1 = Normal@Series[A,{var,0,MaxPow+1}];
+	(* FullSimplify each term *)
+	A2 = A1;
+	Coeffs = CoefficientList[A1,var];
+	A2 = Sum[FullSimplify[Coeffs[[k]] var^(k-1) ],{k,MaxPow+1}];
+	ans = FullSimplify[A2];
+	(* Return Answer *)
+	Return[ans];
+]*)
 
 
 Remove[DeriveIndicialSolutions];
@@ -280,6 +330,188 @@ DeriveIndicialSolutions2[DyFunctions_,y_,x_,SingularPoints_,f_:f]:=Module[
 	Ans = Join[{SingularExponent},{ SingularScale f[x] }];
 	Return[Ans];
 	
+]
+
+
+Remove[PythonForm,PyForm];
+(* Elegant function to return python string of MMA expressions *)
+PythonForm[A_]:=Module[
+	{Answer},
+	(* Handle complex numbers *)
+	Answer = StringReplace[ToString[InputForm[A]],{"^"->"**","I"->"1j"}];
+	(* Handle Exp[X] *)
+	Answer = StringReplace[Answer,{"E**"->"exp"}];
+	(* Handle Sqrt[X] *)
+	Answer = StringReplace[Answer,{"Sqrt"->"sqrt"}];
+	(* Handle ArcTanh[X] *)
+	Answer = StringReplace[Answer,{"ArcTanh"->"arctanh"}];
+	(* Handle Tanh[X] *)
+	Answer = StringReplace[Answer,{"Tanh"->"tanh"}];
+	(* Handle [ and ] *)
+	Answer = StringReplace[Answer,{"["->"(","]"->")"}];
+	Return[Answer];
+]
+PyForm[A_]:=Module[
+	{Answer},
+	Answer = PythonForm[A];
+	Return[Answer];
+]
+
+
+(* Create list of derivatives up to a given order *)
+Remove[TableD];
+TableD[F_,var_,order_:3]:=Module[
+	(* Internals *)
+	{Ans},
+	(* Create table of derivatives *)
+	Ans = Table[
+				D[F,{var,kkk-1}]
+				,{kkk,order}
+			];
+	Return[Ans];
+]
+(* Simplify a product using log *)
+Clear[LogSimplify];
+LogSimplify[X_] :=Simplify[
+							Exp@Expand@PowerExpand[Log[X]]
+															//.{(Sqrt[a_]Sqrt[b_])/c_:>Sqrt[Factor[a b]]/c}
+															//.{c_/(Sqrt[a_]Sqrt[b_]):>c/Sqrt[Factor[a b]]}
+															//.{a_/(b_ Sqrt[c_]):>a/(b Sqrt[Factor[c]])}
+				]//.{a_/(b_ Sqrt[c_]):>a/(b Sqrt[Factor[c]])}//.{a_/b_:>a/Factor[b]}
+				
+(* Create rule to replace derivatives *)
+Remove[MapRuleD];
+MapRuleD[F_,G_,var_,order_:3]:=Module[
+	(* Internals *)
+	{Ans},
+	(* Create table of derivatives *)
+	Ans = Table[
+				(*If[ (G[[0]]\[Equal]Sum),
+					(* Use derivative of simple sum *)
+					D[F,{var,kkk-1}]\[Rule]DerivativeOfSimpleSum[G,{var,kkk-1}]
+					,
+					(* Use standard derivative *)
+					D[F,{var,kkk-1}]\[Rule]D[G,{var,kkk-1}]
+				]*)
+				D[F,{var,kkk-1}]->D[G,{var,kkk-1}]
+				,{kkk,order}
+			];
+	Return[Ans];
+]
+(* Simplfy coefficients independently *)
+Remove[CoeffSimplify];
+CoeffSimplify[F_,vars_]:=Module[
+	(* Internals *)
+	{CollectedF,Ans},
+	(* Create table of derivatives *)
+	CollectedF = Collect[Simplify@F,vars];
+	Ans = CollectedF;
+	Table[
+		Ans = Ans/.{
+					Coefficient[CollectedF,vars[[kkkk]]] :> Simplify[Coefficient[CollectedF,vars[[kkkk]]]]
+					};
+		,{kkkk,Length[vars]}
+	];
+	Return[Ans];
+]
+(* FullSimplfy coefficients independently *)
+Remove[CoeffFullSimplify];
+CoeffFullSimplify[F_,vars_]:=Module[
+	(* Internals *)
+	{CollectedF,Ans},
+	(* Create table of derivatives *)
+	CollectedF = Collect[Simplify@F,vars];
+	Ans = CollectedF;
+	Table[
+		Ans = Ans/.{
+					Coefficient[CollectedF,vars[[kkkk]]] :> FullSimplify[Coefficient[CollectedF,vars[[kkkk]]]]
+					};
+		,{kkkk,Length[vars]}
+	];
+	Return[Ans];
+]
+(* FullSimplfy coefficients independently *)
+Remove[CollectSimplify];
+CollectSimplify[F_,vars_]:=Module[
+	(* Internals *)
+	{Ans},
+	(* Wrap and return *)
+	Return[CoeffSimplify[F,vars]];
+]
+(* FullSimplfy coefficients independently *)
+Remove[CollectFullSimplify];
+CollectFullSimplify[F_,vars_]:=Module[
+	(* Internals *)
+	{Ans},
+	(* Wrap and return *)
+	Return[CoeffFullSimplify[F,vars]];
+]
+(* Commutator for methods with one input *)
+Remove[Commutator];
+Commutator[A_,B_,Field_]:=Module[
+	(* Internals *)
+	{Ans},
+	(* Calculate Commutator *)
+	Ans = A[B[Field]] - B[A[Field]];
+	Return[Simplify@Ans];
+]
+(* Linearize Riccati equation *)
+Remove[RiccatiLinearize];
+RiccatiLinearize[ L_, f_,fNew_, var_ ]:=Module[
+	(* Internals *)
+	{Answer,q2,q1,q0,q1d,c0,u,Q0,Q1,Q2,L1,LinearizedL,L3,\[Beta]Rule,\[Beta]},
+	(* Shorthand *)
+	u = var; \[Beta] = fNew;
+	(* Initial prefactors of interest *)
+	Q0 = {f'[u],f[u],f[u]^2};
+	(* Collect terms *)
+	{q1d,q1,q2} = Coefficient[L,Q0];
+	(* Divide by derivate coefficient and recollect *)
+	L1 = CoeffSimplify[L/q1d,Q0];
+	{q1d,q1,q2} = Coefficient[L1,Q0];
+	(* Deterine the term that is not proportial to a memer of Q0 *)
+	q0 = Simplify[L1 - Total[{q1d,q1,q2}Q0]];
+	(* Define the linearizing variable *)
+	\[Beta]Rule = MapRuleD[f[u],1/q2 D[Log[\[Beta][u]],u],u];
+	LinearizedL = CoeffSimplify[\[Beta][u] L1/.\[Beta]Rule,TableD[\[Beta][u],u]];
+	LinearizedL = CoeffSimplify[LinearizedL*Denominator[Coefficient[LinearizedL,D[\[Beta][u],{u,2}]]],TableD[\[Beta][u],u]];
+	Answer={\[Beta]Rule[[1]],LinearizedL};
+	Return[Answer];
+]
+(* Method to compute adjoint of linear differential operator *)
+Remove[Adjoint]; 
+Adjoint[Df_,f_,var_,assumptions_:{}]:=Module[
+	(* Internal variables *)
+	{Answer,Coeffs,ReducedDf,TemplateConjCoeffs,TemplateAdjDf,QList,AdjDf},
+	
+	(* Make template *)
+	ReducedDf = CoeffSimplify[Df,TableD[f,var]];
+	TemplateConjCoeffs = Table[Symbol["Q" <> ToString@k][var], {k, Length[ReducedDf]}];
+	
+	(*  *)
+	Coeffs = Coefficient[ReducedDf,TableD[f,var,Length[ReducedDf]]];
+	
+	(*  *)
+	TemplateAdjDf = CoeffSimplify[
+					Sum[ 
+						Simplify[(-1)^z D[TemplateConjCoeffs[[z+1]] f,{var,z}]],
+					    {z,0,Length[TemplateConjCoeffs]-1}
+					],
+					TableD[f,var]
+			];
+			
+	(*  *)
+	AdjDf = TemplateAdjDf
+						/.Flatten[
+						    Table[
+								MapRuleD[TemplateConjCoeffs[[k]],Refine[Conjugate@Coeffs[[k]],Assumptions->assumptions],var],
+								{k,Length[Coeffs]}
+						    ]
+						  ];
+	
+	(* Return answer *)
+	Answer = CoeffSimplify[AdjDf,TableD[f,var]];
+	Return[Answer];
 ]
 
 

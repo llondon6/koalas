@@ -2281,6 +2281,7 @@ def teukolsky_angular_adjoint_rule(aw,Alm,allow_warning=True):
     The adjoint of teukolskys angular equation is simply its complex conjugate
     '''
     from numpy import conj
+
     warning('The angular ajoint should only be envoked when there is no interest in the radial problem. If this is indeed the setting in which we wish to use the angular adjoint, then please turn adjoint off via "adjoint=False", and manually conjugate the output of angular related quantities (ie frequency and separation constant). Applying radial and angular adjoint options concurrently happens to be redundant.')
     return ( conj(aw), conj(Alm) )
 
@@ -2305,7 +2306,7 @@ def leaver_mixed_ahelper( l,m,s,awj,awk,Bjk,london=1,verbose=False,adjoint=False
     Sk is also an aigenvector of L(awj)
     '''
 
-    warning('This functionality is based on an incorrect premise. Do not use related functions and options.')
+    error('This functionality is based on an incorrect premise. Do not use related functions and options.')
 
     # Import usefuls
     from numpy import exp,sqrt
@@ -2426,6 +2427,49 @@ def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False,adjoint=False ):
             #
             scale_fun_u = lambda U: (1+U)**k1 * (1-U)**k2 * exp( aw * U )
 
+        elif london==4:
+
+            '''
+            Solution to angular equation if (a*w)^2 term in potential is removed
+            '''
+            # alert('Not using (aw)^2 term in potential')
+            # Use abs of singular exponents AND write recursion functions so that the
+            # appropriate physical solution is always used
+            k1 = 0.5*abs(m-s)
+            k2 = 0.5*abs(m+s)
+            # Use Leaver's form for the recurion functions
+            a_alpha = lambda k:	-2*(1 + k)*(1 + k + 2*k1)
+            a_beta  = lambda k:	-Alm - 2*aw*(1 + 2*k + 2*k1 + s) + (k + k1 + k2 - s)*(1 + k + k1 + k2 + s)
+            a_gamma = lambda k: 2*aw*(-aw + k + k1 + k2 + s)
+            # Define how the exopansion variable relates to u=cos(theta)
+            u2v_map = lambda U: 1+U
+            # Define starting variable transformation variable
+            theta2u_map = lambda TH: cos(TH)
+            #
+            scale_fun_u = lambda U: (1+U)**k1 * (1-U)**k2 * exp( aw * U )
+
+        elif london==3:
+
+            '''
+            Solution to adjoint equation where w is replaced with 1j*d/dt
+            S(u) = exp( a w u ) (1+u)^k1 (1-u)^k2 Sum( a[k](1+u)^k )
+            '''
+
+            # Use abs of singular exponents AND write recursion functions so that the
+            # appropriate physical solution is always used
+            k1 = 0.5*abs(m-s)
+            k2 = 0.5*abs(m+s)
+            # Use Leaver's form for the recurion functions
+            a_alpha = lambda k:	-2*(1 + k)*(1 + k + 2*k1)
+            a_beta  = lambda k:	-Alm - aw**2 - 2*aw*(1 + 2*k + 2*k1 - s) + (k + k1 + k2 - s)*(1 + k + k1 + k2 + s)
+            a_gamma = lambda k: 2*aw*(k + k1 + k2 - s)
+            # Define how the exopansion variable relates to u=cos(theta)
+            u2v_map = lambda U: 1+U
+            # Define starting variable transformation variable
+            theta2u_map = lambda TH: cos(TH)
+            #
+            scale_fun_u = lambda U: (1+U)**k1 * (1-U)**k2 * exp( aw * U )
+
         elif london==-1:
 
             '''
@@ -2493,7 +2537,7 @@ def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False,adjoint=False ):
 
         else:
 
-            error('Unknown input option. Must be -1 or 1 corresponding to the sign of the exponent in the desired solution form.')
+            error('Unknown input option.')
 
     else:
 
@@ -2658,23 +2702,6 @@ def leaver27( a, l, m, w, Alm, s=-2.0, vec=False, mpm=False, adjoint=False, tol=
     # Radial parameter defs
     # ------------------------------------------------ #
     _,_,alpha,beta,gamma,_ = leaver_rhelper( l,m,s,a,w,Alm, london=london, verbose=verbose, adjoint=adjoint )
-    # b  = sqrt(1.0-4.0*a*a)
-    # c_param = 0.5*w - a*m
-    #
-    # c0    =         1.0 - s - 1.0j*w - (2.0j/b) * c_param
-    # c1    =         -4.0 + 2.0j*w*(2.0+b) + (4.0j/b) * c_param
-    # c2    =         s + 3.0 - 3.0j*w - (2.0j/b) * c_param
-    # c3    =         w*w*(4.0+2.0*b-a*a) - 2.0*a*m*w - s - 1.0 \
-    #                 + (2.0+b)*1j*w - A + ((4.0*w+2.0j)/b) * c_param
-    # c4    =         s + 1.0 - 2.0*w*w - (2.0*s+3.0)*1j*w - ((4.0*w+2.0*1j)/b)*c_param
-    #
-    # # If the related equations for the adjoint radial operator are requested, take conjugates
-    # if adjoint:
-    #     c0,c1,c2,c3,c4 = [ q.conj() for q in (c0,c1,c2,c3,c4) ]
-    #
-    # alpha = lambda k:	k*k + (c0+1)*k + c0
-    # beta  = lambda k:   -2.0*k*k + (c1+2.0)*k + c3
-    # gamma = lambda k:	k*k + (c2-3.0)*k + c4 - c2 + 2.0
 
     #
     v = 1.0
@@ -2759,7 +2786,7 @@ def leaver_2D_workfunction( j, l, m, cw, s, tol=1e-10 ):
 
 
 # Work function for QNM solver
-def leaver_workfunction( j, l, m, state, s=-2, mpm=False, adjoint=False, tol=1e-10, use21=True, use27=True ):
+def leaver_workfunction( j, l, m, state, s=-2, mpm=False, adjoint=False, tol=1e-10, use21=True, use27=True, london=None ):
     '''
     work_function_to_zero = leaver( state )
 
@@ -2797,9 +2824,9 @@ def leaver_workfunction( j, l, m, state, s=-2, mpm=False, adjoint=False, tol=1e-
 
     x = []
     if use21:
-        x += leaver21(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,adjoint=adjoint,tol=tol)
+        x += leaver21(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,adjoint=adjoint,tol=tol,london=london)
     if use27:
-        x += leaver27(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,adjoint=adjoint,tol=tol)
+        x += leaver27(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,adjoint=adjoint,tol=tol,london=london)
     if not x:
         error('use21 or/and use27 must be true')
 
@@ -2952,7 +2979,7 @@ def sc_leaver( aw, l, m, s,tol=1e-9, london=True, s_included=False, verbose=Fals
 
     # alert('err = '+str(fmin))
     if retry:
-        warning('retry!')
+        warning('retry! needed in sc_leaver')
 
     return (Alm,fmin,retry,foo)
 
@@ -3170,13 +3197,17 @@ def internal_ssprod( jf, z1, z2, s=-2, verbose=False, N=2**9, london=False,aw=No
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
 ''' Calculate set of spheroidal harmonic duals '''
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
-def slm_dual_set( jf, l, m, n, theta, phi, s=-2, lmax=8, lmin=2, aw=None, verbose=False ):
+def slm_dual_set( jf, l, m, n, theta, phi, s=-2, lmax=8, lmin=2, aw=None, verbose=False, tol=None, conjugate_expansion=True ):
     '''
     Construct set of dual-spheroidals
     '''
+
     # Import usefuls
     from numpy import array,pi,arange,linalg,dot,conj,zeros
-    #error('This function is still being written')
+
+    # Warn if l is large
+    if lmax>8: warning('Input of lmax>8 found. The output of this function is increasingly inaccurate for lmax>8 due to numerical errors at the default value of the tol keyword input.')
+
     # -------------------------------------- #
     # Construct a space of spheroidals as a starting basis
     # -------------------------------------- #
@@ -3189,25 +3220,61 @@ def slm_dual_set( jf, l, m, n, theta, phi, s=-2, lmax=8, lmin=2, aw=None, verbos
     Sspace = []
     for ln in lnspace:
         ll,nn = ln
-        Sspace.append( slm( jf, ll, m, nn, theta, phi, s=s, verbose=verbose, aw=aw, use_nr_convention=False ) )
+        Sspace.append( slm( jf, ll, m, nn, theta, phi, s=s, verbose=verbose, aw=aw, use_nr_convention=False, tol=tol ) )
     Sspace = array(Sspace)
-    # -------------------------------------- #
-    # Construct Gram matrix for spheroidals
-    # -------------------------------------- #
-    u = zeros( (len(lnspace),len(lnspace)), dtype=complex )
-    for j,ln1 in enumerate(lnspace):
-        for k,ln2 in enumerate(lnspace):
-            s1 = Sspace[j,:]
-            s2 = Sspace[k,:]
-            u[j,k] = ssprod(jf, s1, s2, theta=theta, aw=aw, use_nr_convention=False )
-    # -------------------------------------- #
-    # Invert and conjugate
-    # -------------------------------------- #
-    v = conj(linalg.pinv(u))
-    # -------------------------------------- #
-    # Use v to project dual functions out of regular ones
-    # -------------------------------------- #
-    aSspace = dot(v,Sspace)
+
+    # Handle sanity-check option for whether to expand in spheroidals or their complex conjugates
+    if conjugate_expansion:
+
+        ##########################################
+        # Expand in spheroidal conjugates        #
+        ##########################################
+
+        # -------------------------------------- #
+        # Construct Gram matrix for spheroidals
+        # -------------------------------------- #
+        u = zeros( (len(lnspace),len(lnspace)), dtype=complex )
+        for j,ln1 in enumerate(lnspace):
+            for k,ln2 in enumerate(lnspace):
+                s1 = Sspace[j,:]
+                s2 = Sspace[k,:]
+                # Compute the normalized inner-product
+                u[j,k] = ssprod( None, s1, s2.conj(), theta=theta, aw=None, use_nr_convention=False )
+        # -------------------------------------- #
+        # Invert and conjugate
+        # -------------------------------------- #
+        v = linalg.pinv(u)
+
+        # -------------------------------------- #
+        # Use v to project dual functions out of regular ones
+        # -------------------------------------- #
+        aSspace = dot(v,Sspace.conj())
+
+    else:
+
+        #########################################
+        # Expand in regular spheroidals         #
+        #########################################
+
+        # -------------------------------------- #
+        # Construct Gram matrix for spheroidals
+        # -------------------------------------- #
+        u = zeros( (len(lnspace),len(lnspace)), dtype=complex )
+        for j,ln1 in enumerate(lnspace):
+            for k,ln2 in enumerate(lnspace):
+                s1 = Sspace[j,:]
+                s2 = Sspace[k,:]
+                u[j,k] = ssprod(jf, s1, s2, theta=theta, aw=aw, use_nr_convention=False )
+        # -------------------------------------- #
+        # Invert and conjugate
+        # -------------------------------------- #
+        v = conj(linalg.pinv(u))
+
+        # -------------------------------------- #
+        # Use v to project dual functions out of regular ones
+        # -------------------------------------- #
+        aSspace = dot(v,Sspace.conj())
+
     #
     foo,bar = {},{}
     for k,(l,n) in enumerate(lnspace):
@@ -3301,6 +3368,7 @@ def slpm( jf,               # Dimentionless spin parameter
           london = False,   # toggle for which series solution to use (they are all largely equivalent)
           aw = None,        # when not none, the separation constant will be found automatically
           adjoint=False,
+          tol=None,
           verbose = False ):# Be verbose
 
     #
@@ -3310,9 +3378,6 @@ def slpm( jf,               # Dimentionless spin parameter
     from numpy import complex256, cos, ones, mean, isinf, pi, exp, array, ndarray, unwrap, angle, linalg, sqrt, linspace, sin, float128
     from scipy.misc import factorial as f
     from scipy.integrate import trapz
-
-    # Define an absolute error tolerance
-    et = 1e-8
 
     #
     if m<0: error('this low level routine is only valid for m>0; use slm() for general m cases')
@@ -3334,7 +3399,7 @@ def slpm( jf,               # Dimentionless spin parameter
 
             # Validate the QNM frequency and separation constant used
             lvrtol=1e-4
-            lvrwrk = linalg.norm( leaver_workfunction(jf,l,m,[cw.real,cw.imag,sc.real,sc.imag],adjoint=adjoint,s=s) )
+            lvrwrk = linalg.norm( leaver_workfunction(jf,l,m,[cw.real,cw.imag,sc.real,sc.imag],adjoint=adjoint,s=s, london=1) )
             if lvrwrk>lvrtol:
                 msg = 'There is a problem in '+cyan('kerr.core.leaver')+'. The values output are not consistent with leaver''s characteristic equations within %f.\n%s\n# The mode is (jf,l,m,n)=(%f,%i,%i,%i)\n# The leaver_workfunction value is %s\n%s\n'%(lvrtol,'#'*40,jf,l,m,n,red(str(lvrwrk)),'#'*40)
                 error(msg,'slm')
@@ -3350,7 +3415,7 @@ def slpm( jf,               # Dimentionless spin parameter
 
             #
             from numpy import complex128 as dtyp
-            sc = sc_leaver( dtyp(aw), l, m, s, verbose=verbose, adjoint=False)[0]
+            sc = sc_leaver( dtyp(aw), l, m, s, verbose=verbose, adjoint=False, london=london)[0]
 
     else:
 
@@ -3360,7 +3425,7 @@ def slpm( jf,               # Dimentionless spin parameter
 
     #
     from numpy import complex128 as dtyp
-    sc2 = sc_leaver( dtyp(aw), l, m, s, verbose=verbose,adjoint=False)[0]
+    sc2 = sc_leaver( dtyp(aw), l, m, s, verbose=verbose,adjoint=False, london=london, tol=tol)[0]
     if abs(sc2-sc)>1e-3:
         print('aw  = '+str(aw))
         print('sc  = '+str(sc))
@@ -3415,7 +3480,7 @@ def slpm( jf,               # Dimentionless spin parameter
     k = 1
     kmax = 5e3
     err,yy = [],[]
-    et2=1e-8
+    et2=1e-8 if tol is None else tol
     max_a = max(abs(array([a0,a1])))
     v_pow_k = v
     while not done:
@@ -3472,6 +3537,7 @@ def slm(  jf,               # Dimentionless spin parameter
           aw = None,        # when not none, the separation constant will be found automatically
           london = False,
           use_nr_convention = True, # Toggle whether to use NR convention for multipoles
+          tol = None,
           verbose = False ):# Be verbose
 
     # Setup plotting backend
@@ -3498,16 +3564,16 @@ def slm(  jf,               # Dimentionless spin parameter
     #
     if m<0:
         if use_nr_convention:
-            S,yy,err = slpm( jf, l, -m, n, pi-theta, pi+phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw )
+            S,yy,err = slpm( jf, l, -m, n, pi-theta, pi+phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw, tol=tol )
             S = ((-1)**(l+m)) * S.conj()
             warning('NR convention being used for m<0 multipole. This results in a spheroidal function that does not satisfy Teukolsky\'s equation with the given labeling. To disable this warning, use keyword input use_nr_convention=False.')
         else:
             aw = -aw
             m = -m
             s = -s
-            S,yy,err = slpm( jf, l, m, n, theta, phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw )
+            S,yy,err = slpm( jf, l, m, n, theta, phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw, tol=tol )
     else:
-        S,yy,err = slpm( jf, l, m, n, theta, phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw )
+        S,yy,err = slpm( jf, l, m, n, theta, phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw, tol=tol )
 
     #
     if plot:

@@ -66,7 +66,7 @@ def localmins(arr,edge_ignore=False):
 
 
 # Lentz's continued fration solver
-def lentz( aa, bb, tol=1e-10, tiny=1e-30, mpm=False ):
+def lentz( aa, bb, tol=None, tiny=1e-30, mpm=False ):
     '''
     Lentz's method for accurate continued fraction calculation of a function
     f:
@@ -85,6 +85,10 @@ def lentz( aa, bb, tol=1e-10, tiny=1e-30, mpm=False ):
     ~ llondon6'12
     [CONVERTED TO PYTHON FROM MATLAB by llondon2'14]
     '''
+
+    #
+    if tol == None:
+        tol = 1e-10
 
     #
     f = bb(0)
@@ -116,9 +120,10 @@ def lentz( aa, bb, tol=1e-10, tiny=1e-30, mpm=False ):
         #
         f = f*DELTA
         #
-        done = abs( DELTA - 1.0 )<tol
+        err = abs( DELTA - 1.0 )
+        done = err<tol
         if j>=jmax:
-            # print('>>! Maximum number of iterations reached before error criteria passed.\n')
+            warning('Maximum number of iterations reached before error criteria passed. (err=%d)\n'%err)
             state = True
             done = state
 
@@ -137,8 +142,8 @@ class smooth:
         from numpy import ones,convolve,mod,hstack,arange,cumsum,mod,array
         # Handle method input; set default
         method = 'savgol' if method is None else method.lower()
-        # Handle n input; default is None which causes method to be auto
-        method = 'auto' if width is None else method
+        # # Handle n input; default is None which causes method to be auto
+        # method = 'auto' if width is None else method
         # Store relevant inputs to this object
         this.scalar_range = array(y)
         this.width = width
@@ -930,27 +935,40 @@ def nchoosek(n,k): return factorial(n)/(factorial(k)*factorial(n-k))
 def sYlm(s,l,m,theta,phi,return_mesh=False):
 
     # Import useful things
-    from numpy import array,vstack,ndarray,exp,double
+    from numpy import array,vstack,ndarray,exp,double,zeros_like
 
     # Enforce that theta and phi are arrays
     phi   = array( phi   if isinstance(phi  ,(list,tuple)) else [double(phi  )]  ) if not isinstance(phi  ,ndarray) else phi
     theta = array( theta if isinstance(theta,(list,tuple)) else [double(theta)]  ) if not isinstance(theta,ndarray) else theta
 
     #
-    theta_is_matrix = len(theta.shape)>1
-    phi_is_matrix = len(phi.shape)>1
-    if theta_is_matrix or phi_is_matrix :
-        error('theta and phi inputs must not have dimension greater than 1')
+    (s,l,m) = [ int(x) for x in (s,l,m) ]
 
-    # Define function to encapsulate azimuthal dependence
-    Am = lambda M,PHI: exp( 1j*M*PHI )
+    #
+    isvalid = (abs(l)>=s) and (abs(m)<=l)
 
-    # IF more than one phi value is given
-    if len(phi)>1 :
-        D = sDlm(s,l,m,theta)
-        Y = vstack(  [ D * Am(m,ph) for ph in phi ]  )
-    else: # ELSE if a single value is given
-        Y = sDlm(s,l,m,theta) * Am(m,phi)
+    #
+    if isvalid:
+
+        #
+        theta_is_matrix = len(theta.shape)>1
+        phi_is_matrix = len(phi.shape)>1
+        if theta_is_matrix or phi_is_matrix :
+            error('theta and phi inputs must not have dimension greater than 1')
+
+        # Define function to encapsulate azimuthal dependence
+        Am = lambda M,PHI: exp( 1j*M*PHI )
+
+        # IF more than one phi value is given
+        if len(phi)>1 :
+            D = sDlm(s,l,m,theta)
+            Y = vstack(  [ D * Am(m,ph) for ph in phi ]  )
+        else: # ELSE if a single value is given
+            Y = sDlm(s,l,m,theta) * Am(m,phi)
+
+    else:
+
+        Y = zeros_like(theta)
 
     #
     if not return_mesh:
@@ -966,15 +984,16 @@ def sYlm(s,l,m,theta,phi,return_mesh=False):
 def sDlm(s,l,m,theta):
 
     #
-    from numpy import pi,ones,sin,tan,exp,array,double,sqrt,zeros,ones_like
+    from numpy import pi,ones,exp,array,double,zeros_like,ones_like,sum
     from scipy.misc import factorial,comb
+    from scipy import sqrt,tan,sin
 
     #
     if isinstance(theta,(float,int,double)): theta = [theta]
     theta = array(theta)
 
     #
-    theta = array([ double(k) for k in theta ])
+    # theta = array([ double(k) for k in theta ])
 
     # Ensure regular output (i.e. no nans)
     theta[theta==0.0] = 1e-9
@@ -982,7 +1001,8 @@ def sDlm(s,l,m,theta):
     # Name anonymous functions for cleaner syntax
     f = lambda k: double(factorial(k))
     c = lambda x: double(comb(x[0],x[1]))
-    cot = lambda x: 1.0/double(tan(x))
+    # cot = lambda x: 1.0/double(tan(x))
+    cot = lambda x: 1.0/tan(x)
 
     # Pre-allocatetion array for calculation (see usage below)
     X = ones_like( theta )
@@ -996,7 +1016,7 @@ def sDlm(s,l,m,theta):
     A = a * X
 
     # Calcualte the "sum" part of sYlm
-    B = zeros(theta.shape)
+    B = zeros_like(theta)
     for k in range(len(theta)):
         B[k] = 0
         for r in range(l-s+1):
