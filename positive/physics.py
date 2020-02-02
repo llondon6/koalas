@@ -521,7 +521,7 @@ def remnant(m1,m2,chi1,chi2,arxiv=None,verbose=False,L_vec=None):
         Mf = Mf161100332(m1,m2,chi1,chi2)
         jf = jf161100332(m1,m2,chi1,chi2)
     elif arxiv in ('1605.01938',160501938,'precessing','p'):
-        Mf = Mf161100332(m1,m2,chi1,chi2)
+        Mf = Mf161100332(m1,m2,chi1[-1],chi2[-1])
         jf = jf160501938(m1,m2,chi1,chi2,L_vec=L_vec)
     else:
         if verbose:
@@ -1258,7 +1258,7 @@ class pn:
         # Unpack the state
         phi,x = state
         # * phi, Phase with 2*pi*f = dphi/dt where phi is the GW phase
-        # *   x, PN parameter, function of frequency; v = (2*pi*M*f/m)**1/3 = x**0.5 (see e.g. https://arxiv.org/pdf/1601.05588.pdf)
+        # *   x, PN parameter, function of frequency; v = (2*pi*M*f/m)**1.0/3 = x**0.5 (see e.g. https://arxiv.org/pdf/1601.05588.pdf)
 
         #-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~-~#
         # Calculate useful parameters from current object
@@ -2920,7 +2920,7 @@ def aw_leaver( Alm, l, m, s,tol=1e-9, london=True, verbose=False, guess=None, aw
 
 
 # Compute perturbed Kerr separation constant given a frequency
-def sc_leaver( aw, l, m, s,tol=1e-9, london=True, s_included=False, verbose=False, adjoint=False  ):
+def sc_leaver( aw, l, m, s,tol=1e-10, london=True, s_included=False, verbose=False, adjoint=False, __CHECK__=True  ):
     '''
     Given (aw, l, m, s), compute and return separation constant.
     '''
@@ -2932,18 +2932,18 @@ def sc_leaver( aw, l, m, s,tol=1e-9, london=True, s_included=False, verbose=Fals
     from numpy import complex128 as dtyp
 
     #
-    l_min = l-max(abs(m),abs(s)) # VERY IMPORTANT
+    p_min = l-max(abs(m),abs(s)) # VERY IMPORTANT
 
     #
     def action(Alm):
         _,_,alpha,beta,gamma,_,_,_ = leaver_ahelper( l,m,s,aw,Alm, london=london, verbose=verbose, adjoint=False )
         v = 1.0
-        for p in range(l_min+1):
+        for p in range(p_min+1):
             v = beta(p) - (alpha(p-1.0)*gamma(p) / v)
-        aa = lambda p: -alpha(p-1.0+l_min)*gamma(p+l_min)
-        bb = lambda p: beta(p+l_min)
+        aa = lambda p: -alpha(p-1.0+p_min)*gamma(p+p_min)
+        bb = lambda p: beta(p+p_min)
         u,state = lentz(aa,bb,tol)
-        u = beta(l_min) - u
+        u = beta(p_min) - u
         x = v-u
         if verbose: print('err = '+str(abs(x)))
         x = array([x.real,x.imag],dtype=float).ravel()
@@ -2976,6 +2976,15 @@ def sc_leaver( aw, l, m, s,tol=1e-9, london=True, s_included=False, verbose=Fals
     # Given the structure of the spheroidal harmonic differential equation for perturbed Kerr, we have a choice to include a factor of s in the potential, or in the eigenvalue. There's good reason to consider it a part of the latter as s->-s has the action of leaving the eigenvalue unchanged.
     if s_included:
         Alm = Alm + s
+
+    # Impose check on equivalence class
+    if __CHECK__:
+        if (l==abs(s)+3):
+            (Alm_,fmin_,retry_,foo_) = sc_leaver( -aw, l, -m, s,tol=tol, london=london, s_included=s_included, verbose=verbose, adjoint=adjoint, __CHECK__=False  )
+            if linalg.norm(fmin_)<linalg.norm(fmin):
+                (Alm,fmin,retry,foo) = (Alm_,fmin_,retry_,foo_)
+            if verbose:
+                warning('Strange behavior has been noticed for this equivalence class of l and s. We have checked to verify that the optimal root is used here.')
 
     # alert('err = '+str(fmin))
     if retry:
@@ -5433,4 +5442,261 @@ def tkangular( S, theta, acw, m, s=-2, separation_constant=None,adjoint=False  )
     ans = D2S + VS
 
     #
+    return ans
+
+
+# Compute the Clebsch-Gordan coefficient by wrapping the sympy function.
+def clebsh_gordan_wrapper(j1,j2,m1,m2,J,M,precision=16):
+
+    '''
+    Compute the Clebsch-Gordan coefficient by wrapping the sympy functionality.
+    ---
+    USAGE: clebsh_gordan_wrapper(j1,j2,m1,m2,J,M,precision=16)
+    '''
+
+    # Import usefuls
+    import sympy,numpy
+    from sympy.physics.quantum.cg import CG
+
+    # Compute and store for output
+    ans = sympy.N( CG(j1, m1, j2, m2, J, M).doit(), precision )
+
+    # return answer
+    return complex( numpy.array(ans).astype(numpy.complex128) )
+
+
+# Compute inner-products between cos(theta) and cos(theta)**2 and SWSHs
+def swsh_prod_cos(s,l,lp,m,u_power):
+
+    '''
+    Compute the inner product
+    < sYlm(l) | u^u_power | k+right_shift >
+
+    USAGE
+    ---
+    ans = swsh_clebsh_gordan_prods(k,left_shift,u_power,right_shift)
+
+    NOTES
+    ---
+    * Here, k is the polar index more commonly denoted l.
+    * The experssions below were generated in Mathematica
+    * u_power not in (1,2) causes this function to throw an error
+    * related selection rules are manually implemented
+
+    londonl@mit.edu 2020
+    '''
+
+
+    # Import usefuls
+    from scipy import sqrt
+
+    # Define a delta and do a precompute
+    delta = lambda a,b: 1 if a==b else 0
+    sqrt_factor = sqrt((2*l+1.0)/(2*lp+1.0))
+
+    #
+    if u_power==1:
+
+        # Equation 3.9b of Teukolsky 1973 ApJ 185 649P
+        ans = sqrt_factor * clebsh_gordan_wrapper(l,1,m,0,lp,m) * clebsh_gordan_wrapper(l,1,-s,0,lp,-s)
+
+    elif u_power==2:
+
+        # Equation 3.9a of Teukolsky 1973 ApJ 185 649P
+        by3 = 1.0/3
+        twoby3 = 2.0*by3
+        ans = by3*delta(l,lp)  +  twoby3 * sqrt_factor * clebsh_gordan_wrapper(l,2,m,0,lp,m) * clebsh_gordan_wrapper(l,2,-s,0,lp,-s)
+
+    else:
+
+        #
+        error('The inner-product between SWSHs and cos(theta)^%i is not handled by this function. The u_power input must be 1 or 2.'%u_power)
+
+    # Return answer
+    return ans
+
+
+# Compute the innder product: < sYlm(k+left_shift) | u^u_power | k+right_shift >
+def swsh_clebsh_gordan_prods(k,m,s,left_shift,u_power,right_shift):
+    '''
+    Compute the inner product
+    < sYlm(k+left_shift) | u^u_power | k+right_shift >
+
+    USAGE
+    ---
+    ans = swsh_clebsh_gordan_prods(k,left_shift,u_power,right_shift)
+
+    NOTES
+    ---
+    * Here, k is the polar index more commonly denoted l.
+    * The experssions below were generated in Mathematica
+    * u_power not in (1,2) causes this function to throw an error
+    * related selection rules are manually implemented
+
+    londonl@mit.edu 2020
+    '''
+
+    #
+    from scipy import sqrt,floor,angle,pi,sign
+
+    #
+    (k,m,s) = [ float(x) for x in (k,m,s) ]
+
+    #
+    Q ={    (0,1,-1):(sqrt(k - m)*sqrt(k + m)*sqrt(k - s)*sqrt(k + s))/(k*sqrt(-1 + 4*k**2)), \
+            (0,1,1):sqrt((3 + 4*k*(2 + k))*(1 + k - m)*(1 + k + m)*(1 + k - s)*(1 + k + s))/((1 + k)*(1 + 2*k)*(3 + 2*k)), \
+            (0,2,-1):(-2*sqrt(-1 + 4*k**2)*sqrt(k - m)*m*sqrt(k + m)*sqrt(k - s)*s*sqrt(k + s))/(k - 5*k**3 + 4*k**5), \
+            (0,2,1):(-2*m*s*sqrt((3 + 4*k*(2 + k))*(1 + k - m)*(1 + k + m)*(1 + k - s)*(1 + k + s)))/(k*(1 + k)*(2 + k)*(1 + 2*k)*(3 + 2*k)), \
+            (0,2,-2):((-1)**floor((pi - angle(-3 + 2*k) - angle(-1 + k - m) + angle(-1 + k + m) + angle(-1 + k - s) - angle(-1 + k + s))/(2*pi))*sqrt(-1 + k - m)*sqrt(k - m)*sqrt(-1 + k + m)*sqrt(k + m)*sqrt(-1 + k - s)*sqrt(k - s)*sqrt(-1 + k + s)*sqrt(k + s))/(sqrt(-3 + 2*k)*sqrt(1 + 2*k)*(k - 3*k**2 + 2*k**3)), \
+            (0,2,2):sqrt(((1 + k - m)*(2 + k - m)*(1 + k + m)*(2 + k + m)*(1 + k - s)*(2 + k - s)*(1 + k + s)*(2 + k + s))/((1 + 2*k)*(5 + 2*k)))/((1 + k)*(2 + k)*(3 + 2*k)), \
+            (0,1,0):-((m*s)/(k + k**2)), \
+            (-2,1,-2):(m*s)/((2 - 3*k + k**2)*sign(3 - 2*k)), \
+            (-1,1,-1):(m*s)/(k - k**2), \
+            (-1,1,-2):((-1)**floor((pi - angle(3 + 4*(-2 + k)*k) - angle(-1 + k - m) + angle(-1 + k + m) + angle(-1 + k - s) - angle(-1 + k + s))/(2*pi))*sqrt(3 + 4*(-2 + k)*k)*sqrt(-1 + k - m)*sqrt(-1 + k + m)*sqrt(-1 + k - s)*sqrt(-1 + k + s))/((-1 + k)*(-3 + 2*k)*(-1 + 2*k)), \
+            (-2,1,-1):((-1)**floor((pi - angle(3 + 4*(-2 + k)*k) + angle(-1 + k - m) - angle(-1 + k + m) - angle(-1 + k - s) + angle(-1 + k + s))/(2*pi))*sqrt(3 + 4*(-2 + k)*k)*sqrt(-1 + k - m)*sqrt(-1 + k + m)*sqrt(-1 + k - s)*sqrt(-1 + k + s))/((-1 + k)*(-3 + 2*k)*(-1 + 2*k)), \
+            (1,1,1):-((m*s)/(2 + 3*k + k**2)), \
+            (1,1,2):sqrt(((2 + k - m)*(2 + k + m)*(2 + k - s)*(2 + k + s))/((3 + 2*k)*(5 + 2*k)))/(2 + k), \
+            (2,1,1):sqrt(((2 + k - m)*(2 + k + m)*(2 + k - s)*(2 + k + s))/((3 + 2*k)*(5 + 2*k)))/(2 + k), \
+            (2,1,2):-((m*s)/(6 + 5*k + k**2)), \
+            (0,2,0):1.0/3 + (2*(k + k**2 - 3*m**2)*(k + k**2 - 3*s**2))/(3*k*(1 + k)*(-1 + 2*k)*(3 + 2*k)), \
+            (0,2,2):sqrt(((1 + k - m)*(2 + k - m)*(1 + k + m)*(2 + k + m)*(1 + k - s)*(2 + k - s)*(1 + k + s)*(2 + k + s))/((1 + 2*k)*(5 + 2*k)))/((1 + k)*(2 + k)*(3 + 2*k)), \
+            (-2,2,-2):1.0/3 - (2*(2 + (-3 + k)*k - 3*m**2)*(2 + (-3 + k)*k - 3*s**2))/(3*(-2 + k)*(-1 + k)*(-5 + 2*k)*(-1 + 2*k)*sign(3 - 2*k)), \
+            (-1,2,-2):(2*(-1)**floor((pi - angle(3 + 4*(-2 + k)*k) - angle(1 - k + m) + angle(-1 + k + m) + angle(1 - k + s) - angle(-1 + k + s))/(2*pi))*sqrt(3 + 4*(-2 + k)*k)*m*sqrt(1 - k + m)*sqrt(-1 + k + m)*s*sqrt(1 - k + s)*sqrt(-1 + k + s))/((-2 + k)*(-1 + k)*k*(-3 + 2*k)*(-1 + 2*k)), \
+            (-2,2,-1):(2*(-1)**floor((pi - angle(3 + 4*(-2 + k)*k) + angle(1 - k + m) - angle(-1 + k + m) - angle(1 - k + s) + angle(-1 + k + s))/(2*pi))*sqrt(3 + 4*(-2 + k)*k)*m*sqrt(1 - k + m)*sqrt(-1 + k + m)*s*sqrt(1 - k + s)*sqrt(-1 + k + s))/((-2 + k)*(-1 + k)*k*(-3 + 2*k)*(-1 + 2*k)), \
+            (-1,2,-1):((-1 + k)*k*(-1 + 2*(-1 + k)*k - 2*m**2) + 2*(k - k**2 + 3*m**2)*s**2)/(k*(3 + k + 4*(-2 + k)*k**2)), \
+            (1,2,1):1.0/3 + (2*(2 + k*(3 + k) - 3*m**2)*(2 + k*(3 + k) - 3*s**2))/(3*(1 + k)*(2 + k)*(1 + 2*k)*(5 + 2*k)), \
+            (1,2,2):(-2*m*s*sqrt(((2 + k - m)*(2 + k + m)*(2 + k - s)*(2 + k + s))/((3 + 2*k)*(5 + 2*k))))/((1 + k)*(2 + k)*(3 + k)), \
+            (2,2,1):(-2*m*s*sqrt(((2 + k - m)*(2 + k + m)*(2 + k - s)*(2 + k + s))/((3 + 2*k)*(5 + 2*k))))/((1 + k)*(2 + k)*(3 + k))
+        }
+
+    #
+    if not ( u_power in [1,2] ):
+       error('This function handles inner-products between two spin wieghted spherical harmonics and cos(theta) or cos(theta)^2. You have entrered %s, which would correspond to cos(theta)^%s'%(red(str(u_power)),red(str(u_power))))
+
+    #
+    z = (left_shift,u_power,right_shift)
+
+    #
+    is_handled = (z in Q)
+    lp_exists = ((z[0]+k)>=abs(s)) and ((z[-1]+k)>=abs(s))
+    is_valid = lp_exists and is_handled
+
+    #
+    ans = Q[z] if is_valid else 0
+
+    # Return answer // implicitely implement selection rules
+    if z in Q:
+       return Q[z]
+    else:
+       error('make sure that you should not be using the sympy version of this function: swsh_prod_cos')
+       return 0
+
+
+
+# Compute spheroidal harmonics with clebsh-gordan coefficients from scipy
+def slmcg( aw, s, l, m, theta, phi, lmin=None, lmax=None, span=6, full_output=False  ):
+
+    '''
+    Use Clebsh-Gordan coefficients to calculate spheroidal harmonics
+    london.l 2015+2020
+
+    '''
+
+    # Import usefuls
+    from scipy.linalg import eig
+    from sympy.physics.quantum import cg
+    from numpy import array,zeros,zeros_like,exp
+    from numpy import ones,arange,ndarray,complex128
+
+    # Preliminaries
+    # ------------------------------ #
+
+    # Handle input format
+    if isinstance(aw,(list,ndarray)):
+        if len(aw)>1:
+            error('first input as iterable not handled; fun function on each element')
+        else:
+            aw = aw[0]
+    # if lmin in None, set it relative to l
+    if lmin is None: lmin = max(l-span,max(abs(s),abs(m)))
+    # if lmax in None, set it relative to l
+    if lmax is None: lmax = l+span
+    # Define index range and perform precomputations
+    lrange = range(lmin,lmax+1); num_ell = len(lrange)
+    aw2 = aw*aw; c1 = -2*aw*s; c2 = aw2
+
+    # Main bits
+    # ------------------------------ #
+
+    # Eigenvalue for non-spinning solution
+    A0 = lambda ll: (ll-s)*(1+ll+s)
+    # Make lambdas to reduce duplicate code
+
+    # TODO: determine which is faster
+    # c1_term = lambda llj,llk: c1*swsh_clebsh_gordan_prods(llj,m,s,0,1,llk-llj)
+    # c2_term = lambda llj,llk: c2*swsh_clebsh_gordan_prods(llj,m,s,0,2,llk-llj)
+
+    c1_term = lambda llj,llk: c1*swsh_prod_cos(s,llj,llk,m,1)
+    c2_term = lambda llj,llk: c2*swsh_prod_cos(s,llj,llk,m,2)
+
+    # Pre-allocate and then fill the coefficient matrix
+    Q = zeros((num_ell,num_ell),dtype=complex128)
+    for j,lj in enumerate(lrange):
+        for k,lk in enumerate(lrange):
+
+            # Populate the coefficient matrix
+            if   lk == lj-2:
+                Q[j,k] = c2_term(lj,lk)
+            elif lk == lj-1:
+                Q[j,k] = c1_term(lj,lk)+c2_term(lj,lk)
+            elif lk == lj+0:
+                Q[j,k] = c1_term(lj,lk)+c2_term(lj,lk)-A0(lj)
+            elif lk == lj+1:
+                Q[j,k] = c1_term(lj,lk)+c2_term(lj,lk)
+            elif lk == lj+2:
+                Q[j,k] = c2_term(lj,lk)
+            else:
+                Q[j,k] = 0
+
+    # Use scipy to find the eigenvalues and eigenvectors,
+    # aka the spheroidal eigenvalues, and lists of spherical-spheroidal inner-products
+    vals,vecs = eig(Q)
+
+    #
+    dex_map = { ll:lrange.index(ll) for ll in lrange }
+    sep_consts = vals
+    ysprod_array = vecs
+
+    # Extract spherical-spheroidal inner-products of interest
+    ysprod_vec = ysprod_array[ :,dex_map[l] ]
+
+    # Compute Spheroidal Harmonic
+    S = zeros_like(theta,dtype=complex128)
+    for k,lp in enumerate(lrange):
+        S += sYlm(s,lp,m,theta,0) * ysprod_vec[k]
+    S *= exp(1j*m*phi)
+
+    # Extract separation constant
+    A = sep_consts[ dex_map[l] ]
+
+    # Package output
+    # ------------------------------ #
+
+    # Initialize answer
+    if full_output:
+        ans = {}
+        # Spheroidal harmonic and separation constant
+        ans['standard_ouput'] = (S,A)
+        # All separation constants
+        ans['sep_consts'] = sep_consts
+        # Array and l specific ysprods
+        ans['ysprod_array'] = ysprod_array
+        ans['ysprod_vec'] = ysprod_vec
+        # Coefficient matrix
+        ans['coeff_array'] = Q
+    else:
+        # Only output harmonic and sep const
+        ans = S,A
+
+    # Return asnwer
     return ans

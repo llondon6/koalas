@@ -339,8 +339,18 @@ PythonForm[A_]:=Module[
 	{Answer},
 	(* Handle complex numbers *)
 	Answer = StringReplace[ToString[InputForm[A]],{"^"->"**","I"->"1j"}];
+	(* Handle Pi *)
+	Answer = StringReplace[Answer,{"Pi"->"pi"}];
 	(* Handle Exp[X] *)
 	Answer = StringReplace[Answer,{"E**"->"exp"}];
+	(* Handle Floor[X] *)
+	Answer = StringReplace[Answer,{"Floor"->"floor"}];
+	(* Handle Arg[X] *)
+	Answer = StringReplace[Answer,{"Arg"->"angle"}];
+	(* Handle Abs[X] *)
+	Answer = StringReplace[Answer,{"Abs"->"abs"}];
+	(* Handle Sign[X] *)
+	Answer = StringReplace[Answer,{"Sign"->"sign"}];
 	(* Handle Sqrt[X] *)
 	Answer = StringReplace[Answer,{"Sqrt"->"sqrt"}];
 	(* Handle ArcTanh[X] *)
@@ -370,14 +380,37 @@ TableD[F_,var_,order_:3]:=Module[
 			];
 	Return[Ans];
 ]
-(* Simplify a product using log *)
+
+(*(* Simplify a product using log *)
 Clear[LogSimplify];
-LogSimplify[X_] :=Simplify[
-							Exp@Expand@PowerExpand[Log[X]]
-															//.{(Sqrt[a_]Sqrt[b_])/c_:>Sqrt[Factor[a b]]/c}
-															//.{c_/(Sqrt[a_]Sqrt[b_]):>c/Sqrt[Factor[a b]]}
-															//.{a_/(b_ Sqrt[c_]):>a/(b Sqrt[Factor[c]])}
-				]//.{a_/(b_ Sqrt[c_]):>a/(b Sqrt[Factor[c]])}//.{a_/b_:>a/Factor[b]}
+LogSimplify[X_,XAssumptions_:{k\[GreaterEqual]1/2,Abs[m]\[LessEqual]k,k\[GreaterEqual]Abs[s],k\[Element]Integers,m\[Element]Integers,s\[Element]Integers}] :=Simplify[
+							Exp@Expand@PowerExpand[Log[X],Assumptions\[Rule]XAssumptions]
+															//.{(Sqrt[a_]Sqrt[b_])/c_\[RuleDelayed]Sqrt[Factor[a b]]/c}
+															//.{c_/(Sqrt[a_]Sqrt[b_])\[RuleDelayed]c/Sqrt[Factor[a b]]}
+															//.{a_/(b_ Sqrt[c_])\[RuleDelayed]a/(b Sqrt[Factor[c]])}
+				]//.{a_/(b_ Sqrt[c_])\[RuleDelayed]a/(b Sqrt[Factor[c]])}//.{a_/b_\[RuleDelayed]a/Factor[b]}*)
+
+(*(* Log simplify multiple terms *)
+Remove[LogSimplify];
+LogSimplify[X_,XAssumptions_:{k\[GreaterEqual]1/2,Abs[m]\[LessEqual]k,k\[GreaterEqual]Abs[s],k\[Element]Integers,m\[Element]Integers,s\[Element]Integers}]:= Module[
+	(* Internals *)
+	{Ans},
+	(* Return Answer *)
+	Return[
+		PowerExpand[X,Assumptions\[Rule]XAssumptions]
+		//.{Sqrt[a_]Sqrt[b_]\[RuleDelayed]Sqrt[a b]}
+		//.{Sqrt[a_]\[RuleDelayed]Sqrt[Factor[a]],1/Sqrt[a_]\[RuleDelayed]1/Sqrt[Factor[a]]}
+	]
+];*)
+
+(* Log simplify multiple terms *)
+Remove[LogSimplify];
+LogSimplify[X_]:= Module[
+	(* Internals *)
+	{Ans},
+	(* Return Answer *)
+	Return[X]
+];
 				
 (* Create rule to replace derivatives *)
 Remove[MapRuleD];
@@ -486,7 +519,7 @@ Adjoint[Df_,f_,var_,assumptions_:{}]:=Module[
 	
 	(* Make template *)
 	ReducedDf = CoeffSimplify[Df,TableD[f,var]];
-	TemplateConjCoeffs = Table[Symbol["Q" <> ToString@k][var], {k, Length[ReducedDf]}];
+	TemplateConjCoeffs = Table[Symbol["Q" <> ToString@kkkk][var], {kkkk, Length[ReducedDf]}];
 	
 	(*  *)
 	Coeffs = Coefficient[ReducedDf,TableD[f,var,Length[ReducedDf]]];
@@ -494,8 +527,8 @@ Adjoint[Df_,f_,var_,assumptions_:{}]:=Module[
 	(*  *)
 	TemplateAdjDf = CoeffSimplify[
 					Sum[ 
-						Simplify[(-1)^z D[TemplateConjCoeffs[[z+1]] f,{var,z}]],
-					    {z,0,Length[TemplateConjCoeffs]-1}
+						Simplify[(-1)^zzz D[TemplateConjCoeffs[[zzz+1]] f,{var,zzz}]],
+					    {zzz,0,Length[TemplateConjCoeffs]-1}
 					],
 					TableD[f,var]
 			];
@@ -504,8 +537,8 @@ Adjoint[Df_,f_,var_,assumptions_:{}]:=Module[
 	AdjDf = TemplateAdjDf
 						/.Flatten[
 						    Table[
-								MapRuleD[TemplateConjCoeffs[[k]],Refine[Conjugate@Coeffs[[k]],Assumptions->assumptions],var],
-								{k,Length[Coeffs]}
+								MapRuleD[TemplateConjCoeffs[[kkkk]],Refine[Conjugate@Coeffs[[kkkk]],Assumptions->assumptions],var],
+								{kkkk,Length[Coeffs]}
 						    ]
 						  ];
 	

@@ -945,7 +945,7 @@ def sYlm(s,l,m,theta,phi,return_mesh=False):
     (s,l,m) = [ int(x) for x in (s,l,m) ]
 
     #
-    isvalid = (abs(l)>=s) and (abs(m)<=l)
+    isvalid = (abs(l)>=abs(s)) and (abs(m)<=l) 
 
     #
     if isvalid:
