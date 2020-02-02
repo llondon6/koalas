@@ -5676,8 +5676,8 @@ def slmcg( aw, s, l, m, theta, phi, lmin=None, lmax=None, span=6, full_output=Fa
         S += sYlm(s,lp,m,theta,0) * ysprod_vec[k]
     S *= exp(1j*m*phi)
 
-    # Extract separation constant
-    A = sep_consts[ dex_map[l] ]
+    # Extract separation constant. Account for sign convention
+    A = -sep_consts[ dex_map[l] ]
 
     # Package output
     # ------------------------------ #
@@ -5694,6 +5694,10 @@ def slmcg( aw, s, l, m, theta, phi, lmin=None, lmax=None, span=6, full_output=Fa
         ans['ysprod_vec'] = ysprod_vec
         # Coefficient matrix
         ans['coeff_array'] = Q
+        # store space of l values considered
+        ans['lrange'] = lrange
+        # map between l and index
+        ans['dex_map'] = dex_map
     else:
         # Only output harmonic and sep const
         ans = S,A
