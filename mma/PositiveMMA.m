@@ -75,6 +75,27 @@ Adjoint::usage="Method to compute adjoint of linear differential operator"
 PythonForm::usage="Elegant function to return python string of MMA expressions"
 PyForm::usage="Elegant function to return python string of MMA expressions"
 
+(* Method to determine highest derivative order in expression *)
+MaxD::usage="Method to determine highest derivative order in expression"
+
+
+
+(* Method to determine highest derivative order in expression *)
+Remove[MaxD]; 
+MaxD[Expression_,F_,var_]:=Module[
+	(* Internals *)
+	{Answer,Done,n,k,HasOrder,ExpressionVars},
+	ExpressionVars = Variables[Expression];
+	Answer = 0; k = 0;
+	Done = False;
+	While[ !Done,
+		HasOrder = MemberQ[ExpressionVars,D[F,{var,k}]];
+		If[HasOrder,Answer=k];
+		Done = !HasOrder;
+		k++
+	];
+	Return[Answer];
+]
 
 
 Remove[TakeLargestExponent];
@@ -359,6 +380,8 @@ PythonForm[A_]:=Module[
 	Answer = StringReplace[Answer,{"Tanh"->"tanh"}];
 	(* Handle [ and ] *)
 	Answer = StringReplace[Answer,{"["->"(","]"->")"}];
+	(* Handle division *)
+	Answer = StringReplace[Answer,{"/"->"*1.0/"}];
 	Return[Answer];
 ]
 PyForm[A_]:=Module[
@@ -370,13 +393,13 @@ PyForm[A_]:=Module[
 
 (* Create list of derivatives up to a given order *)
 Remove[TableD];
-TableD[F_,var_,order_:3]:=Module[
+TableD[F_,var_,order_:2]:=Module[
 	(* Internals *)
 	{Ans},
 	(* Create table of derivatives *)
 	Ans = Table[
 				D[F,{var,kkk-1}]
-				,{kkk,order}
+				,{kkk,order+1}
 			];
 	Return[Ans];
 ]
@@ -414,9 +437,9 @@ LogSimplify[X_]:= Module[
 				
 (* Create rule to replace derivatives *)
 Remove[MapRuleD];
-MapRuleD[F_,G_,var_,order_:3]:=Module[
+MapRuleD[F_,G_,var_,order_:2]:=Module[
 	(* Internals *)
-	{Ans},
+	{Ans,kkk},
 	(* Create table of derivatives *)
 	Ans = Table[
 				(*If[ (G[[0]]\[Equal]Sum),
@@ -427,7 +450,7 @@ MapRuleD[F_,G_,var_,order_:3]:=Module[
 					D[F,{var,kkk-1}]\[Rule]D[G,{var,kkk-1}]
 				]*)
 				D[F,{var,kkk-1}]->D[G,{var,kkk-1}]
-				,{kkk,order}
+				,{kkk,order+1}
 			];
 	Return[Ans];
 ]
@@ -513,16 +536,18 @@ RiccatiLinearize[ L_, f_,fNew_, var_ ]:=Module[
 ]
 (* Method to compute adjoint of linear differential operator *)
 Remove[Adjoint]; 
-Adjoint[Df_,f_,var_,assumptions_:{}]:=Module[
+Adjoint[Df_,f_,var_,assumptions_:{},NoConj_:False]:=Module[
 	(* Internal variables *)
-	{Answer,Coeffs,ReducedDf,TemplateConjCoeffs,TemplateAdjDf,QList,AdjDf},
+	{Answer,Coeffs,AdjCoeffs,ReducedDf,TemplateConjCoeffs,TemplateAdjDf,QList,AdjDf,zzz,kkkk,OrderD},
 	
 	(* Make template *)
-	ReducedDf = CoeffSimplify[Df,TableD[f,var]];
-	TemplateConjCoeffs = Table[Symbol["Q" <> ToString@kkkk][var], {kkkk, Length[ReducedDf]}];
+	OrderD = MaxD[Df,f,var]+1;
+	ReducedDf = CoeffSimplify[Df,TableD[f,var,OrderD-1]];
+	If[!Simplify[Df==ReducedDf],Print[Style["Error",Background->Red]]];
+	TemplateConjCoeffs = Table[Symbol["Q" <> ToString@kkkk][var], {kkkk, OrderD}];
 	
 	(*  *)
-	Coeffs = Coefficient[ReducedDf,TableD[f,var,Length[ReducedDf]]];
+	Coeffs = Coefficient[ReducedDf,TableD[f,var,OrderD-1]];
 	
 	(*  *)
 	TemplateAdjDf = CoeffSimplify[
@@ -530,20 +555,35 @@ Adjoint[Df_,f_,var_,assumptions_:{}]:=Module[
 						Simplify[(-1)^zzz D[TemplateConjCoeffs[[zzz+1]] f,{var,zzz}]],
 					    {zzz,0,Length[TemplateConjCoeffs]-1}
 					],
-					TableD[f,var]
+					TableD[f,var,Length[Coeffs]]
 			];
+			
+	(*  *)
+	(*Print[TemplateConjCoeffs];
+	Print[OrderD];
+	Print[TableD[f,var,OrderD-1]];
+	Print[Length[ReducedDf]];
+	Print[ReducedDf];
+	Print[Length[TemplateConjCoeffs]];
+	Print[Length[TemplateConjCoeffs]];
+	Print@Coeffs;
+	Print@Length[Coeffs];*)
 			
 	(*  *)
 	AdjDf = TemplateAdjDf
 						/.Flatten[
 						    Table[
-								MapRuleD[TemplateConjCoeffs[[kkkk]],Refine[Conjugate@Coeffs[[kkkk]],Assumptions->assumptions],var],
+								MapRuleD[TemplateConjCoeffs[[kkkk]],Refine[ Coeffs[[kkkk]],Assumptions->assumptions],var,OrderD],
 								{kkkk,Length[Coeffs]}
 						    ]
 						  ];
+						  
+	(* Handle optional conjugation if reality is assumed *)
+	AdjCoeffs = Coefficient[AdjDf,TableD[f,var,OrderD]];
+	AdjDf = Total[ Table[ D[f,{var,kkk-1}] If[NoConj,AdjCoeffs[[kkk]],Conjugate[AdjCoeffs[[kkk]]]], {kkk,Length[AdjCoeffs]} ] ]; 
 	
 	(* Return answer *)
-	Answer = CoeffSimplify[AdjDf,TableD[f,var]];
+	Answer = CoeffSimplify[AdjDf,TableD[f,var,Length[Coeffs]]];
 	Return[Answer];
 ]
 

@@ -945,7 +945,7 @@ def sYlm(s,l,m,theta,phi,return_mesh=False):
     (s,l,m) = [ int(x) for x in (s,l,m) ]
 
     #
-    isvalid = (abs(l)>=abs(s)) and (abs(m)<=l) 
+    isvalid = (abs(l)>=abs(s)) and (abs(m)<=l)
 
     #
     if isvalid:
@@ -2351,3 +2351,74 @@ def acos(X,sig=1,branch=0):
         return array( [ _acos_(x) for x in X ] )
     else:
         return _acos_(X)
+
+
+
+def sYlmAdj(s,l,lref,m,theta,phi,verbose=False,norm=True):
+
+    '''
+
+    AdjY = sYlmAdj(s,l,lref,m,theta,phi)
+
+    Given indeces for a spin weighted spherical at (s,lref,m) calculate a relative adjoint (s,l,m). Note that we cannot currently handle add l-lref cases.
+
+    '''
+
+    # Import usefuls
+    from positive import sYlm
+    from scipy import sqrt,cos
+    from numpy import zeros_like,conj
+
+    # Define u coordinate
+    u = cos(theta)
+
+    # Raising ell: Define dictionary for handled cases
+    # Raising ell: Define dictionary for handled cases
+    P = {
+    		(1) : lambda ll: (2*sqrt((3 + 2*ll)*1.0/(1 + 2*ll))*(m*s + ll*(1 + ll)*u)*sYlm(s, ll, m, theta, phi))*1.0/sqrt((1 + 2*ll + ll**2 - m**2)*(1 + 2*ll + ll**2 - s**2)) - sYlm(s, 1 + ll, m, theta, phi),
+
+    		(2) : lambda ll: (sqrt((5 + 2*ll)*1.0/(1 + 2*ll))*(2 + 6*m**2*s**2 + 4*m*s*u - 2*u**2 + 4*ll**5*u**2 + ll*(9 + 4*m**2*s**2 + 20*m*s*u - 5*u**2) + 2*ll**2*(7 + 12*m*s*u + 2*u**2) + 2*ll**4*(1 + 8*u**2) + ll**3*(9 + 8*m*s*u + 19*u**2))*sYlm(s, ll, m, theta, phi))*1.0/((1 + ll)*sqrt((1 + 2*ll + ll**2 - m**2)*(1 + 2*ll + ll**2 - s**2))*sqrt((4 + 4*ll + ll**2 - m**2)*(4 + 4*ll + ll**2 - s**2))) - (2*sqrt((5 + 2*ll)*1.0/(3 + 2*ll))*((3 + 2*ll)*m*s + (2 + 7*ll + 7*ll**2 + 2*ll**3)*u)*sYlm(s, 1 + ll, m, theta, phi))*1.0/((1 + ll)*sqrt((4 + 4*ll + ll**2 - m**2)*(4 + 4*ll + ll**2 - s**2))) + sYlm(s, 2 + ll, m, theta, phi),
+
+    		(3) : lambda ll: (2*sqrt((5 + 2*ll)*1.0/(1 + 2*ll))*sqrt((7 + 2*ll)*1.0/(5 + 2*ll))*(2*(6 + 7*ll + 2*ll**2)*m**3*s**3 + 2*(13 + 49*ll + 63*ll**2 + 33*ll**3 + 6*ll**4)*m**2*s**2*u + 2*ll*(1 + ll)**4*(6 + 5*ll + ll**2)*u*(3 + 2*(-1 + ll)*u**2) + (1 + ll)**2*m*s*(25 - 13*u**2 + 12*ll**4*u**2 + 4*ll*(13 + 5*u**2) + 4*ll**2*(8 + 21*u**2) + ll**3*(6 + 60*u**2)))*sYlm(s, ll, m, theta, phi))*1.0/((1 + ll)**2*sqrt((1 + 2*ll + ll**2 - m**2)*(1 + 2*ll + ll**2 - s**2))*sqrt((4 + 4*ll + ll**2 - m**2)*(4 + 4*ll + ll**2 - s**2))*sqrt((9 + 6*ll + ll**2 - m**2)*(9 + 6*ll + ll**2 - s**2))) - (2*sqrt((7 + 2*ll)*1.0/(3 + 2*ll))*(36 + 33*m**2*s**2 + 76*m*s*u + 6*ll**7*u**2 + 2*ll*(78 + 29*m**2*s**2 + 145*m*s*u + 36*u**2) + 6*ll**5*(5 + 2*m*s*u + 40*u**2) + 12*ll**4*(10 + 8*m*s*u + 41*u**2) + ll**6*(3 + 60*u**2) + ll**3*(246 + 6*m**2*s**2 + 292*m*s*u + 546*u**2) + ll**2*(33*m**2*s**2 + 422*m*s*u + 39*(7 + 8*u**2)))*sYlm(s, 1 + ll, m, theta, phi))*1.0/((1 + ll)**2*(2 + ll)*sqrt((4 + 4*ll + ll**2 - m**2)*(4 + 4*ll + ll**2 - s**2))*sqrt((9 + 6*ll + ll**2 - m**2)*(9 + 6*ll + ll**2 - s**2))) + (2*sqrt((7 + 2*ll)*1.0/(3 + 2*ll))*((11 + 12*ll + 3*ll**2)*m*s + 3*(1 + ll)**2*(6 + 5*ll + ll**2)*u)*sYlm(s, 2 + ll, m, theta, phi))*1.0/((1 + ll)*(2 + ll)*sqrt((5 + 2*ll)*1.0/(3 + 2*ll))*sqrt((9 + 6*ll + ll**2 - m**2)*(9 + 6*ll + ll**2 - s**2))) - sYlm(s, 3 + ll, m, theta, phi)
+        }
+
+    # Lowering ell: Define dictionary for handled cases
+    Q = {
+    		(1) : lambda ll: -sYlm(s, -1 + ll, m, theta, phi) + (2*sqrt((-1 + 2*ll)*1.0/(1 + 2*ll))*(m*s + ll*(1 + ll)*u)*sYlm(s, ll, m, theta, phi))*1.0/sqrt((ll**2 - m**2)*(ll**2 - s**2)),
+
+    		(2) : lambda ll: sYlm(s, -2 + ll, m, theta, phi) + (2*sqrt((3 - 2*ll)*1.0/(1 - 2*ll))*(m*(s - 2*ll*s) + ll*(1 + ll - 2*ll**2)*u)*sYlm(s, -1 + ll, m, theta, phi))*1.0/(ll*sqrt((1 - 2*ll + ll**2 - m**2)*(1 - 2*ll + ll**2 - s**2))) + (sqrt((-3 + 2*ll)*1.0/(1 + 2*ll))*(-2*m**2*s**2 + 4*ll*m*s*(m*s - u) + 4*ll**5*u**2 + ll**3*(1 + 8*m*s*u - 5*u**2) + ll**2*(1 - 3*u**2) + ll**4*(-2 + 4*u**2))*sYlm(s, ll, m, theta, phi))*1.0/(ll*sqrt((ll**2 - m**2)*(ll**2 - s**2))*sqrt((1 - 2*ll + ll**2 - m**2)*(1 - 2*ll + ll**2 - s**2))),
+
+    		(3) : lambda ll: (-((-1 + ll)*sYlm(s, -3 + ll, m, theta, phi)) + (2*sqrt((5 - 2*ll)*1.0/(1 - 2*ll))*((2 - 6*ll + 3*ll**2)*m*s + 3*ll**2*(2 - 3*ll + ll**2)*u)*sYlm(s, -2 + ll, m, theta, phi))*1.0/(sqrt((3 - 2*ll)*1.0/(1 - 2*ll))*ll*sqrt((4 - 4*ll + ll**2 - m**2)*(4 - 4*ll + ll**2 - s**2))) + (2*sqrt((5 - 2*ll)*1.0/(3 - 2*ll))*(-3 + 2*ll)*(2*m**2*s**2 - 6*ll**7*u**2 + 2*ll*m*s*(-5*m*s + u) + ll**2*m*s*(15*m*s + 2*u) + 3*ll**4*(5 + 12*m*s*u - 6*u**2) - 2*ll**3*(3 + 3*m**2*s**2 + 14*m*s*u - 6*u**2) - 6*ll**5*(2 + 2*m*s*u + u**2) + 3*ll**6*(1 + 6*u**2))*sYlm(s, -1 + ll, m, theta, phi))*1.0/(sqrt((3 - 2*ll)*1.0/(1 - 2*ll))*ll**2*(-1 + 2*ll)*sqrt((4 - 4*ll + ll**2 - m**2)*(4 - 4*ll + ll**2 - s**2))*sqrt((1 - 2*ll + ll**2 - m**2)*(1 - 2*ll + ll**2 - s**2))))*1.0/(-1 + ll) + (2*sqrt((5 - 2*ll)*1.0/(3 - 2*ll))*(-3 + 2*ll)*sqrt((-1 + 2*ll)*1.0/(1 + 2*ll))*(2*m**3*s**3 - 6*ll**7*u + 4*ll**8*u**3 + 2*ll*m**2*s**2*(-3*m*s + 2*u) - 2*ll**3*m*s*(3 + 9*m*s*u - 8*u**2) + ll**2*m*s*(-1 + 4*m**2*s**2 + 3*u**2) - 4*ll**6*u*(-3 - 3*m*s*u + 5*u**2) + 2*ll**4*(-6*u + 6*m**2*s**2*u + 8*u**3 + m*s*(7 - 12*u**2)) - 6*ll**5*(-u + m*(s + 2*s*u**2)))*sYlm(s, ll, m, theta, phi))*1.0/(sqrt((3 - 2*ll)*1.0/(1 - 2*ll))*ll**2*(-1 + 2*ll)*sqrt((ll**2 - m**2)*(ll**2 - s**2))*sqrt((4 - 4*ll + ll**2 - m**2)*(4 - 4*ll + ll**2 - s**2))*sqrt((1 - 2*ll + ll**2 - m**2)*(1 - 2*ll + ll**2 - s**2)))
+        }
+
+    # Define shorthand
+    k = lref
+    r = l-k
+
+    #
+    print r
+    if (abs(r) in P) and (r>0):
+    	#
+    	aY = P[r](k)
+    elif (abs(r) in Q) and (r<0):
+    	#
+    	if (l>=abs(s)) and (l>=abs(m)):
+    		aY = Q[abs(r)](k)
+    	else:
+    		aY = zeros_like(theta)
+    elif r==0:
+        if verbose: alert('returning conjugate of input')
+    	aY = sYlm(s,l,m,theta,phi)
+    else:
+    	#
+    	warning('l-lref=%i currently not handled'%r)
+    	aY = zeros_like(theta)
+
+    #
+    ans = conj( aY )
+    if norm:
+        c = sqrt(prod(ans,ans,theta))
+        ans = ans/c
+
+    #
+    return ans

@@ -5630,12 +5630,12 @@ def slmcg( aw, s, l, m, theta, phi, lmin=None, lmax=None, span=6, full_output=Fa
 
     # Eigenvalue for non-spinning solution
     A0 = lambda ll: (ll-s)*(1+ll+s)
-    # Make lambdas to reduce duplicate code
 
-    # TODO: determine which is faster
+    # Make lambdas to reduce duplicate code
+    # TODO: determine which clebsch gordan method is faster
+    # # Possibly the faster option, but throws wornings which must be investigated
     # c1_term = lambda llj,llk: c1*swsh_clebsh_gordan_prods(llj,m,s,0,1,llk-llj)
     # c2_term = lambda llj,llk: c2*swsh_clebsh_gordan_prods(llj,m,s,0,2,llk-llj)
-
     c1_term = lambda llj,llk: c1*swsh_prod_cos(s,llj,llk,m,1)
     c2_term = lambda llj,llk: c2*swsh_prod_cos(s,llj,llk,m,2)
 
