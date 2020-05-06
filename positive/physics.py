@@ -3074,12 +3074,11 @@ def ysprod( jf,
             s = -2,
             N=2**9,         # Number of points in theta to use for trapezoidal integration
             theta = None,   # Pre computed theta domain
+            use_nr_convention = True,
             verbose=False):
 
     #
-    from kerr.pttools import slm
-    from kerr import sYlm as ylm
-    from kerr import warning
+    from positive import slm,sYlm as ylm,warning
     from numpy import pi,linspace,trapz,sin,sqrt
     from positive import spline,lim
 
@@ -3108,7 +3107,7 @@ def ysprod( jf,
     if m_eff==mm:
         #
         y = ylm(s,ll,mm,th,ph)
-        _s = slm(jf,l,m,n,th,ph,s=s,norm=False,__rescale__=False) if not so else slm(jf,l,m,n,th,ph,norm=False,__rescale__=False)*slm(jf,l2,m2,n2,th,ph,norm=False,__rescale__=False)
+        _s = slm(jf,l,m,n,th,ph,s=s,norm=False,__rescale__=False) if not so else slm(jf,l,m,n,th,ph,norm=False,__rescale__=False)*slm(jf,l2,m2,n2,th,ph,norm=False,__rescale__=False,use_nr_convention=use_nr_convention)
         ss = _s / sqrt(prod(_s,_s,th))
         ans = prod( y,ss,th ) # note that this is consistent with the matlab implementation modulo the 2*pi convention
     else:
@@ -3200,7 +3199,7 @@ def internal_ssprod( jf, z1, z2, s=-2, verbose=False, N=2**9, london=False,aw=No
 
     #
     return ans
-
+    
 
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
@@ -3212,10 +3211,17 @@ def slm_dual_set( jf, l, m, n, theta, phi, s=-2, lmax=8, lmin=2, aw=None, verbos
     '''
 
     # Import usefuls
-    from numpy import array,pi,arange,linalg,dot,conj,zeros
+    from numpy import array,pi,arange,linalg,dot,conj,zeros,double
 
     # Warn if l is large
     if lmax>8: warning('Input of lmax>8 found. The output of this function is increasingly inaccurate for lmax>8 due to numerical errors at the default value of the tol keyword input.')
+        
+    #
+    if not isinstance(phi,(float,int,double)):
+        error('phi must be number; zero makes sense as the functions phi dependence is exp(1j*m*phi), and so can be added externally')
+
+    #
+    if lmin<abs(m): lmin = max(abs(m),abs(s))
 
     # -------------------------------------- #
     # Construct a space of spheroidals as a starting basis
@@ -3382,10 +3388,10 @@ def slpm( jf,               # Dimentionless spin parameter
 
     #
     from positive import red
-    from kerr import leaver as lvr
-    from kerr import rgb,lim,leaver_workfunction,cyan,alert,pylim,sYlm,error,internal_ssprod
+    from positive import leaver as lvr
+    from positive import rgb,lim,leaver_workfunction,cyan,alert,pylim,sYlm,error,internal_ssprod
     from numpy import complex256, cos, ones, mean, isinf, pi, exp, array, ndarray, unwrap, angle, linalg, sqrt, linspace, sin, float128
-    from scipy.misc import factorial as f
+    # from scipy.misc import factorial as f
     from scipy.integrate import trapz
 
     #
@@ -3440,7 +3446,7 @@ def slpm( jf,               # Dimentionless spin parameter
         print('sc  = '+str(sc))
         print('sc2 = '+str(sc2))
         print('err = '+str(abs(sc2-sc)))
-        warning('input separation constant nont consistent with angular consteraint, and so we will use a different one to give you an answer that converges.')
+        warning('input separation constant not consistent with angular constraint, so we will use a different one to give you an answer that converges.')
         sc = sc2
 
     # ------------------------------------------------ #
@@ -3567,7 +3573,7 @@ def slm(  jf,               # Dimentionless spin parameter
     from numpy import complex256,cos,ones,mean,isinf,pi,exp,array,ndarray,unwrap,angle,linalg,sqrt,linspace,sin,float128
     from matplotlib.pyplot import subplot,gca,xlabel,ylabel,xlim,ylim,title,figure,sca
     from matplotlib.pyplot import plot as plot_
-    from scipy.misc import factorial as f
+    # from scipy.misc import factorial as f
     from scipy.integrate import trapz
 
     #
@@ -3707,7 +3713,7 @@ def ysprod_matrix( jf, lm_space, N_theta=128, __aw_sc__=None, s=-2 ):
     for j,(l,m) in enumerate(lm_space):
 
         #
-        sYj = sYlm(-2,l,m,theta,phi)
+        sYj = sYlm(s,l,m,theta,phi)
         y = sYj/sqrt(prod(sYj,sYj,theta))
 
         for k in range( len(k_space) ):
@@ -5591,21 +5597,122 @@ def swsh_clebsh_gordan_prods(k,m,s,left_shift,u_power,right_shift):
        error('make sure that you should not be using the sympy version of this function: swsh_prod_cos')
        return 0
 
-
-
-# Compute spheroidal harmonics with clebsh-gordan coefficients from scipy
-def slmcg( aw, s, l, m, theta, phi, lmin=None, lmax=None, span=6, full_output=False  ):
-
+#
+def aslmcg( a, s, l, m, n, theta, phi, kerr=True, lmin=None, lmax=None, span=6 ):
     '''
-    Use Clebsh-Gordan coefficients to calculate spheroidal harmonics
-    london.l 2015+2020
-
+    Compute adjoint spheroidal harmonic functoin using the spherical harmonic clensch-gordan method. By default, kerr adjoint functions are computed.
+    londonl@mit.edu 2020
     '''
-
+    
+    #
+    from numpy.linalg import inv
+    from numpy import zeros,array,double,ndarray,dot
+    
+    # Return standard adjoint if requested
+    if not kerr:
+        aw = a * leaver( a, l, m, n )[0]
+        S,A = slmcg( aw, s, l, m, theta, phi )
+        return S.conj(), A.conj()
+        
+    #
+    if not isinstance(phi,(float,int,double)):
+        error('phi must be number; zero makes sense as the functions phi dependence is exp(1j*m*phi), and so can be added externally')
+        
+    # Otherwise proceed to computeation of Kerr "adjoint" function(s)
+    
+    # Handle input format
+    if isinstance(a,(list,ndarray)):
+        if len(a)>1:
+            error('first input as iterable not handled; fun function on each element')
+        else:
+            a = a[0]
+            
+    # if lmin in None, set it relative to l
+    if lmin is None: lmin = max(l-span,max(abs(s),abs(m)))
+    # if lmax in None, set it relative to l
+    if lmax is None: lmax = l+span
+    
+    # Define index range and perform precomputations
+    lrange = range(lmin,lmax+1); num_ell = len(lrange)
+    
+    # # -------------------------------------- #
+    # # ALTERNATE ROUTE -- Perform the integrals directly 
+    # # NOTE that this is faster but less accurate
+    # # in phase for small amplitudes
+    # # -------------------------------------- #
+    # # Use spheroidals directly
+    # beta = zeros( (num_ell,num_ell), dtype=complex )
+    # for j,llj in enumerate(lrange):
+    #     for k,llk in enumerate(lrange):
+    #         beta[j,k] = ysprod(a, llj,m, (llk,m,n), N=2**10, use_nr_convention=False )
+    
+    #
+    beta = zeros( (num_ell,num_ell), dtype=complex )
+    for k,llk in enumerate( lrange ):
+        
+        # Calculate spherical-spheroidal mixing coefficients using matrix method
+        aw = a * leaver( a, llk, m, n )[0]
+        
+        # Use helper function to calculate matrx elements
+        _,_,vecs_k,lrange_k = slmcg_helper(aw,s,llk,m,span=span)
+        dex_map = { ll:lrange_k.index(ll) for ll in lrange_k }
+        raw_beta_k = vecs_k[ :,dex_map[llk] ]
+        
+        lmin_k = min(lrange_k); lmax_k = max(lrange_k)
+        # Create mask for wanted values in raw_beta_k
+        start_dex_k = lrange_k.index(lmin) if lmin in lrange_k else  0
+        end_dex_k   = lrange_k.index(lmax) if lmax in lrange_k else -1
+        # Select wanted values 
+        wanted_raw_beta_k = raw_beta_k[ start_dex_k : end_dex_k+1 ]
+        # Seed beta with wanted values after determining the lrange mask of interest
+        start_dex = lrange.index( lrange_k[start_dex_k] )
+        end_dex   = lrange.index( lrange_k[end_dex_k] )
+        beta[start_dex:end_dex+1,k] = wanted_raw_beta_k
+        
+    # Compute the inverse conjugate matrix
+    nu = inv(beta).conj()
+    
+    # Construct space of spherical harmonics to use 
+    Yspace = array( [ sYlm(s,llj,m,theta,phi) for llj in lrange ] )
+    
+    # Compute adjoint functions 
+    # NOTE that this line can be slow if many (thousand) values of theta are used
+    aSspace = dot( nu, Yspace )
+    # Compute regular spheroidal function
+    Sspace = dot(beta.T,Yspace)
+    
+    # Create maps between ell and harmonics
+    foo,bar,sun = {},{},{}
+    for k,llk in enumerate(lrange):
+        foo[ llk ] = aSspace[k,:]
+        bar[ llk ] =  Yspace[k,:]
+        sun[ llk ] =  Sspace[k,:]
+        
+    # Package output
+    ans = {}
+    ans['Ylm'] = bar
+    ans['AdjSlm'] = foo
+    ans['Slm'] = sun
+    ans['lnspace'] = lrange 
+    ans['Yspace'] = Yspace
+    ans['aSspace'] = aSspace
+    ans['YSGramian'] = beta
+    ans['overtone_index'] = n
+    
+    # Return output
+    return ans
+    
+#
+def slmcg_helper( aw, s, l, m, lmin=None, lmax=None, span=6 ):
+    '''
+    Compute matrix elements of spheroidal differential operator in spherical harmonic basis
+    londonl@mit.edu 2020 
+    '''        
+    
     # Import usefuls
-    from scipy.linalg import eig
+    from scipy.linalg import eig,inv
     from sympy.physics.quantum import cg
-    from numpy import array,zeros,zeros_like,exp
+    from numpy import array,zeros,zeros_like,exp,double
     from numpy import ones,arange,ndarray,complex128
 
     # Preliminaries
@@ -5617,10 +5724,12 @@ def slmcg( aw, s, l, m, theta, phi, lmin=None, lmax=None, span=6, full_output=Fa
             error('first input as iterable not handled; fun function on each element')
         else:
             aw = aw[0]
+            
     # if lmin in None, set it relative to l
     if lmin is None: lmin = max(l-span,max(abs(s),abs(m)))
     # if lmax in None, set it relative to l
     if lmax is None: lmax = l+span
+    
     # Define index range and perform precomputations
     lrange = range(lmin,lmax+1); num_ell = len(lrange)
     aw2 = aw*aw; c1 = -2*aw*s; c2 = aw2
@@ -5633,9 +5742,11 @@ def slmcg( aw, s, l, m, theta, phi, lmin=None, lmax=None, span=6, full_output=Fa
 
     # Make lambdas to reduce duplicate code
     # TODO: determine which clebsch gordan method is faster
-    # # Possibly the faster option, but throws wornings which must be investigated
+    # # Possibly the faster option, but throws warnings which must be investigated
     # c1_term = lambda llj,llk: c1*swsh_clebsh_gordan_prods(llj,m,s,0,1,llk-llj)
     # c2_term = lambda llj,llk: c2*swsh_clebsh_gordan_prods(llj,m,s,0,2,llk-llj)
+    
+    # Safer option, likely
     c1_term = lambda llj,llk: c1*swsh_prod_cos(s,llj,llk,m,1)
     c2_term = lambda llj,llk: c2*swsh_prod_cos(s,llj,llk,m,2)
 
@@ -5660,7 +5771,49 @@ def slmcg( aw, s, l, m, theta, phi, lmin=None, lmax=None, span=6, full_output=Fa
 
     # Use scipy to find the eigenvalues and eigenvectors,
     # aka the spheroidal eigenvalues, and lists of spherical-spheroidal inner-products
-    vals,vecs = eig(Q)
+    vals,vecs = eig(Q)  
+    
+    #
+    dex_map = { ll:lrange.index(ll) for ll in lrange }
+    sep_consts = vals
+    ysprod_array = vecs
+
+    # Extract spherical-spheroidal inner-products of interest
+    ysprod_vec = ysprod_array[ :,dex_map[l] ]
+    
+    #
+    return Q,vals,vecs,lrange  
+            
+# Compute spheroidal harmonics with clebsh-gordan coefficients from scipy
+def slmcg( aw, s, l, m, theta, phi, lmin=None, lmax=None, span=6, full_output=False ):
+
+    '''
+    Use Clebsh-Gordan coefficients to calculate spheroidal harmonics
+    londonl@mit.edu 2015+2020
+
+    '''
+
+    # Import usefuls
+    from scipy.linalg import eig,inv
+    from sympy.physics.quantum import cg
+    from numpy import array,zeros,zeros_like,exp,double
+    from numpy import ones,arange,ndarray,complex128
+
+    # Preliminaries
+    # ------------------------------ #
+
+    # Handle input format
+    if isinstance(aw,(list,ndarray)):
+        if len(aw)>1:
+            error('first input as iterable not handled; fun function on each element')
+        else:
+            aw = aw[0]
+
+    # Main bits
+    # ------------------------------ #
+    
+    # Use helper function to calculate matrx elements
+    Q,vals,vecs,lrange = slmcg_helper( aw, s, l, m, lmin=lmin, lmax=lmax, span=span )
 
     #
     dex_map = { ll:lrange.index(ll) for ll in lrange }
@@ -5686,7 +5839,7 @@ def slmcg( aw, s, l, m, theta, phi, lmin=None, lmax=None, span=6, full_output=Fa
     if full_output:
         ans = {}
         # Spheroidal harmonic and separation constant
-        ans['standard_ouput'] = (S,A)
+        ans['standard_output'] = (S,A)
         # All separation constants
         ans['sep_consts'] = sep_consts
         # Array and l specific ysprods

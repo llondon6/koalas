@@ -376,6 +376,8 @@ PythonForm[A_]:=Module[
 	Answer = StringReplace[Answer,{"Sqrt"->"sqrt"}];
 	(* Handle ArcTanh[X] *)
 	Answer = StringReplace[Answer,{"ArcTanh"->"arctanh"}];
+	(* Handle ArcCos[X] *)
+	Answer = StringReplace[Answer,{"ArcCos"->"arccos"}];
 	(* Handle Tanh[X] *)
 	Answer = StringReplace[Answer,{"Tanh"->"tanh"}];
 	(* Handle [ and ] *)

@@ -985,7 +985,7 @@ def sDlm(s,l,m,theta):
 
     #
     from numpy import pi,ones,exp,array,double,zeros_like,ones_like,sum
-    from scipy.misc import factorial,comb
+    from scipy.special import factorial,comb
     from scipy import sqrt,tan,sin
 
     #
@@ -2412,8 +2412,9 @@ def sYlmAdj(s,l,lref,m,theta,phi,verbose=False,norm=True):
     	else:
     		aY = zeros_like(theta)
     elif r==0:
-        if verbose: alert('returning conjugate of input')
-    	aY = sYlm(s,l,m,theta,phi)
+        aY = sYlm(s,l,m,theta,phi)
+        if verbose: 
+            alert('returning complex conjugate of input')
     else:
     	#
     	warning('l-lref=%i currently not handled'%r)
@@ -2422,8 +2423,10 @@ def sYlmAdj(s,l,lref,m,theta,phi,verbose=False,norm=True):
     #
     ans = conj( aY )
     if norm:
+        from positive import prod
         c = sqrt(prod(ans,ans,theta))
         ans = ans/c
+        print(c)
 
     #
     return ans
