@@ -151,6 +151,7 @@ def thisline():
 def alert(msg,fname=None,say=False,output_string=False,heading=None,header=None,pattern=None,verbose=True,fname_color=None):
     if verbose:
         import os
+        msg = str(msg)
         if fname is None:
             fname = thisfun()
             if fname == "<module>": fname = 'notebook'
@@ -170,6 +171,7 @@ def alert(msg,fname=None,say=False,output_string=False,heading=None,header=None,
 # Wrapper for OS say
 def say(msg,fname=None):
     import os
+    msg = str(msg)
     if fname is None:
         fname = thisfun()
     if msg:
@@ -183,6 +185,7 @@ def warning(msg,fname=None,output_string=False,heading=None,header=None,pattern=
     exc_type, exc_obj, exc_tb = sys.exc_info()
     flname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1] if exc_tb is not None else 'unknown'
     #
+    msg = str(msg)
     if fname is None:
         fname = thisfun()
 

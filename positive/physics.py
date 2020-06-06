@@ -5598,7 +5598,7 @@ def swsh_clebsh_gordan_prods(k,m,s,left_shift,u_power,right_shift):
        return 0
 
 #
-def aslmcg( a, s, l, m, n, theta, phi, kerr=True, lmin=None, lmax=None, span=6 ):
+def aslmcg( a, s, l, m, n, theta, phi, kerr=True, lmin=None, lmax=None, span=6, force_norm=True ):
     '''
     Compute adjoint spheroidal harmonic functoin using the spherical harmonic clensch-gordan method. By default, kerr adjoint functions are computed.
     londonl@mit.edu 2020
@@ -5606,7 +5606,7 @@ def aslmcg( a, s, l, m, n, theta, phi, kerr=True, lmin=None, lmax=None, span=6 )
     
     #
     from numpy.linalg import inv
-    from numpy import zeros,array,double,ndarray,dot
+    from numpy import zeros,array,double,ndarray,dot,sqrt,zeros_like
     
     # Return standard adjoint if requested
     if not kerr:
@@ -5619,6 +5619,10 @@ def aslmcg( a, s, l, m, n, theta, phi, kerr=True, lmin=None, lmax=None, span=6 )
         error('phi must be number; zero makes sense as the functions phi dependence is exp(1j*m*phi), and so can be added externally')
         
     # Otherwise proceed to computeation of Kerr "adjoint" function(s)
+    
+    #
+    if l is not 2:
+        error('This function currently works when l=2 is given, but it will generate and output harmonics for all l<=lmax.')
     
     # Handle input format
     if isinstance(a,(list,ndarray)):
@@ -5648,15 +5652,19 @@ def aslmcg( a, s, l, m, n, theta, phi, kerr=True, lmin=None, lmax=None, span=6 )
     
     #
     beta = zeros( (num_ell,num_ell), dtype=complex )
+    A = zeros_like(beta)
     for k,llk in enumerate( lrange ):
         
         # Calculate spherical-spheroidal mixing coefficients using matrix method
         aw = a * leaver( a, llk, m, n )[0]
         
         # Use helper function to calculate matrx elements
-        _,_,vecs_k,lrange_k = slmcg_helper(aw,s,llk,m,span=span)
+        _,vals_k,vecs_k,lrange_k = slmcg_helper(aw,s,llk,m,span=span)
         dex_map = { ll:lrange_k.index(ll) for ll in lrange_k }
         raw_beta_k = vecs_k[ :,dex_map[llk] ]
+        
+        #
+        A[ k,k ] = vals_k[ dex_map[llk] ]
         
         lmin_k = min(lrange_k); lmax_k = max(lrange_k)
         # Create mask for wanted values in raw_beta_k
@@ -5670,7 +5678,11 @@ def aslmcg( a, s, l, m, n, theta, phi, kerr=True, lmin=None, lmax=None, span=6 )
         beta[start_dex:end_dex+1,k] = wanted_raw_beta_k
         
     # Compute the inverse conjugate matrix
-    nu = inv(beta).conj()
+    X, Z = beta, inv(beta)
+    nu = Z.conj()
+    
+    # Compute the related operator's matrix rep (a "heterogeneous adjoint")
+    L_ddag = dot( Z, dot( A, X ) ).conj()
     
     # Construct space of spherical harmonics to use 
     Yspace = array( [ sYlm(s,llj,m,theta,phi) for llj in lrange ] )
@@ -5680,6 +5692,16 @@ def aslmcg( a, s, l, m, n, theta, phi, kerr=True, lmin=None, lmax=None, span=6 )
     aSspace = dot( nu, Yspace )
     # Compute regular spheroidal function
     Sspace = dot(beta.T,Yspace)
+    
+    # Enforce normalization
+    # NOTE that this is very optional as harmonics are arlready normalized to high
+    # accuracy by construction. However, the stencil in theta may cause minor departures
+    if force_norm:
+        norm = lambda x: x/sqrt( prod(x,x,theta) )
+        for k,llk in enumerate(lrange):
+            aSspace[k,:] = norm( aSspace[k,:] )
+            Yspace[k,:]  = norm(  Yspace[k,:] )
+            Sspace[k,:]  = norm(  Sspace[k,:] )
     
     # Create maps between ell and harmonics
     foo,bar,sun = {},{},{}
@@ -5698,6 +5720,8 @@ def aslmcg( a, s, l, m, n, theta, phi, kerr=True, lmin=None, lmax=None, span=6 )
     ans['aSspace'] = aSspace
     ans['YSGramian'] = beta
     ans['overtone_index'] = n
+    ans['matrix_op'] = L_ddag
+    ans['ZAX'] = (Z,A,X)
     
     # Return output
     return ans
@@ -5711,7 +5735,6 @@ def slmcg_helper( aw, s, l, m, lmin=None, lmax=None, span=6 ):
     
     # Import usefuls
     from scipy.linalg import eig,inv
-    from sympy.physics.quantum import cg
     from numpy import array,zeros,zeros_like,exp,double
     from numpy import ones,arange,ndarray,complex128
 
@@ -5783,6 +5806,189 @@ def slmcg_helper( aw, s, l, m, lmin=None, lmax=None, span=6 ):
     
     #
     return Q,vals,vecs,lrange  
+  #
+
+#
+def aslmcg2_helper( a, s, l, m, lmin=None, lmax=None, span=6 ):
+    '''
+    Compute matrix elements of spheroidal differential operator in spherical harmonic basis
+    londonl@mit.edu 2020 
+    '''        
+    
+    # Import usefuls
+    from scipy.linalg import eig,inv
+    from numpy import array,zeros,zeros_like,exp,double
+    from numpy import ones,arange,ndarray,complex128,conj
+
+    # Preliminaries
+    # ------------------------------ #
+    error('experimental function version. do not use')
+    
+    #
+    w = leaver(a,l,m,0)[0]
+    
+    #
+    aw = a*w
+
+    # Handle input format
+    if isinstance(aw,(list,ndarray)):
+        if len(aw)>1:
+            error('first input as iterable not handled; fun function on each element')
+        else:
+            aw = aw[0]
+            
+    # if lmin in None, set it relative to l
+    if lmin is None: lmin = max(l-span,max(abs(s),abs(m)))
+    # if lmax in None, set it relative to l
+    if lmax is None: lmax = l+span
+
+    # Main bits
+    # ------------------------------ #
+
+    # Eigenvalue for non-spinning solution
+    A0 = lambda ll: (ll-s)*(1+ll+s)
+
+    # Make lambdas to reduce duplicate code
+    # TODO: determine which clebsch gordan method is faster
+    # # Possibly the faster option, but throws warnings which must be investigated
+    # c1_term = lambda llj,llk: c1*swsh_clebsh_gordan_prods(llj,m,s,0,1,llk-llj)
+    # c2_term = lambda llj,llk: c2*swsh_clebsh_gordan_prods(llj,m,s,0,2,llk-llj)
+
+    # Pre-allocate and then fill the coefficient matrix
+    lrange = range(lmin,lmax+1); num_ell = len(lrange)
+    print(l,m,s,lmin,lmax,lrange)
+    Q = zeros((num_ell,num_ell),dtype=complex128)
+    for j,lj in enumerate(lrange):
+        
+        # Load QNM frequency 
+        awj = a*leaver(a,lj,m,0)[0]
+        
+        for k,lk in enumerate(lrange):
+            
+            # Load QNM frequency 
+            awk = a*leaver(a,lk,m,0)[0]
+    
+            # Define index range and perform precomputations
+            c1 = -2*s; c2 = awk
+    
+            # Safer option, likely
+            lam = awk*awj/conj(awj)
+            c1_term = lambda llj,llk: lam*c1*swsh_prod_cos(s,llj,llk,m,1)
+            c2_term = lambda llj,llk: lam*c2*swsh_prod_cos(s,llj,llk,m,2)
+
+            # Populate the coefficient matrix
+            if   lk == lj-2:
+                Q[j,k] = c2_term(lj,lk)
+            elif lk == lj-1:
+                Q[j,k] = c1_term(lj,lk)+c2_term(lj,lk)
+            elif lk == lj+0:
+                Q[j,k] = c1_term(lj,lk)+c2_term(lj,lk)-A0(lj)
+            elif lk == lj+1:
+                Q[j,k] = c1_term(lj,lk)+c2_term(lj,lk)
+            elif lk == lj+2:
+                Q[j,k] = c2_term(lj,lk)
+            else:
+                Q[j,k] = 0
+
+    # Use scipy to find the eigenvalues and eigenvectors,
+    # aka the spheroidal eigenvalues, and lists of spherical-spheroidal inner-products
+    vals,vecs = eig(Q.T.conj())  
+    
+    #
+    dex_map = { ll:lrange.index(ll) for ll in lrange }
+    sep_consts = vals
+    ysprod_array = vecs
+
+    # Extract spherical-spheroidal inner-products of interest
+    ysprod_vec = ysprod_array[ :,dex_map[l] ]
+    
+    #
+    return Q,vals,vecs,lrange  
+            
+# Compute adjoint-spheroidal harmonics with clebsh-gordan coefficients from scipy
+def aslmcg2( a, s, l, m, n, theta, phi, lmin=None, lmax=None, span=6, full_output=True ):
+
+    '''
+    Use Clebsh-Gordan coefficients to calculate spheroidal harmonics
+    londonl@mit.edu 2015+2020
+
+    '''
+
+    # Import usefuls
+    from scipy.linalg import eig,inv
+    from numpy import array,zeros,zeros_like,exp,double
+    from numpy import ones,arange,ndarray,complex128
+
+    # Preliminaries
+    # ------------------------------ #
+    # error('experimental function version. do not use')
+
+    # Handle input format
+    if isinstance(a,(list,ndarray)):
+        if len(a)>1:
+            error('first input as iterable not handled; fun function on each element')
+        else:
+            a = a[0]
+            
+    # if lmin in None, set it relative to l
+    if lmin is None: lmin = max(l-span,max(abs(s),abs(m)))
+    # if lmax in None, set it relative to l
+    if lmax is None: lmax = l+span
+    
+    # Define index range and perform precomputations
+    lrange = range(lmin,lmax+1); num_ell = len(lrange)
+    print(lmin,max(l-span,max(abs(s),abs(m))))
+    print('>> ',l,m,s,lmin,lmax,lrange)
+
+    # Main bits
+    # ------------------------------ #
+    
+    # Use helper function to calculate matrx elements
+    Q,vals,vecs,lrange = aslmcg2_helper( a, s, l, m, lmin=lmin, lmax=lmax, span=span )
+
+    #
+    dex_map = { ll:lrange.index(ll) for ll in lrange }
+    sep_consts = vals
+    ysprod_array = vecs
+
+    # Extract spherical-spheroidal inner-products of interest
+    ysprod_vec = ysprod_array[ :,dex_map[l] ]
+
+    # Compute Spheroidal Harmonic
+    S = zeros_like(theta,dtype=complex128)
+    for k,lp in enumerate(lrange):
+        S += sYlm(s,lp,m,theta,0) * ysprod_vec[k]
+    S *= exp(1j*m*phi)
+
+    # Extract separation constant. Account for sign convention
+    A = -sep_consts[ dex_map[l] ]
+
+    # Package output
+    # ------------------------------ #
+
+    # Initialize answer
+    if full_output:
+        ans = {}
+        # Spheroidal harmonic and separation constant
+        ans['standard_output'] = (S,A)
+        # All separation constants
+        ans['sep_consts'] = sep_consts
+        # Array and l specific ysprods
+        ans['ysprod_array'] = ysprod_array
+        ans['ysprod_vec'] = ysprod_vec
+        # Coefficient matrix
+        ans['coeff_array'] = Q
+        # store space of l values considered
+        ans['lrange'] = lrange
+        # map between l and index
+        ans['dex_map'] = dex_map
+    else:
+        # Only output harmonic and sep const
+        ans = S,A
+
+    # Return asnwer
+    return ans
+
             
 # Compute spheroidal harmonics with clebsh-gordan coefficients from scipy
 def slmcg( aw, s, l, m, theta, phi, lmin=None, lmax=None, span=6, full_output=False ):
