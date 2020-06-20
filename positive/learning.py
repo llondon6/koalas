@@ -29,7 +29,7 @@ def mvrslv0( domain, centered_scalar_range, numerator_symbols, denominator_symbo
     M = len( numerator_symbols )
     alpha = array( [ symeval(sym,domain)*( 1 if k < M else right_centered_scalar_range) for k,sym in enumerate( numerator_symbols+denominator_symbols ) ] ).T
     #
-    coeffs = lstsq( alpha, centered_scalar_range )[0]
+    coeffs = lstsq( alpha, centered_scalar_range,rcond=None )[0]
 
     def action(coeffs):
         #
@@ -151,6 +151,7 @@ class mvrfit:
         this.denominator_coeffs = denominator_coeffs
         this.residuals = residuals
         this.frmse = sqrt( est_list[-1] )
+        this.std = std(residuals)
         this.__fitfun__ = fitfun
         this.bin = {}
 
@@ -252,7 +253,7 @@ class mvrfit:
         dim = this.domain.shape[-1] + 1
 
         #
-        ax1 = subplot2grid((2,4), (0,0),colspan=2,rowspan=2,projection='3d') if dim==3 else subplot2grid((2,4), (0,0),colspan=2,rowspan=2)
+        ax1 = subplot2grid((2,4), (0,0),colspan=2,rowspan=2,projection='3d') if dim>=3 else subplot2grid((2,4), (0,0),colspan=2,rowspan=2)
         ax2 = subplot2grid((2,4), (0,2))
         ax3 = subplot2grid((2,4), (1,2))
         ax4 = subplot2grid((2,4), (0,3))
@@ -265,6 +266,8 @@ class mvrfit:
                 this.__plot3D__(ax1)
             elif dim==2:
                 this.__plot2D__(ax1)
+            else:
+                this.__plotND__(ax1)
             #
             this.__plotFl__(ax2)
             this.__plotHi__(ax3)
@@ -509,6 +512,67 @@ class mvrfit:
             from matplotlib.pyplot import show
             show()
 
+    # Plot N-D domain, 1D Range
+    def __plotND__(this,ax=None,_map=None):
+
+        # Import useful things
+        import matplotlib as mpl
+        mpl.rcParams['lines.linewidth'] = 0.8
+        mpl.rcParams['font.family'] = 'serif'
+        mpl.rcParams['font.size'] = 12
+        mpl.rcParams['axes.labelsize'] = 16
+        mpl.rcParams['axes.titlesize'] = 16
+
+        from matplotlib.pyplot import plot,figure,title,xlabel,ylabel,legend,subplots,gca,sca
+        from mpl_toolkits.mplot3d import Axes3D
+        from numpy import diff,linspace, meshgrid, amin, amax, ones, array
+
+        # Handle optional axes input
+        if ax is None:
+            fig = figure()
+            ax = fig.subplot(111,projection='3d')
+
+        # Handle optinal map input: transform the range values for plotting use
+        _map = (lambda x: x) if _map is None else _map
+
+        #
+        ax.view_init(60,30)
+
+        # Plot the fit evaluated on the domain
+        ax.scatter(this.domain[:,0],this.domain[:,1],_map(this.eval( this.domain )),marker='x',color='r',label='Fit',s=20)
+
+        # # Setup grid points for model
+        # padf = 0
+        # dx = ( max(this.domain[:,0])-min(this.domain[:,0]) ) * padf
+        # dy = ( max(this.domain[:,1])-min(this.domain[:,1]) ) * padf
+        # fitx = linspace( min(this.domain[:,0])-dx, max(this.domain[:,0])+dx, 20 )
+        # fity = linspace( min(this.domain[:,1])-dy, max(this.domain[:,1])+dy, 20 )
+        # xx,yy = meshgrid( fitx, fity )
+        # rawfitdomain = [xx,yy]
+        # for k in range( 2,len(domain[0,:]-2) ):
+        #     rawfitdomain += [ mean(this.domain[:,k])*ones( xx.shape, dtype=this.domain[:,k].dtype ) ]
+        # fitdomain,_ = ndflatten( rawfitdomain, yy )
+        # # Plot model on grid
+        # zz = this.eval( fitdomain ).reshape( xx.shape )
+        # ax.plot_wireframe(xx, yy, _map(zz), color='r', rstride=1, cstride=1,label='Model Slice',zorder=1,alpha=0.8)
+
+        # Plot the raw data points
+        ax.scatter(this.domain[:,0],this.domain[:,1],_map(this.scalar_range),marker='o',color='k',label='Data',zorder=1, facecolors='none')
+
+        
+
+        #
+        ax.set_xlabel('$x_0$',size=24)
+        ax.set_ylabel('$x_1$',size=24)
+        
+        # ax.set_zlabel( '$f(x_0,x_1)$' )
+        # ax.set_zlabel( '$%s$'%this.labels['latex'][0] if len(list(this.labels.keys())) else '$f(x_0,x_1)$' )
+        dz = (-amin(_map(this.scalar_range))+amax(_map(this.scalar_range)))*0.05
+        ax.set_zlim( amin(_map(this.scalar_range))-dz, amax(_map(this.scalar_range))+dz )
+        # title('$%s$'%this)
+        legend(frameon=False)
+
+
     # Define function for plotting convergence information
     def __plot_convergence__(this,ax1=None,ax2=None,fig=None,show=False):
 
@@ -673,6 +737,8 @@ def gmvrfit( domain,
              verbose = False,
              take_raw_symbols = True,
              apply_negative = True,
+             maxdeg_list = None,
+             abserror=False,
              **kwargs ):
     """Adaptive (Greedy) Multivariate rational fitting
 
@@ -708,6 +774,8 @@ def gmvrfit( domain,
     apply_negative: bool, optional
         Toggle for the application of a negtative greedy algorithm following
         the positive one. This is set true by default to handle overmodelling.
+    abserror: bool, optional
+        Toggle for which represenation error to use as estimator in greedy process. (True,None):'frmse' otherwise 'std'. 
 
     Returns
     -------
@@ -741,13 +809,15 @@ def gmvrfit( domain,
         # NOTE that here we tell mvrfit to use the raw input symbols, and NOT automatically adjust them according to range centering
         foo = mvrfit(domain,scalar_range,trial_numerator_symbols,trial_denominator_symbols,take_raw_symbols=take_raw_symbols)
         # estimator = foo.frmse
-        estimator = foo.frmse
+        estimator = foo.frmse if (not abserror) else foo.std
         return estimator,foo
 
     def mvplotfun( foo ): foo.plot(show=show)
 
     # Create a lexicon of symbols to consider for model learning
     maxbulk = mvsyms( domain_dimension, maxdeg )
+    # Filter max degree by dimension
+    maxbulk = mvfilter( maxbulk, maxdeg_list )
     # Define the space of all possible degrees bounded above by maxdeg
     degree_space = list(range(mindeg,maxdeg+1))
     # Increment through degrees
@@ -756,7 +826,7 @@ def gmvrfit( domain,
         # Let the people know
         if verbose: alert('Now working deg = %i' % deg)
         #
-        a_bulk = [ s for s in maxbulk if len(s)<=deg ] if deg>0 else mvsyms(domain_dimension,deg)
+        a_bulk = [ s for s in maxbulk if len(s)<=deg ] if deg>0 else mvfilter( mvsyms(domain_dimension,deg), maxdeg_list )
         b_bulk = [ s for s in maxbulk if len(s)<=deg and s!='K' ]
         # Numerator + Denominator
         bulk = [ (a,True) for a in a_bulk ] + [ (b,False) for b in b_bulk ]
@@ -831,157 +901,6 @@ def gmvrfit( domain,
 
     #
     return ans
-
-# #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
-# # Given a 1D array, determine the set of N lines that are optimally representative  #
-# #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
-#
-# # Hey, here's a function that approximates any 1d curve as a series of lines
-# def romline(  domain,           # Domain of Map
-#               range_,           # Range of Map
-#               N,                # Number of Lines to keep for final linear interpolator
-#               positive=True,   # Toggle to use positive greedy algorithm ( where rom points are added rather than removed )
-#               verbose = False ):
-#
-#     # Use a linear interpolator, and a reverse greedy process
-#     from numpy import interp, linspace, array, inf, arange, mean, zeros, std, argmax, argmin
-#     linterp = lambda x,y: lambda newx: interp(newx,x,y)
-#
-#     # Domain and range shorthand
-#     d = domain
-#     R = range_
-#     # Normalize Data
-#     R0,R1 = mean(R), std(R)
-#     r = (R-R0)/( R1 if abs(R1)!=0 else 1 )
-#
-#     #
-#     if not positive:
-#         #
-#         done = False
-#         space = list(range( len(d) ))
-#         raw_space = list(range( len(d) ))
-#         err = lambda x: mean( abs(x) )
-#         raw_mask = []
-#         while not done:
-#             #
-#             min_sigma = inf
-#             for k in range(len(space)):
-#                 # Remove a trial domain point
-#                 trial_space = list(space)
-#                 trial_space.pop(k)
-#                 # Determine the residual error incured by removing this trial point after linear interpolation
-#                 # Apply linear interpolation ON the new domain TO the original domain
-#                 trial_domain = d[ trial_space ]
-#                 trial_range = r[ trial_space ]
-#                 # Calculate the ROM's representation error using ONLY the points that differ from the raw domain, as all other points are perfectly represented by construction. NOTE that doing this significantly speeds up the algorithm.
-#                 trial_mask = list( raw_mask ).append( k )
-#                 sigma = err( linterp( trial_domain, trial_range )( d[trial_mask] ) - r[trial_mask] ) / ( err(r[trial_mask]) if err(r[trial_mask])!=0 else 1e-8  )
-#                 #
-#                 if sigma < min_sigma:
-#                     min_k = k
-#                     min_sigma = sigma
-#                     min_space = array( trial_space )
-#
-#             #
-#             raw_mask.append( min_k )
-#             #
-#             space = list(min_space)
-#
-#             #
-#             done = len(space) == N
-#
-#         #
-#         rom = linterp( d[min_space], R[min_space] )
-#         knots = min_space
-#
-#     else:
-#         from numpy import inf,argmin,argmax
-#         seed_list = [ 0, argmax(R), argmin(R), len(R)-1 ]
-#         min_sigma = inf
-#         for k in seed_list:
-#             trial_knots,trial_rom,trial_sigma = positive_romline( d, R, N, seed = k )
-#             # print trial_sigma
-#             if trial_sigma < min_sigma:
-#                 knots,rom,min_sigma = trial_knots,trial_rom,trial_sigma
-#
-#     #
-#     # print min_sigma
-#     knots = array([ int(k) for k in knots ])
-#
-#     return knots,rom
-#
-#
-# # Hey, here's a function related to romline
-# def positive_romline(   domain,           # Domain of Map
-#                         range_,           # Range of Map
-#                         N,                # Number of Lines to keep for final linear interpolator
-#                         seed = None,      # First point in domain (index) to use
-#                         verbose = False ):
-#
-#     # Use a linear interpolator, and a reverse greedy process
-#     from numpy import interp, linspace, array, inf, arange, mean, zeros, std, argmax, argmin, amin, amax, ones
-#     linterp = lambda x,y: lambda newx: interp(newx,x,y)
-#
-#     # Domain and range shorthand
-#     d = domain
-#     R = range_
-#
-#     # Some basic validation
-#     if len(d) != len(R):
-#         raise ValueError('length of domain (of len %i) and range (of len %i) mus be equal'%(len(d),len(R)))
-#     if len(d)<3:
-#         raise ValueError('domain length is less than 3. it must be longer for a romline porcess to apply. domain is %s'%domain)
-#
-#     # Normalize Data
-#     R0,R1 = mean(R), std(R)
-#     r = (R-R0)/R1
-#     #
-#     weights = (r-amin(r)) / amax( r-amin(r) )
-#     weights = ones( d.size )
-#
-#     #
-#     if seed is None:
-#         seed = argmax(r)
-#     else:
-#         if not isinstance(seed,int):
-#             msg = 'seed input must be int'
-#             error( msg, 'positive_romline' )
-#
-#     #
-#     done = False
-#     space = [ seed ]
-#     domain_space = list(range(len(d)))
-#     err = lambda x: mean( abs(x) ) # std(x) #
-#     min_space = list(space)
-#     while not done:
-#         #
-#         min_sigma = inf
-#         for k in [ a for a in domain_space if not (a in space) ]:
-#             # Add a trial point
-#             trial_space = list(space)
-#             trial_space.append(k)
-#             trial_space.sort()
-#             # Apply linear interpolation ON the new domain TO the original domain
-#             trial_domain = d[ trial_space ]
-#             trial_range = r[ trial_space ]
-#             #
-#             sigma = err( weights * (linterp( trial_domain, trial_range )( d ) - r) ) / ( err(r) if err(r)!=0 else 1e-8  )
-#             #
-#             if sigma < min_sigma:
-#                 min_k = k
-#                 min_sigma = sigma
-#                 min_space = array( trial_space )
-#
-#         #
-#         space = list(min_space)
-#         #
-#         done = len(space) == N
-#
-#     #
-#     rom = linterp( d[min_space], R[min_space] )
-#     knots = min_space
-#
-#     return knots,rom,min_sigma
 
 
 # Hey, here's a function related to romspline
@@ -1140,6 +1059,52 @@ def mvsyms( dimension, max_degree, verbose=False ):
     # Return output
     return ans
 
+
+# Filter output of mvsyms such that each dimension has a prescibed maximum polynomial degree 
+def mvfilter( bulk, maxdegs ):
+    
+    # Filter output of mvsyms such that each dimension has a prescibed maximum polynomial degree 
+    
+    #
+    from numpy import ndarray,ones,sort
+    
+    #
+    if not (maxdegs is None):
+    
+        # 
+        dim_syms = list(sort(list(set(''.join(bulk).replace('K','')))))
+        dims = len(dim_syms)
+        dim_range = range(dims)
+        
+        # test for float
+        if isinstance(maxdegs,(float,complex,int)):
+            maxdegs = maxdegs*ones(dims)
+        if isinstance(maxdegs,(list,ndarray,tuple)):
+            # test for compatible lengths
+            if dims!=len(maxdegs):
+                error('maximum degrees must be a list of the same dimension as the bulk symbol space; ie the number of unique symbols in the first input must equal the length of the second input')
+
+        #
+        filtered_bulk = []
+        for k,term in enumerate(bulk):
+            keep_term = True
+            for j in dim_range:
+                dim_sym = dim_syms[j]
+                term_order_in_dim = len(term)-len(term.replace(dim_sym,''))
+                keep_term = keep_term and (term_order_in_dim <= maxdegs[j])
+            #
+            if keep_term:
+                filtered_bulk.append( term )
+                     
+        #
+        return filtered_bulk
+        
+    else:
+        
+        #
+        return bulk
+
+
 # Flatten N-D domain and related range
 def ndflatten( domain_list,      # List of meshgrid arrays
                range_array=None ):  # Array of related range for some external map
@@ -1235,6 +1200,7 @@ def FRMSE(FIT,DATA):
     from numpy import std
     return abs( std(FIT-DATA) / std(DATA) )
 
+
 # Multivariate polynomial fitting algorithm
 class mvpolyfit:
     '''
@@ -1319,6 +1285,7 @@ class mvpolyfit:
 
         # Store bulk information about fit
         this.residual = residuals
+        this.fractional_residuals = fractional_residuals
         this.frmse = frmse
         this.netstd = sqrt( cc_std**2 + rr_std**2  )
         this.maxres = maxres
@@ -1714,9 +1681,10 @@ class mvpolyfit:
             ax = fig.subplot(111,projection='3d')
 
         # Extract desired residuals
-        # res = this.bin['frac_real_res'] if kind in (None,'real') else ( this.bin['frac_amp_res'] if kind.lower() == 'amp' else this.bin['frac_pha_res'] )
-        res = this.residual
-        res = res.real
+        res = this.bin['frac_real_res'] if kind in (None,'real') else ( this.bin['frac_amp_res'] if kind.lower() == 'amp' else this.bin['frac_pha_res'] )
+        # res = fractional_residuals
+        # res = this.residual
+        res = 100*res.real
 
         # Extract desired normal fit
         # mu,std = this.bin['frac_real_res_mu_std'] if kind in (None,'real') else ( this.bin['frac_amp_res_mu_std'] if kind.lower() == 'amp' else this.bin['frac_pha_res_mu_std'] )
@@ -1737,7 +1705,7 @@ class mvpolyfit:
         # Decorate plot
         title(r'$frmse = %1.4e$, $\langle res \rangle =%1.4e$'%(this.frmse,mean(res)))
         # xlabel('Fractional Residual Error')
-        xlabel('Residual Error')
+        xlabel('$\%$ Residual Error')
         ylabel('Count in Bin')
         # legend( frameon=False )
 
@@ -2249,7 +2217,7 @@ class ngreedy:
 # NOTE that this version optimizes over degree
 def gmvpfit( domain,              # The N-D domain over which a scalar will be modeled: list of vector coordinates
              scalar_range,        # The scalar range to model on the domain: 1d iterable of range values corresponding to domain entries
-             maxdeg = 16,          # polynomial degrees of at most this order in domain variables will be considered: e.g. x*y and y*y are both degree 2. NOTE that the effective degree will be optimized over: increased incrementally until the model becomes less optimal.
+             maxdeg = 16,          # polynomial degrees of at most this order in domain variables will be considered: e.g. x*y and y*y are both degree 2. NOTE that the effective degree will be optimized over: increased incrementally until the model becomes less optimal. 
              mindeg = 1,          # minimum degree to consider for tempering
              plot = False,        # Toggle plotting
              show = False,        # Toggle for showing plots as they are created
@@ -2262,7 +2230,7 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
              verbose = False,       # Let the people know
              homogeneous=False,     # Toggle for homogenous polynomials
              maxres_estimator = False, # Toggle for using abs of max residual as estimator rather then frmse
-             maxdeg_list = None,
+             maxdeg_list = None,    # List of max polynomial degrees per dimension
              **kwargs ):
     """Adaptive (Greedy) Multivariate polynomial fitting
 
@@ -2310,6 +2278,8 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
         Toggle for homogenous polynomials.
     maxres_estimator: bool, optional
         Toggle for using abs of max residual as estimator rather then frmse.
+    maxdeg_list: iterable
+        List of maximum polynomial degrees for each dimension
 
     Returns
     -------
@@ -2363,11 +2333,14 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
     # Create a lexicon of symbols to consider for model learning
     # NOTE the manual adding of a constant term symbol, "K"
     maxbulk = mvsyms( domain_dimension, maxdeg )
+    # Filter max degree by dimension
+    maxbulk = mvfilter( maxbulk, maxdeg_list )
 
     # Allow for homogenous polynomials
     if homogeneous: maxbulk = [ s for s in maxbulk if s != 'K' ]
 
     # Define the space of all possible degrees bounded above by maxdeg
+    # NOTE that maxdeg_list is applied externally
     degree_space = list(range(mindeg,maxdeg+1)) if temper else [maxdeg]
 
     # Increment through degrees
@@ -2376,7 +2349,7 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
     for deg in degree_space:
 
         # Determine the bulk for this degree value
-        bulk = [ s for s in maxbulk if len(s)<=deg ] if deg>0 else mvsyms(domain_dimension,deg)
+        bulk = [ s for s in maxbulk if len(s)<=deg ] if deg>0 else mvfilter( mvsyms(domain_dimension,deg), maxdeg_list )
 
         # Let the people know
         if verbose:
