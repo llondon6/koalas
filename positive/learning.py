@@ -2449,6 +2449,11 @@ def romline(  domain,           # Domain of Map
     # Normalize Data
     R0,R1 = mean(R), std(R)
     r = (R-R0)/( R1 if abs(R1)!=0 else 1 )
+    
+    #
+    if N <= 2:
+        warning('N is %s, but it must be less than or equal to 3. We have set N=3. This course is often desired in cases where N=2 is naively given.'%(red(str(N))) )
+        N=3
 
     #
     if not positive:
@@ -2458,6 +2463,7 @@ def romline(  domain,           # Domain of Map
         raw_space = list(range( len(d)))
         err = lambda x: mean( abs(x) ) # std(x) #
         raw_mask = []
+        iter_max=len(d); iter_count = 0
         while not done:
             #
             min_sigma = inf
@@ -2482,9 +2488,16 @@ def romline(  domain,           # Domain of Map
             raw_mask.append( min_k )
             #
             space = list(min_space)
+            
+            #
+            iter_count+=1
+            too_many_iters = iter_count>=iter_max
+            
+            #
+            is_done = len(space) == N
 
             #
-            done = len(space) == N
+            done = is_done or too_many_iters
 
         #
         rom = linterp( d[min_space], R[min_space] )
