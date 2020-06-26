@@ -1195,6 +1195,25 @@ def symeval( sym, domain, verbose=False ):
     return ans
 
 
+# Estimate maximum polynomial order appropriate for data WITHOUT prior polynomial fitting.
+def guess_polynomial_order( arr ):
+    '''
+    Estimate maximum polynomial order appropriate for data WITHOUT prior polynomial fitting.
+    INTPUT
+    ---
+    arr     numpy array of reals to be externally considered for polynomial fitting
+    OUTPUT
+    ---
+    order   integer polynomial order estimated from derivative of sorted data
+    
+    londonl@mit.edu, pilondon2@gmail.com 2020
+    '''
+    v = sort(arr)/max(arr)
+    dv = array( [ round(z,2) for z in diff(v)/max(diff(v))] )
+    peaks,knots = findpeaks( dv )
+    order = len(knots)-1
+    return order
+
 # Function to compute frmse
 def FRMSE(FIT,DATA):
     from numpy import std

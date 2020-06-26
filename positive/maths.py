@@ -141,6 +141,7 @@ class smooth:
         # Import useful things
         from numpy import ones,convolve,mod,hstack,arange,cumsum,mod,array
         # Handle method input; set default
+        width = max(10,int(len(y)/10.0)) if width is None else width
         method = 'savgol' if method is None else method.lower()
         # # Handle n input; default is None which causes method to be auto
         # method = 'auto' if width is None else method
@@ -169,10 +170,10 @@ class smooth:
 
         # Import usefuls
         from scipy.signal import savgol_filter as savgol
-        from numpy import mod
+        from numpy import mod,ceil
 
         # Handle inputs
-        if width is None: width = max( ceil( len(this.scalar_rang)/10 ), polynomial_order+1 )
+        if width is None: width = max( ceil( len(this.scalar_range)/10 ), polynomial_order+1 )
         if not isinstance(width,int):
             error('width muist be int')
         if width<(polynomial_order+1):

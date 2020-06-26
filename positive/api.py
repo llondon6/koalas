@@ -216,5 +216,5 @@ def error(msg,fname=None):
         _msg = bold('('+red(fname+'!!,%s,@%i'%(flname,exc_tb.tb_lineno))+')>> ')+msg
     else:
         _msg = bold('('+red(fname+'!!')+')')+'>> '+msg
-    #
-    raise NotImplementedError( _msg )
+    # Treat all as raise AssertionErrors
+    raise AssertionError( _msg )

@@ -6063,3 +6063,74 @@ def slmcg( aw, s, l, m, theta, phi, lmin=None, lmax=None, span=6, full_output=Fa
 
     # Return asnwer
     return ans
+
+
+# Function to calculate "chi_p"
+def calc_chi_p(m1,X1,m2,X2,L):
+    '''
+    Calculate chi_p: see eqn 3.4 of https://arxiv.org/pdf/1408.1810.pdf
+    '''
+    #
+    from numpy import dot,array
+    from numpy.linalg import norm
+    
+    #
+    if m1<m2:
+        m1,m2 = [ float(k) for k in (m2,m1) ]
+        X1,X2 = [ array(k) for k in (X2,X1) ]
+
+    #
+    l = L/norm(L)
+    
+    #
+    X1_l = l * dot( l, X1 )
+    X1_perp = X1 - X1_l
+    
+    #
+    X2_l = l * dot( l, X2 )
+    X2_perp = X2 - X2_l
+    
+    #
+    A1 = 2 + (3*m2)/(2*m1)
+    A2 = 2 + (3*m1)/(2*m2)
+    
+    #
+    m1_squared = m1*m1
+    m2_squared = m2*m2
+    S1_perp = norm( X1_perp * m1_squared )
+    S2_perp = norm( X2_perp * m2_squared )
+    
+    #
+    B1 = A1 * S1_perp
+    B2 = A2 * S2_perp
+    
+    #
+    chip = max( B1,B2 ) / ( A1 * m1_squared )
+    
+    #
+    return chip
+    
+#
+def calc_chi_eff(m1,X1,m2,X2,L):
+    '''
+    Calculate chi_s: see eqn 2 of https://arxiv.org/pdf/1508.07253.pdf
+    '''
+    #
+    from numpy import dot,array
+    from numpy.linalg import norm
+
+    #
+    l = L/norm(L)
+    
+    # #
+    # X1_l = l * dot( l, X1 )
+    # X2_l = l * dot( l, X2 )
+    # X_eff = ( X1_l*m1 + X2_l*m2 ) / (m1+m2)
+    # chi_eff = dot( l, X_eff )
+    
+    #
+    chi_eff = (m1*dot( l, X1 ) + m2*dot( l, X2 ))/(m1+m2)
+    
+    #
+    return chi_eff
+    
