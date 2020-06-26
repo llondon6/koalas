@@ -1196,7 +1196,7 @@ def symeval( sym, domain, verbose=False ):
 
 
 # Estimate maximum polynomial order appropriate for data WITHOUT prior polynomial fitting.
-def guess_polynomial_order( arr ):
+def guess_max_polynomial_order( arr ):
     '''
     Estimate maximum polynomial order appropriate for data WITHOUT prior polynomial fitting.
     INTPUT
