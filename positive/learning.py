@@ -1208,6 +1208,8 @@ def guess_max_polynomial_order( arr ):
     
     londonl@mit.edu, pilondon2@gmail.com 2020
     '''
+    from positive import findpeaks
+    from numpy import sort,array,diff
     v = sort(arr)/max(arr)
     dv = array( [ round(z,2) for z in diff(v)/max(diff(v))] )
     peaks,knots = findpeaks( dv )
