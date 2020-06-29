@@ -216,7 +216,7 @@ class mvrfit:
         return latex_str
 
     # High level plotting function
-    def plot(this,ax=None,show=False,fit_xmin=None,fit_xmax=None):
+    def plot(this,ax=None,show=False,fit_xmin=None,fit_xmax=None,size_scale=1):
 
         # Import useful things
         import matplotlib as mpl
@@ -240,7 +240,7 @@ class mvrfit:
         spdim = '23' if range_is_complex else '13'
 
         # Initiate the figure
-        fig = figure( figsize=2*array([8.5,3.5]) )
+        fig = figure( figsize=size_scale*1.2*array([8.5,3.5]) )
         # fig = figure( figsize=2.5*( array([7,4]) if range_is_complex else array([7,2]) ) )
         subplot( spdim+'1' )
         fig.patch.set_facecolor('white')
@@ -295,6 +295,9 @@ class mvrfit:
         if show:
             from matplotlib.pyplot import show,draw
             draw();show()
+            
+        #
+        return fig
 
     # Plot residual histograms
     def __plotHi__(this,ax=None,_map=None,kind=None,color='r',alpha=1):
@@ -539,7 +542,7 @@ class mvrfit:
         ax.view_init(60,30)
 
         # Plot the fit evaluated on the domain
-        ax.scatter(this.domain[:,0],this.domain[:,1],_map(this.eval( this.domain )),marker='x',color='r',label='Fit',s=20)
+        ax.scatter(this.domain[:,0],this.domain[:,1],_map(this.eval( this.domain )),marker='x',s=30,color='r',label='Fit')
 
         # # Setup grid points for model
         # padf = 0
@@ -557,18 +560,18 @@ class mvrfit:
         # ax.plot_wireframe(xx, yy, _map(zz), color='r', rstride=1, cstride=1,label='Model Slice',zorder=1,alpha=0.8)
 
         # Plot the raw data points
-        ax.scatter(this.domain[:,0],this.domain[:,1],_map(this.scalar_range),marker='o',color='k',label='Data',zorder=1, facecolors='none')
+        ax.scatter(this.domain[:,0],this.domain[:,1],_map(this.scalar_range),marker='o',s=35,color='k',label='Data',zorder=1, facecolors='none')
 
-        
+        # Plot the raw data points
+        ax.scatter(this.domain[:,0],this.domain[:,1],_map(this.range),marker='o',color='k',label='Data',zorder=1, facecolors='none')
 
-        #
-        ax.set_xlabel('$x_0$',size=24)
-        ax.set_ylabel('$x_1$',size=24)
-        
-        # ax.set_zlabel( '$f(x_0,x_1)$' )
-        # ax.set_zlabel( '$%s$'%this.labels['latex'][0] if len(list(this.labels.keys())) else '$f(x_0,x_1)$' )
-        dz = (-amin(_map(this.scalar_range))+amax(_map(this.scalar_range)))*0.05
-        ax.set_zlim( amin(_map(this.scalar_range))-dz, amax(_map(this.scalar_range))+dz )
+        xlabel( '$%s$'%this.labels['latex'][1][0] if len(list(this.labels.keys())) else '$x_0$' )
+        ylabel( '$%s$'%this.labels['latex'][1][1] if len(list(this.labels.keys())) else '$x_1$' )
+        # ylabel( '$x_1$' )
+        ax.set_zlabel( '$f(x_0,x_1)$' )
+        ax.set_zlabel( '$%s$'%this.labels['latex'][0] if len(list(this.labels.keys())) else '$f(x_0,x_1)$' )
+        dz = (-amin(_map(this.range))+amax(_map(this.range)))*0.05
+        ax.set_zlim( amin(_map(this.range))-dz, amax(_map(this.range))+dz )
         # title('$%s$'%this)
         legend(frameon=False)
 
@@ -1213,7 +1216,7 @@ def guess_max_polynomial_order( arr ):
     v = sort(arr)/max(arr)
     dv = array( [ round(z,2) for z in diff(v)/max(diff(v))] )
     peaks,knots = findpeaks( dv )
-    order = len(knots)-1
+    order = len(knots)
     return order
 
 # Function to compute frmse
@@ -1283,7 +1286,7 @@ class mvpolyfit:
         #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
         ''' Perform the fit '''
         #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
-        this.__fit__()
+        this.__fit__(kdex = this.basis_symbols.index('K') if 'K' in this.basis_symbols else None )
 
         # Compute the fit residuals
         # NOTE that we will use a similarity transformation based on the range_map
@@ -1324,7 +1327,7 @@ class mvpolyfit:
         this.bin['frac_real_res'] = fractional_residuals
 
     # Perform the fit
-    def __fit__(this):
+    def __fit__(this,kdex=None):
 
         # Import usefuls
         from numpy import array,dot,mean,std
@@ -1361,7 +1364,7 @@ class mvpolyfit:
         #
         if this.center:
             a *= sigma
-            a[0] += mu
+            a[kdex] += mu
 
         # Store the fit coefficients
         this.coeffs = a
@@ -1775,22 +1778,39 @@ class mvpolyfit:
 
 
     # High level plotting function
-    def plot(this,show=False,fit_xmin=None):
+    def plot(this,show=False,fit_xmin=None,labels=None,size_scale=1,ax_array=None):
 
-        from matplotlib.pyplot import plot,figure,title,xlabel,ylabel,legend,subplots,gca,sca,subplot,tight_layout
+        from matplotlib.pyplot import plot,figure,title,xlabel,ylabel,legend,subplots,gca,sca,subplot,tight_layout,gcf
         from mpl_toolkits.mplot3d import Axes3D
-        from numpy import diff,linspace,meshgrid,amin,amax,array,arange,angle,unwrap,pi
+        from numpy import diff,linspace,meshgrid,amin,amax,array,arange,angle,unwrap,pi,ndarray
 
         # Determine if range is complex; this effects plotting flow control
         range_is_complex = this.range.dtype == complex
+        
+        # 
+        if labels: this.labels = labels
 
         # Setup the dimnesions of the plot
         spdim = '23' if range_is_complex else '13'
 
         # Initiate the figure
-        fig = figure( figsize=2.5*( array([7,4]) if range_is_complex else array([7,2]) ) )
-        subplot( spdim+'1' )
-        fig.patch.set_facecolor('white')
+        use_external_axes = False
+        if ax_array is None:
+            fig = figure( figsize=size_scale*2.5*( array([7,4]) if range_is_complex else array([7,2]) ) )
+            subplot( spdim+'1' )
+            fig.patch.set_facecolor('white')
+        else:
+            use_external_axes = True
+            fig = gcf()
+            if not isinstance(ax_array,(ndarray)):
+                error('ax_array input must be numpy array containing figure axes')
+            if range_is_complex:
+                if len(ax_array)!=6:
+                    error('ax_array input must be array of figure axes of lenth 6 for complex data')
+            else:
+                if len(ax_array)!=3:
+                    error('ax_array input must be array of figure axes of lenth 3 for complex data')
+        
         if range_is_complex:
             tight_layout(w_pad=5,h_pad=5,pad=4)
         else:
@@ -1808,48 +1828,46 @@ class mvpolyfit:
         # --------------------------------------------- #
         if this.domain.shape[-1] == 2:
             if range_is_complex:
-                ax = subplot(spdim+'1',projection='3d')
+                ax = ax_array[0] if use_external_axes else subplot(spdim+'1',projection='3d')
                 this.__plot3D__( ax, _map = lambda s: abs(s) )
-                ax = subplot(spdim+'4',projection='3d')
+                ax = ax_array[3] if use_external_axes else subplot(spdim+'4',projection='3d')
                 this.__plot3D__( ax, _map = lambda s: get_phase(s) )
             else:
-                ax = subplot(spdim+'1',projection='3d')
+                ax = ax_array[0] if use_external_axes else subplot(spdim+'1',projection='3d')
                 this.__plot3D__( ax )
         elif this.domain.shape[-1] == 1:
             if range_is_complex:
-                ax = subplot(spdim+'1')
+                ax = ax_array[0] if use_external_axes else subplot(spdim+'1')
                 this.__plot2D__( ax, _map = lambda s: abs(s), fit_xmin=fit_xmin )
-                ax = subplot(spdim+'4')
+                ax = ax_array[3] if use_external_axes else subplot(spdim+'4')
                 this.__plot2D__( ax, _map = lambda s: get_phase(s), fit_xmin=fit_xmin )
             else:
-                ax = subplot(spdim+'1')
+                ax = ax_array[0] if use_external_axes else subplot(spdim+'1')
                 this.__plot2D__( ax )
         else:
             if range_is_complex:
-                ax = subplot(spdim+'1',projection='3d')
+                ax = ax_array[0] if use_external_axes else subplot(spdim+'1',projection='3d')
                 this.__plotND__( ax, _map = lambda s: abs(s))
-                ax = subplot(spdim+'4',projection='3d')
+                ax = ax_array[3] if use_external_axes else subplot(spdim+'4',projection='3d')
                 this.__plotND__( ax, _map = lambda s: get_phase(s) )
             else:
-                ax = subplot(spdim+'1',projection='3d')
+                ax = ax_array[0] if use_external_axes else subplot(spdim+'1',projection='3d')
                 this.__plotND__( ax )
-
-            print('2/3d plotting is not enabled as the map is %id'% (1+this.domain.shape[-1]))
 
         # --------------------------------------------- #
         # Plot Histogram of Fractional Residuals
         # --------------------------------------------- #
         if range_is_complex:
-            ax = subplot(spdim+'3')
+            ax = ax_array[2] if use_external_axes else subplot(spdim+'3')
             this.__plotHist__(ax,kind='amp')
             # this.__plotHist__(ax,_map = lambda s: abs(s))
             ax.yaxis.set_label_position('right')
-            ax = subplot(spdim+'6')
+            ax = ax_array[5] if use_external_axes else subplot(spdim+'6')
             this.__plotHist__(ax,kind='phase')
             # this.__plotHist__(ax,_map = lambda s: get_phase(s))
             ax.yaxis.set_label_position('right')
         else:
-            ax = subplot(spdim+'3')
+            ax = ax_array[2] if use_external_axes else subplot(spdim+'3')
             this.__plotHist__(ax,kind='real')
             ax.yaxis.set_label_position('right')
 
@@ -1857,14 +1875,14 @@ class mvpolyfit:
         # Plot 1D data points
         # --------------------------------------------- #
         if range_is_complex:
-            ax = subplot(spdim+'2')
+            ax = ax_array[1] if use_external_axes else subplot(spdim+'2')
             this.__plot1D__(ax,_map = lambda s: abs(s))
             # ax.yaxis.set_label_position('right')
-            ax = subplot(spdim+'5')
+            ax = ax_array[4] if use_external_axes else subplot(spdim+'5')
             this.__plot1D__(ax,_map = lambda s: get_phase(s))
             # ax.yaxis.set_label_position('right')
         else:
-            ax = subplot(spdim+'2')
+            ax = ax_array[1] if use_external_axes else subplot(spdim+'2')
             this.__plot1D__(ax)
             # ax.yaxis.set_label_position('right')
 
@@ -1954,6 +1972,11 @@ class mvpolyfit:
                 error(msg,'mvpolyfit')
 
         # TODO: Check content of strings to ensure valid format -- can it be inderstood by mvpolyfit?
+        
+        # Enforce that there is a constant offset if centering is on
+        basis_symbols = list(basis_symbols)
+        if center:
+            basis_symbols.append('K')
 
         # Cleanly format basis symbols, and remove possible duplicates, or linearly dependent symbols
         for s in basis_symbols:
@@ -2157,7 +2180,7 @@ class ngreedy:
             min_est,min_term = inf,None
             for k,term in enumerate(boundary):
                 if not term in permanent:
-                    trial_boundary = copy(boundary)
+                    trial_boundary = list(boundary)
                     trial_boundary.remove( term )
                     est,foo = action(trial_boundary)
                     if est < min_est:
@@ -2309,10 +2332,21 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
     """
     # Import stuff
     from itertools import combinations as combo
-    from numpy import arange,isfinite,inf,amin
+    from numpy import arange,isfinite,inf,amin,sort
     from copy import deepcopy as copy
 
     # NOTE that this algorithm does not try to optimize over maximum degree. This is necessary in some cases as an overmodeling bias for maxdegree too large can overwhelm the fitatol threshold before a decent fit is found.
+    
+    #
+    if permanent_symbols is None:
+        permanent_symbols = []
+    else:
+        permanent_symbols = list(permanent_symbols)
+    
+    #
+    if 'center' in kwargs:
+        permanent_symbols = list( set(permanent_symbols+['K']) )
+    
 
     # Determine the number of domain dimensions:
     if len(domain.shape)==1: domain = domain.reshape(len(domain),1)
@@ -2351,6 +2385,14 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
         return estimator,foo
     def mvplotfun( foo ): foo.plot(show=show)
 
+    # # Auto generate maxdeg_list -- NOTE not fully tested
+    # if maxdeg_list is None:
+    #     maxdeg_list = []
+    #     for arr in domain.T:
+    #         maxdeg_list.append( min(maxdeg,guess_max_polynomial_order( arr )) )
+    #     alert('Estimating max polynomial order per domain dimension.')
+    #     print('>> ',maxdeg_list)
+
     # Create a lexicon of symbols to consider for model learning
     # NOTE the manual adding of a constant term symbol, "K"
     maxbulk = mvsyms( domain_dimension, maxdeg )
@@ -2371,6 +2413,7 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
 
         # Determine the bulk for this degree value
         bulk = [ s for s in maxbulk if len(s)<=deg ] if deg>0 else mvfilter( mvsyms(domain_dimension,deg), maxdeg_list )
+        bulk = list( set(bulk+permanent_symbols) )
 
         # Let the people know
         if verbose:
@@ -2409,6 +2452,7 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
             A = A_
             boundary,est_list = A.boundary, A.estimator_list
             last_min_est = est_list[-1]
+            boundary = sort(list( set(boundary+permanent_symbols) ))[::-1]
             if verbose:
                 print('&& The current boundary is %s' % boundary)
                 print('&& The current estimator value is %f\n' % est_list[-1])

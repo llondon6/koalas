@@ -1408,7 +1408,7 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     '''
     INPUTS
     ---
-    fstart,             Units: Mf/(2*pi)
+    fstart,             Units: M*omega/(2*pi)
     N,                  Number of samples for output (use an NR waveform for reference!). NOTE that this input may be overwrridden by an internal check on waveform length.
     dt,                 Time step of output (use an NR waveform for reference!)
     model_data,         [Mx3] shaped numpy array in GEOMETRIC UNITS
