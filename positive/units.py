@@ -268,10 +268,18 @@ def q2eta(q): return q/((1.0+q)*(1.0+q))
 
 # Function to convert eta to mass ratio
 def eta2q(eta):
+    '''Function to convert eta to mass ratio'''
     from numpy import sqrt
     b = 2.0 - 1.0/eta
     q  = (-b + sqrt( b*b - 4.0 ))/2.0
     return q
+
+# Function to convert eta to mass difference
+def eta2delta(eta,sign=1):
+    '''Function to convert eta to mass difference'''
+    from numpy import sqrt
+    delta = sign*sqrt( 1-4*eta )
+    return delta
 
 # Function to convert masses to symmetric mass ratio
 def q2m1m2(q):
@@ -296,3 +304,9 @@ def eta2m1m2(eta):
     q = eta2q(eta)
     m1,m2 = q2m1m2(q)
     return m1,m2
+
+# Convert Mpc to meters 
+def mpc2meters( D_Mpc ):
+    #
+    D_meters = D_Mpc/__physical_constants__['meter_to_mpc']
+    return D_meters

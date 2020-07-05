@@ -2104,7 +2104,7 @@ class pgreedy:
             itercount += 1
             if verbose:
                 print('\n%sIteration #%i (Positive Greedy)\n%s' % ( 'Final ' if done else '', itercount, 12*'---' ))
-                print('>> The current estimator value is %1.4e' % min_est)
+                print('>> The current estimator value is %f' % min_est)
                 print('>> %s was added to the boundary' % ( min_term if isinstance(min_term,(list,str,ndarray)) else (str(min_term) if not (min_term is None) else 'Nothing' ) ))
                 print('>> This caused the estimator value to change by %f' % d_est)
                 print('>> The current boundary is %s' % boundary)
@@ -2266,6 +2266,7 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
              plot = False,        # Toggle plotting
              show = False,        # Toggle for showing plots as they are created
              fitatol  = 1e-2,     # Tolerance in fractional chance in estimator
+             estatol  = 0,          # Tolerance for value of estimator
              permanent_symbols = None,  # If given, these symbols (compatible with mvpfit) will always be used in the final fit
              initial_boundary = None,   # Seed boundary for positive greedy process
              apply_negative = True,     # Toggle for the application of a negtative greedy algorithm following the positive one. This is set true by default to handle overmodelling.
@@ -2430,19 +2431,24 @@ def gmvpfit( domain,              # The N-D domain over which a scalar will be m
         temper_fitatol = fitatol
         the_estimator_hasnt_changed_a_lot = abs(d_est)<temper_fitatol and d_est!=0
         we_are_at_maxdeg = deg == maxdeg
+        the_estimator_is_small_enough = amin(A_.estimator_list)<=estatol
         done =    the_estimator_is_worse \
                or the_estimator_hasnt_changed_a_lot \
-               or we_are_at_maxdeg
+               or we_are_at_maxdeg \
+               or the_estimator_is_small_enough
 
         # Let the people know
         if verbose:
 
+            exit_msg = ''
             if the_estimator_is_worse:
-                exit_msg = 'the estimator was made worse by using this max degree'
-            elif the_estimator_hasnt_changed_a_lot:
-                exit_msg = 'the estimator has changed by |%f| < %f' % (d_est,temper_fitatol)
-            elif we_are_at_maxdeg:
-                exit_msg = 'we are at the maximum degree of %i' % deg
+                exit_msg += 'The estimator was made worse by using this max degree. '
+            if the_estimator_hasnt_changed_a_lot:
+                exit_msg += 'The estimator has changed by |%f| < %f. ' % (d_est,temper_fitatol)
+            if we_are_at_maxdeg:
+                exit_msg += 'We are at the maximum degree of %i. ' % deg
+            if the_estimator_is_small_enough:
+                exit_msg += 'The estimator vlue %f is smaller than the prescibed tolerance of %f. '%(amin(A_.estimator_list),estatol)
 
             print('&& The estimator has changed by %f' % d_est)
             print('&& '+ ('Degree tempering will continue.' if not done else 'Degree tempering has completed becuase %s. The results of the last iteration wil be kept.'%exit_msg))
