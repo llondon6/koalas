@@ -6133,4 +6133,17 @@ def calc_chi_eff(m1,X1,m2,X2,L):
     
     #
     return chi_eff
-    
+
+#
+def Schwarzschild_tortoise(r,M):
+    '''
+    Calculate the Schwazschild radial tortoise coordinate: 
+    '''
+    #
+    from numpy import log
+    #
+
+    radial_tortoise = r + 2 * M * log( r / ( 2 * M ) - 1 )
+
+    #
+    return radial_tortoise
