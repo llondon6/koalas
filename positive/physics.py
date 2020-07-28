@@ -925,7 +925,7 @@ class pn:
         # Initial gwylm object
         sceo = copy(sceo)
         sceo.config = False
-        y = gwylm(sceo,load=False,calcnews=False,calcstrain=False)
+        y = gwylm(sceo,load=False,calcnews=False,calcstrain=False,load_dynamics=False)
         y.__lmlist__ = this.lmlist
         y.__input_lmlist__ = this.lmlist
 
@@ -1594,7 +1594,8 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     # Construct complex waveform
     hf_raw = amp * exp( -1j*pha )
 
-    hf_raw *= maketaper(f,[ find(f>0)[0], find(f>fstart_eff)[0] ],window_type='exp')
+    window = maketaper(f,[ find(f>0)[0], find(f>fstart_eff)[0] ],window_type='exp')
+    hf_raw *= window
     # hf_raw *= maketaper(f,[ find(f>fmax)[0], find(f>(fmax-0.1))[0] ],window_type='parzen')
 
     #
@@ -3724,8 +3725,8 @@ def ysprod_matrix( jf, lm_space, N_theta=128, __aw_sc__=None, s=-2 ):
             #
             if m==m_:
                 Sk = slm(jf,l_,m_,n_,theta,phi,norm=False,__aw_sc__=__aw_sc__)
-                s = Sk/sqrt(prod(Sk,Sk,theta))
-                ans[j,k] = conj(prod( y,s, theta ))
+                s_ = Sk/sqrt(prod(Sk,Sk,theta))
+                ans[j,k] = conj(prod( y,s_, theta ))
             else:
                 ans[j,k] = 0
             # print (L,M),(l,m,n), ans[j,k]

@@ -943,6 +943,10 @@ def sYlm(s,l,m,theta,phi,return_mesh=False):
     theta = array( theta if isinstance(theta,(list,tuple)) else [double(theta)]  ) if not isinstance(theta,ndarray) else theta
 
     #
+    if (not isinstance(s,int) ):
+        error('Harmonic spin weigh must be integer')
+
+    #
     (s,l,m) = [ int(x) for x in (s,l,m) ]
 
     #

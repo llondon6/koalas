@@ -58,6 +58,8 @@ def physhf( harr, M, D ):
     harr        in same format as input, but in physical units
 
     '''
+    # Work with copy of input 
+    harr = harr.copy()
     # Import useful things
     from numpy import ndarray
     # Calculate unit conversion factor for strain amplitude
@@ -110,6 +112,8 @@ def physh( harr, M, D, verbose=False ):
     '''
     # Import useful things
     from numpy import ndarray
+    # Work with copy of input 
+    harr = harr.copy()
     # Calculate unit conversion factor for strain amplitude
     K = mass_mpc(M)/D
     # If conversion of a number is desired
@@ -162,6 +166,9 @@ def codeh( harr, M, D ):
     # Import useful things
     from numpy import ndarray
 
+    # Work with copy of input 
+    harr = harr.copy()
+    
     #
     K =  1.0 / (mass_mpc( M )/D)
 
@@ -203,6 +210,8 @@ def codehf( fd_harr, M, D ):
     fd_harr        in same format as input, but in geometric units
 
     '''
+    # Work with copy of input 
+    fd_harr = fd_harr.copy()
     #
     K  = D/mass_mpc( M )    # scale wave amplitude for mass and distance
     K /= mass_sec(M)        # convert the differential dt to M
