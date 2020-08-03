@@ -335,7 +335,12 @@ def plot_single_3d_trajectory( xx, yy, zz, color='black', alpha=0.6, lw=2, plot_
     if ax is None:
         fig = figure( figsize=4*figaspect(1) )
         ax = fig.add_subplot(111,projection='3d')
-        plot_3d_mesh_sphere( ax, color='k', alpha=0.025, lw=1, axes_alpha=0.1, view=view )
+        axis('square'); r=1
+        ax.set_xlim([-r,r])
+        ax.set_ylim([-r,r])
+        ax.set_zlim([-r,r])
+        axis('off')
+        plot_3d_mesh_sphere( ax, color='k', alpha=0.025, lw=1, axes_alpha=0.1 )
 
     plot(xx,yy,zz,color=color,alpha=alpha,lw=lw,label=label if plot_end else None)
     if plot_start: ax.scatter( xx[0], yy[0], zz[0],  label=r'Initial %s (Dynamics)'%label, color=color, marker='o', s=20 )
@@ -349,19 +354,24 @@ def alpha_plot_trajectory( xx,yy,zz, nmasks=10, color='b', lw=1,label=None, ax=N
     #
     from numpy import sin,cos,linspace,ones_like,array,pi,max,sqrt,linalg
     from mpl_toolkits.mplot3d import Axes3D
-    from matplotlib.pyplot import figure,plot,figaspect,text,axis
+    from matplotlib.pyplot import figure,plot,figaspect,text,axis,gca
 
     #
     if ax is None:
         fig = figure( figsize=4*figaspect(1) )
         ax = fig.add_subplot(111,projection='3d')
-        plot_3d_mesh_sphere( ax, color='k', alpha=0.025, lw=1, axes_alpha=0.1, view=view )
+        axis('square'); r=1
+        ax.set_xlim([-r,r])
+        ax.set_ylim([-r,r])
+        ax.set_zlim([-r,r])
+        axis('off')
+        plot_3d_mesh_sphere( ax, color='k', alpha=0.025, lw=1, axes_alpha=0.1 )
 
     nmask_len = int(float(len(xx))/nmasks)
     masks = []; startdex,enddex = 0,nmask_len
     for k in range(nmasks):
         masks.append( range( startdex, enddex ) )
-        startdex=enddex
+        startdex=enddex-1 # No gaps
         enddex = enddex+nmask_len
         if k+1 == nmasks-1:
             enddex = len(xx)
@@ -371,6 +381,6 @@ def alpha_plot_trajectory( xx,yy,zz, nmasks=10, color='b', lw=1,label=None, ax=N
         alpha = alpha_min+k*(alpha_max-alpha_min)/(len(masks)-1)
         plot_end=(k==len(masks)-1)
         plot_start=(k==0)
-        plot_single_trajectory(xx[mask],yy[mask],zz[mask],color=color,alpha=alpha,lw=lw,plot_start=plot_start,plot_end=plot_end,label=label if (plot_end or plot_start) else None)
+        plot_single_3d_trajectory(xx[mask],yy[mask],zz[mask],color=color,alpha=alpha,lw=lw,plot_start=plot_start,plot_end=plot_end,label=label if (plot_end or plot_start) else None,ax=gca())
 
     return ax
