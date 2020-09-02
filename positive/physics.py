@@ -1,6 +1,6 @@
 #
 from __future__ import print_function
-from positive import *
+from . import *
 from positive.plotting import *
 from positive.learning import *
 
