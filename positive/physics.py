@@ -1494,6 +1494,10 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     # axhline( time_shift, linestyle='--' )
     # axhline( max(dmodel_pha[ mask ]), color='r', alpha=0.5 )
     # # axvline( model_f[kstart], linestyle=':' )
+    
+    #
+    if min(model_f)>=fstart:
+        error('The input frequency values for the model are greater than or equal to the desired fstart value. Please regenerate the model values with a starting frequency that is lower than the desired time domain starting frequncy of the waveform. This is needed for phenom2td to construct an appropriate frequency daomin taper. It would be ok if the model FD waveform started at zero or alsmost zero frequency. As implied, it must have only positive frequency content. ')
 
     #
     ringdown_pad = ringdown_pad     # Time units not index; TD padding for ringdown
