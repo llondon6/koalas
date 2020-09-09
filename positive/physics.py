@@ -1411,7 +1411,7 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     fstart,             Units: M*omega/(2*pi)
     N,                  Number of samples for output (use an NR waveform for reference!). NOTE that this input may be overwrridden by an internal check on waveform length.
     dt,                 Time step of output (use an NR waveform for reference!)
-    model_data,         [Mx3] shaped numpy array in GEOMETRIC UNITS
+    model_data,         [Mx3] shaped numpy array in GEOMETRIC UNITS: (positive_f,amp,phase)
     plot=False,         Toggle for plotting output
     verbose=False,      Toggle for verbose
     force_t=False       Force the total time duration of the output based on inputs
@@ -1420,7 +1420,7 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     ---
     ht,                 Waveform time series (complex)
     t,                  time values
-    time_shift          Location od waveform peak
+    time_shift          Location of waveform peak
     '''
     # The idea here is to perform the formatting in a parameterized rather than mimicked way.
     '''
