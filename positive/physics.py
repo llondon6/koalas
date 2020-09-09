@@ -1453,6 +1453,10 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     model_f   = array( model_data[0] )
     model_amp = array( model_data[1] )
     model_pha = array( model_data[2] )
+    
+    #
+    if min(model_f)<0:
+        error('This function is only setup to work with Phenom models defined on f>=0. It would need to be modified to work with more general cases. ')
 
     # NOTE: Using the regular diff here would result in
     # unpredictable results due to round-off error
@@ -1556,7 +1560,7 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
 
     # 1st try hard windowing around fstart and fend
 
-    ##%% Work on positive side for m>0
+    ##%% Work on positive side
     f_ = _f_[ _f_ > 0 ]
 
     # Interpolate model over this subdomain
@@ -1575,7 +1579,7 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     # plot( f_, pha_, '--k' )
     # xscale('log')
 
-    ## Work on negative side for m>0
+    ## Work on negative side (which will have zero amplitude). We add the f<0 side for consistent ifft usage
     _f = _f_[ _f_ < 0 ]
     # Make zero
     _amp = zeros( _f.shape )
