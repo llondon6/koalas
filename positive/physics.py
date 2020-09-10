@@ -1404,7 +1404,7 @@ class pn:
 #####
 
 # Convert phenom frequency domain waveform to time domain
-def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=False, time_shift=None, fmax=0.5, ringdown_pad=600 ):
+def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=False, time_shift=None, fmax=0.5, ringdown_pad=600,window_type='exp',apply_window_n_times=1 ):
     '''
     INPUTS
     ---
@@ -1602,9 +1602,15 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     # Construct complex waveform
     hf_raw = amp * exp( -1j*pha )
 
-    window = maketaper(f,[ find(f>0)[0], find(f>fstart_eff)[0] ],window_type='exp')
-    hf_raw *= window
+    # -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ #
+    # Apply window to FD amplitude to squash unnecessary low frequency power
+    # * Apply input window type
+    # -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ #
+    window = maketaper(f,[ find(f>0)[0], find(f>fstart_eff)[0] ],window_type=window_type)
+    # Sharpen the effect of the window by applying it multiple times (one is default)
+    hf_raw *= (window**apply_window_n_times)
     # hf_raw *= maketaper(f,[ find(f>fmax)[0], find(f>(fmax-0.1))[0] ],window_type='parzen')
+    # -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ -~ #
 
     #
     fd_window = fft( window )

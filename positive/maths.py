@@ -822,7 +822,7 @@ def maketaper(arr,state,window_type='hann',ramp=True):
     Low level function that takes in numpy 1d array, and index locations of start and end of wind, and then outputs the taper (a hanning taper). This function does not apply the taper to the data.
 
     For all window types allowed, see:
-    https://docs.scipy.org/doc/scipy-0.15.1/reference/generated/scipy.signal.get_window.html
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.get_window.html
     '''
 
     # Import useful things
