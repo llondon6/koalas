@@ -300,6 +300,7 @@ def q2m1m2(q):
 # Convert eta to q
 def eta2q(eta):
     from numpy import sqrt,ndarray
+    from positive import error
     if (eta if not isinstance(eta,ndarray) else max(eta))>0.25:
         error('eta must be less than 0.25, but %f found'%max(eta))
     b = 2.0 - 1.0/eta

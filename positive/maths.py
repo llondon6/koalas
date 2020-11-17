@@ -121,9 +121,9 @@ def lentz( aa, bb, tol=None, tiny=1e-30, mpm=False ):
         f = f*DELTA
         #
         err = abs( DELTA - 1.0 )
-        done = err<tol
+        done = (err<tol) or (err==0)
         if j>=jmax:
-            warning('Maximum number of iterations reached before error criteria passed. (err=%d)\n'%err)
+            warning('Maximum number of iterations reached before error criteria passed. (err=%s)\n'%str(err))
             state = True
             done = state
 

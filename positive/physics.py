@@ -1484,6 +1484,9 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
     if time_shift is None:
         hist,edges = histogram( dmodel_pha[mask],50 )
         time_shift = edges[ 1+argmax( hist ) ]
+        warning('This function time shofts data by default. If applying to a collection of multipoles for which the relative timeshift is physical, then use the time_shift=0 keyword input option.')
+    if time_shift==0:
+        ringdown_pad=0
     # #%% Use peak of phase derivative
     # argmax_shift = argmax( dmodel_pha[ mask ] )
     # time_shift = dmodel_pha[ mask ][ argmax_shift ]
@@ -1722,7 +1725,7 @@ def leaver( jf,                     # Dimensionless BH Spin
     #
     if isinstance(jf,(tuple,list,ndarray)):
         #
-        cw,sc = array( [ __leaver_helper__(jf_, l, m, n, p , s, Mf, verbose) for jf_ in jf ] )[:,:,0].T
+        cw,sc = array( [ __leaver_helper__(jf_, l, m, n, p , s, Mf, verbose) for jf_ in jf ] ).T
         return cw,sc
 
     else:
@@ -1740,7 +1743,10 @@ def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = F
     from numpy.linalg import norm
 
     # Validate jf input: case of int given, make float. NOTE that there is further validation below.
-    if isinstance(jf,(int,float)): jf = [float(jf)]
+    REVERT_TO_FLOAT = False
+    if isinstance(jf,(int,float)): 
+        jf = [float(jf)]
+        REVERT_TO_FLOAT = True
     if not isinstance(jf,ndarray): jf = array(jf)
     # Valudate s input
     if abs(s) != 2: raise ValueError('This function currently handles on cases with |s|=2, but s=%i was given.'%s)
@@ -1805,6 +1811,10 @@ def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = F
     # Handle positive spin weight
     if s>0:
         cs = cs - 2*abs(s)
+        
+    #
+    if REVERT_TO_FLOAT:
+        cw,cs[0] = cw[0],cs[0]
 
     #
     return cw,cs
@@ -2549,6 +2559,30 @@ def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False,adjoint=False ):
             u2v_map = lambda U: U-aw
             #
             scale_fun_u = lambda U: (array(aw+U,dtype=complex))**k1 * (array(aw-U,dtype=complex))**k2 * exp( -U )
+            
+        elif london==-4:
+            
+            '''
+            u = cos(theta)
+            S_j(u) = exp( -aw_j * u ) Sum( a[k]Y_k(u) )
+            '''
+            
+            #
+            k1 = 1.0 # NOTE that k1 and k2 are NOT used in this encarnation
+            k2 = 1.0 # NOTE that k1 and k2 are NOT used in this encarnation
+            kref = max(abs(m),abs(s))
+            #
+            a_alpha = lambda k: (2*aw*(1 + k + kref - s)*sqrt(((1 + k + kref - m)*(1 + k + kref + m)*(1 + k + kref - s)*(1 + k + kref + s))*1.0/(3 + 4*(k + kref)*(2 + k + kref))))*1.0/(1 + k + kref)
+            #
+            a_beta  = lambda k: Alm + aw**2 - k - kref - (k + kref)**2 + s + s**2 + (2*aw*m*s**2)*1.0/(k + kref + (k + kref)**2)
+            #
+            a_gamma = lambda k: (-2*aw*sqrt((k + kref - m)*(k + kref + m)*(k + kref - s)*(k + kref + s)))*1.0/((k + kref)*sqrt((1 + 2*(k + kref))*1.0/(-1 + 2*(k + kref)))) + (2*aw*(-1 + k + kref - s)*sqrt(((k + kref - m)*(k + kref + m)*(k + kref - s)*(k + kref + s))*1.0/(-1 + 4*(k + kref)**2)))*1.0/(k + kref)
+            # Define starting variable transformation variable
+            theta2u_map = lambda TH: cos(TH)
+            # Define how the exopansion variable relates to u=cos(theta)
+            u2v_map = lambda U: U
+            #
+            scale_fun_u = lambda U: exp( aw * U )
 
         else:
 
@@ -2933,6 +2967,74 @@ def aw_leaver( Alm, l, m, s,tol=1e-9, london=True, verbose=False, guess=None, aw
 
 
 
+# Compute perturbed Kerr separation constant given a frequency
+def sc_london( aw, l, m, s,tol=1e-10, s_included=False, verbose=False, adjoint=False, __CHECK__=True  ):
+    '''
+    Given (aw, l, m, s), compute and return separation constant. This method uses a three-term recursion relaition obtained by applying the following ansatz to the spheroidal problem:
+    
+            u = cos(theta)
+            S_j(u) = exp( -aw_j * u ) Sum( a[k]Y_k(u) )
+            
+    londonl@mit.edu Nov 2020
+    '''
+
+    # Import Maths
+    from numpy import log,exp,linalg,array
+    from scipy.optimize import root,fmin,minimize
+    from positive import alert,red,warning,leaver_workfunction
+    from numpy import complex128 as dtyp
+
+    #
+    p_min = l-max(abs(m),abs(s)) # VERY IMPORTANT
+
+    #
+    def action(Alm):
+        _,_,alpha,beta,gamma,_,_,_ = leaver_ahelper( l,m,s,aw,Alm, london=-4, verbose=verbose, adjoint=False )
+        v = 1.0
+        for p in range(p_min+1):
+            v = beta(p) - (alpha(p-1.0)*gamma(p) / v)
+        aa = lambda p: -alpha(p-1.0+p_min)*gamma(p+p_min)
+        bb = lambda p: beta(p+p_min)
+        u,state = lentz(aa,bb,tol)
+        u = beta(p_min) - u
+        x = v-u
+        if verbose: print('err = '+str(abs(x)))
+        x = array([x.real,x.imag],dtype=float).ravel()
+        return x
+
+    if verbose: print('')
+
+    # Try using root
+    # Define the intermediate work function to be used for this iteration
+    indirect_action = lambda STATE: action(STATE[0]+1j*STATE[1])
+    # indirect_action = lambda STATE: log( 1.0 + abs( array(  action(STATE[0]+1j*STATE[1])  ) ) )
+    aw_guess = aw if isinstance(aw,(float,complex)) else aw
+    Alm_guess = scberti(aw_guess,l,m,s,adjoint=False)
+    guess = [Alm_guess.real,Alm_guess.imag]
+    foo  = root( indirect_action, guess, tol=tol )
+    Alm = foo.x[0]+1j*foo.x[1]
+    fmin = indirect_action( foo.fun )
+    retry = ( 'not making good progress' in foo.message.lower() ) or ( 'error' in foo.message.lower() )
+
+    # 
+    if s_included:
+        Alm = Alm + s
+
+    # Impose check on equivalence class
+    if __CHECK__:
+        if (l==abs(s)+3):
+            (Alm_,fmin_,retry_,foo_) = sc_london( -aw, l, -m, s,tol=tol, london=london, s_included=s_included, verbose=verbose, adjoint=adjoint, __CHECK__=False  )
+            if linalg.norm(fmin_)<linalg.norm(fmin):
+                (Alm,fmin,retry,foo) = (Alm_,fmin_,retry_,foo_)
+            if verbose:
+                warning('Strange behavior has been noticed for this equivalence class of l and s. We have checked to verify that the optimal root is used here.')
+
+    # 
+    if retry:
+        warning('retry! needed in sc_london')
+
+    return (Alm,fmin,retry,foo)
+
 
 # Compute perturbed Kerr separation constant given a frequency
 def sc_leaver( aw, l, m, s,tol=1e-10, london=True, s_included=False, verbose=False, adjoint=False, __CHECK__=True  ):
@@ -3090,6 +3192,7 @@ def ysprod( jf,
             N=2**9,         # Number of points in theta to use for trapezoidal integration
             theta = None,   # Pre computed theta domain
             use_nr_convention = True,
+            aw=None,
             verbose=False):
 
     #
@@ -3122,7 +3225,7 @@ def ysprod( jf,
     if m_eff==mm:
         #
         y = ylm(s,ll,mm,th,ph)
-        _s = slm(jf,l,m,n,th,ph,s=s,norm=False,__rescale__=False) if not so else slm(jf,l,m,n,th,ph,norm=False,__rescale__=False)*slm(jf,l2,m2,n2,th,ph,norm=False,__rescale__=False,use_nr_convention=use_nr_convention)
+        _s = slm(jf,l,m,n,th,ph,s=s,norm=False,__rescale__=False,aw=aw) if not so else slm(jf,l,m,n,th,ph,norm=False,__rescale__=False,use_nr_convention=use_nr_convention,aw=aw)*slm(jf,l2,m2,n2,th,ph,norm=False,__rescale__=False,use_nr_convention=use_nr_convention,aw=aw)
         ss = _s / sqrt(prod(_s,_s,th))
         ans = prod( y,ss,th ) # note that this is consistent with the matlab implementation modulo the 2*pi convention
     else:
@@ -3581,9 +3684,6 @@ def slm(  jf,               # Dimentionless spin parameter
     #
     from positive import red
     from positive import leaver as lvr
-    # from kerr.formula.ksm2_slm_norm import CC as normcfit
-    # from kerr.formula.ksm2_sc import SC as scfit
-    # from kerr.formula.ksm2_cw import CW as cwfit
     from positive import rgb,lim,leaver_workfunction,cyan,alert,pylim,sYlm,error,internal_ssprod
     from numpy import complex256,cos,ones,mean,isinf,pi,exp,array,ndarray,unwrap,angle,linalg,sqrt,linspace,sin,float128
     from matplotlib.pyplot import subplot,gca,xlabel,ylabel,xlim,ylim,title,figure,sca
@@ -3936,8 +4036,8 @@ class cwbox:
     def map(this,jf):
 
         # Import useful things
-        from kerr import localmins # finds local minima of a 2D array
-        from kerr.basics import alert,green,yellow,cyan,bold,magenta,blue
+        from positive.maths import localmins # finds local minima of a 2D array
+        from positive import alert,green,yellow,cyan,bold,magenta,blue
         from numpy import array,delete,ones
 
         #%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#%%#
@@ -4096,9 +4196,9 @@ class cwbox:
         # Import useful things
         from numpy import complex128,array,linalg,log,exp,abs
         from scipy.optimize import fmin,root,fmin_tnc,fmin_slsqp
-        from kerr.pttools import leaver_workfunction,scberti
-        from kerr.basics import alert,say,magenta,bold,green,cyan,yellow
-        from kerr import localmins # finds local minima of a 2D array
+        from positive.physics import leaver_workfunction,scberti
+        from positive import alert,say,magenta,bold,green,cyan,yellow
+        from positive import localmins # finds local minima of a 2D array
 
         #
         if this.isfundamental():
@@ -4180,7 +4280,7 @@ class cwbox:
     # ************************************************************* #
     def splitcenter(this):
         from numpy import array,zeros,linalg,inf,mean,amax,amin,sqrt
-        from kerr.basics import magenta,bold,alert,error,red,warning,yellow
+        from positive import magenta,bold,alert,error,red,warning,yellow
         mins =  this.__localmin__
         num_solutions = len(array(mins)[0])
         if num_solutions > 1: # Split the box
@@ -4244,7 +4344,7 @@ class cwbox:
     def validatechildren(this):
         #
         from numpy import linalg,array
-        from kerr import alert,yellow,cyan,blue,magenta
+        from positive import alert,yellow,cyan,blue,magenta
         tol = 1e-6
 
         #
@@ -4359,8 +4459,8 @@ class cwbox:
     def lvrgridsolve(this,jf=0,fullopt=False):
         # Import maths
         from numpy import linalg,complex128,ones,array
-        from kerr.pttools import scberti
-        from kerr.pttools import leaver_workfunction
+        from positive.physics import scberti
+        from positive.physics import leaver_workfunction
         from scipy.optimize import fmin,root
         import sys
 
@@ -4440,9 +4540,9 @@ class cwbox:
     # Get guess either from local min, or from extrapolation of past data
     def guess(this,jf,gridguess=None):
         #
-        from kerr.pttools import leaver_workfunction
-        from kerr.basics import alert,magenta,apolyfit
-        from kerr import localmins
+        from positive.physics import leaver_workfunction
+        from positive import alert,magenta,apolyfit
+        from positive import localmins
         from numpy import array,linalg,arange,complex128,allclose,nan
         from scipy.interpolate import InterpolatedUnivariateSpline as spline
         # Get a guess from the localmin
@@ -4527,8 +4627,8 @@ class cwbox:
         # Import Maths
         from numpy import log,exp,linalg,array
         from scipy.optimize import root,fmin,minimize
-        from kerr.pttools import leaver_workfunction
-        from kerr import alert,red,warning
+        from positive.physics import leaver_workfunction
+        from positive import alert,red,warning
 
         # Try using root
         # Define the intermediate work function to be used for this iteration
@@ -4581,8 +4681,8 @@ class cwbox:
         # Import Maths
         from numpy import log,exp,linalg,array
         from scipy.optimize import root,fmin,minimize
-        from kerr.pttools import leaver_workfunction
-        from kerr import alert,red,warning,error
+        from positive.physics import leaver_workfunction
+        from positive import alert,red,warning,error
 
         #
         fun = lambda JF: linalg.norm(  leaver_workfunction( JF,this.l,this.m, solution, s=this.s, adjoint=this.adjoint )  )
@@ -4629,7 +4729,7 @@ class cwbox:
 
         #
         from numpy import array,inf,linalg,sqrt
-        from kerr import alert
+        from positive import alert
 
         #
         children = this.collectchildren()
