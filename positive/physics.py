@@ -2974,7 +2974,9 @@ def sc_london( aw, l, m, s,tol=1e-10, s_included=False, verbose=False, adjoint=F
     
             u = cos(theta)
             S_j(u) = exp( -aw_j * u ) Sum( a[k]Y_k(u) )
-            
+
+    NOTE that this method is equivalent to using sc_leaver(...,london=-4,...).
+
     londonl@mit.edu Nov 2020
     '''
 
@@ -3483,6 +3485,79 @@ def depreciated_slm_dual_set_slow( jf, l, m, n, theta, phi, s=-2, lmax=8, lmin=2
     ans['SGramian'] = u
     return ans
 
+
+#
+def slmy(aw,l,m,theta,phi,s=-2,tol=None,verbose=False,output_iterations=False):
+
+    #
+    from positive import red
+    from positive import leaver as lvr
+    from positive import rgb,lim,leaver_workfunction,cyan,alert,pylim,sYlm,error,internal_ssprod
+    from numpy import complex256, cos, ones, mean, isinf, pi, exp, array, ndarray, unwrap, angle, linalg, sqrt, linspace, sin, float128, inf, isnan
+    from scipy.integrate import trapz
+    from numpy import complex128 as dtyp
+    
+    #
+    sc = sc_leaver( dtyp(aw), l, m, s, verbose=verbose,adjoint=False, london=-4, tol=tol)[0]
+    
+    #
+    k1,k2,alpha,beta,gamma,scale_fun_u,u2v_map,theta2u_map = leaver_ahelper( l,m,s,aw,sc, london=-4, verbose=verbose )
+    
+    #
+    kref = max(abs(s),abs(m))
+    
+    # Variable map for theta
+    u = theta2u_map(theta)
+    
+    #
+    a0 = 1.0 
+    a1 = -beta(0)/alpha(0)
+    
+    #
+    kref = max(abs(s),abs(m))
+    
+    # the sum part
+    done = False
+    Y = a0*sYlm(s,0+kref,m,theta,phi)
+    
+    k = 0; xx = max(abs( Y ))
+    print( l,k+kref,xx)
+    
+    Y = Y + a1*sYlm(s,1+kref,m,theta,phi)
+    
+    k = 1; xx = max(abs( a1*sYlm(s,1+kref,m,theta,phi) ))
+    print( l,k+kref,xx)
+    
+    k = 1
+    kmax = 5e3
+    err = []
+    et2=1e-7 if tol is None else tol
+    last_xx = inf
+    while not done:
+        k += 1
+        j = k-1
+        a2 = -1.0*( beta(j)*a1 + gamma(j)*a0 ) / alpha(j)
+        Yk = sYlm(s,k+kref,m,theta,phi)
+        dY = a2*Yk
+        xx = max(abs( dY ))
+        k_is_too_large = k>kmax
+        done = (k>(l-kref)) and ( (xx<et2) or k_is_too_large )
+        done = done or (xx<et2) or isnan(xx)
+        done = done or (  (k>(l-kref)) and (xx>last_xx) )
+        if not done:
+            Y += dY
+        last_xx = xx
+        a0 = a1
+        a1 = a2
+        print( l,k+kref,xx)
+
+    # together now
+    S = scale_fun_u(u) * Y 
+    S = S / sqrt( prod(S,S,theta) )
+    
+    #
+    return S
+    
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
 ''' Spheroidal Harmonic angular function via leaver's sum FOR m>0 '''
