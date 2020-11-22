@@ -933,7 +933,7 @@ def nchoosek(n,k): return factorial(n)/(factorial(k)*factorial(n-k))
 
 
 # High level function for spin weighted spherical harmonics
-def sYlm(s,l,m,theta,phi,return_mesh=False):
+def sYlm(s,l,m,theta,phi,return_mesh=False,leaver=False):
 
     # Import useful things
     from numpy import array,vstack,ndarray,exp,double,zeros_like
@@ -965,11 +965,15 @@ def sYlm(s,l,m,theta,phi,return_mesh=False):
         Am = lambda M,PHI: exp( 1j*M*PHI )
 
         # IF more than one phi value is given
+        if leaver:
+            Dfun = sDlm_leaver 
+        else:
+            Dfun = sDlm
         if len(phi)>1 :
-            D = sDlm(s,l,m,theta)
+            D = Dfun(s,l,m,theta)
             Y = vstack(  [ D * Am(m,ph) for ph in phi ]  )
         else: # ELSE if a single value is given
-            Y = sDlm(s,l,m,theta) * Am(m,phi)
+            Y = Dfun(s,l,m,theta) * Am(m,phi)
 
     else:
 
@@ -983,13 +987,20 @@ def sYlm(s,l,m,theta,phi,return_mesh=False):
         THETA,PHI = meshgrid(theta,phi)
         return Y,THETA,PHI
 
+#
+def sDlm_leaver(s,l,m,theta):
+    #
+    from positive import slm
+    # Use leaver's representation for the spheroidals at zero oblateness
+    return slm(None,l,m,0,theta,0,s=s,aw=0,use_nr_convention=False)
+
 # Use formula from wikipedia to calculate the harmonic
 # See http://en.wikipedia.org/wiki/Spin-weighted_spherical_harmonics#Calculating
 # for more information.
 def sDlm(s,l,m,theta):
 
     #
-    from numpy import pi,ones,exp,array,double,zeros_like,ones_like,sum
+    from numpy import pi,ones,exp,array,double,zeros_like,ones_like,sum,isnan
     from scipy.special import factorial,comb
     from scipy import sqrt,tan,sin
 
@@ -1037,6 +1048,11 @@ def sDlm(s,l,m,theta):
     #
     if (sum(abs(D.imag)) <= 1e-7).all():
         D = D.real
+        
+    #
+    if isnan(D).any():
+        warning('The standard routine has failed. We will now complute Dlm using a different series solution due to Leaver.')
+        D = slm(None,l,m,0,theta,0,s=s,aw=0)
 
     #
     return D

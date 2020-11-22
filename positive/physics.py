@@ -2409,18 +2409,18 @@ def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False,adjoint=False ):
     # Import usefuls
     from numpy import exp,sqrt,ndarray,cos,array
 
-    # Determine if the user wishes to consider the mixed problem
-    mixed = isinstance(aw,(tuple,list,ndarray))
-    if mixed:
-        mixed = 2==len(aw)
-        if len(aw)>2: error('Iterable aw found, but it is not of length 2 as requirede to consider the mixed eigenvalue problem.')
-    # Interface with leaver_mixed_ahelper
-    if mixed:
-        # Unpack aw values. Note that awj lives in the operator, awk lives in the eigenfunction
-        awj,awk = aw
-        if london==False: london=1
-        alert('Retrieving recurion functions for mixed the problem',verbose=verbose)
-        return leaver_mixed_ahelper( l,m,s,awj,awk,Alm,london=london,verbose=verbose,adjoint=adjoint )
+    # # Determine if the user wishes to consider the mixed problem
+    # mixed = isinstance(aw,(tuple,list,ndarray))
+    # if mixed:
+    #     mixed = 2==len(aw)
+    #     if len(aw)>2: error('Iterable aw found, but it is not of length 2 as requirede to consider the mixed eigenvalue problem.')
+    # # Interface with leaver_mixed_ahelper
+    # if mixed:
+    #     # Unpack aw values. Note that awj lives in the operator, awk lives in the eigenfunction
+    #     awj,awk = aw
+    #     if london==False: london=1
+    #     alert('Retrieving recurion functions for mixed the problem',verbose=verbose)
+    #     return leaver_mixed_ahelper( l,m,s,awj,awk,Alm,london=london,verbose=verbose,adjoint=adjoint )
 
     # If the adjoint equation is of interest, apply the adjoint rule
     if adjoint:
@@ -2968,7 +2968,7 @@ def aw_leaver( Alm, l, m, s,tol=1e-9, london=True, verbose=False, guess=None, aw
 
 
 # Compute perturbed Kerr separation constant given a frequency
-def sc_london( aw, l, m, s,tol=1e-10, s_included=False, verbose=False, adjoint=False, __CHECK__=True  ):
+def sc_london( aw, l, m, s,tol=1e-12, s_included=False, verbose=False, adjoint=False, __CHECK__=True,london=-4  ):
     '''
     Given (aw, l, m, s), compute and return separation constant. This method uses a three-term recursion relaition obtained by applying the following ansatz to the spheroidal problem:
     
@@ -3039,7 +3039,7 @@ def sc_london( aw, l, m, s,tol=1e-10, s_included=False, verbose=False, adjoint=F
 
 
 # Compute perturbed Kerr separation constant given a frequency
-def sc_leaver( aw, l, m, s,tol=1e-10, london=True, s_included=False, verbose=False, adjoint=False, __CHECK__=True  ):
+def sc_leaver( aw, l, m, s,tol=1e-10, london=-4, s_included=False, verbose=False, adjoint=False, __CHECK__=True  ):
     '''
     Given (aw, l, m, s), compute and return separation constant.
     '''
@@ -3059,6 +3059,7 @@ def sc_leaver( aw, l, m, s,tol=1e-10, london=True, s_included=False, verbose=Fal
         v = 1.0
         for p in range(p_min+1):
             v = beta(p) - (alpha(p-1.0)*gamma(p) / v)
+            if v==0: break
         aa = lambda p: -alpha(p-1.0+p_min)*gamma(p+p_min)
         bb = lambda p: beta(p+p_min)
         u,state = lentz(aa,bb,tol)
@@ -3487,69 +3488,235 @@ def depreciated_slm_dual_set_slow( jf, l, m, n, theta, phi, s=-2, lmax=8, lmin=2
 
 
 #
-def slmy(aw,l,m,theta,phi,s=-2,tol=None,verbose=False,output_iterations=False):
+def slm_sequence_backwards(aw,l,m,s=-2,sc=None,verbose=False,span=10):
+    
+    '''
+    unstable for large l values and so should be used in conjunction with slm_sequence_forwards which is also unstable but in the other direction 
+    
+    The relevant spheroidal harmonic ansatz is:
+            u = cos(theta)
+            S_j(u) = exp( -aw_j * u ) Sum( a[k]Y_k(u) )
+    See case london==-4 in leaver_ahelper for recursive formula.
+    '''
 
     #
     from positive import red
     from positive import leaver as lvr
     from positive import rgb,lim,leaver_workfunction,cyan,alert,pylim,sYlm,error,internal_ssprod
-    from numpy import complex256, cos, ones, mean, isinf, pi, exp, array, ndarray, unwrap, angle, linalg, sqrt, linspace, sin, float128, inf, isnan
+    from numpy import complex256, cos, ones, mean, isinf, pi, exp, array, ndarray, unwrap, angle, linalg, sqrt, linspace, sin, float128, inf, isnan, argmax
     from scipy.integrate import trapz
     from numpy import complex128 as dtyp
     
+    # NOTE that london=-4 seems to have the most consistent behavior for all \ell and m
+    if sc is None:
+        sc = sc_leaver( dtyp(aw), l, m, s, verbose=verbose,adjoint=False, london=-4)[0]
+        
     #
-    sc = sc_leaver( dtyp(aw), l, m, s, verbose=verbose,adjoint=False, london=-4, tol=tol)[0]
+    k1,k2,alpha,beta,gamma,scale_fun_u,u2v_map,theta2u_map = leaver_ahelper( l,m,s,aw,sc, london=-4, verbose=verbose )
+    
+    #
+    a = {} 
+    
+    #
+    tol = 1e-10
+    
+    #
+    k_min = 0
+    k_max = l+span
+    k_ell = l-max(abs(s),abs(m))
+    
+    # Initialize sequence
+    k = k_max
+    # a[ k + 1 ] = 0
+    a[ k + 0 ]     = (tol if aw else 0) if k!=k_ell else 1
+    a[ k - 1 ] = - a[k] * beta(k) / gamma(k) if aw else 0
+    
+    #
+    done = False 
+    while not done:
+        
+        #
+        k = k - 1
+        
+        #
+        if aw:
+        
+            #
+            a[k-1] = -( a[k+1]*alpha(k) + a[k]*beta(k) ) / gamma(k)
+            
+            #
+            avals = array(a.values())
+            for p in a:
+                a[p] /= (avals[argmax(abs(avals))] if k>=k_ell else a[k_ell])
+                
+        else:
+            
+            #
+            if (k-1)==k_ell:
+                a[k-1] = 1
+            else:
+                a[k-1] = 0
+            
+        #
+        done = (k-1) == k_min
+    
+    #
+    b = {}
+    kref = max(abs(m),abs(s))
+    for key in a:
+        b[ key+kref ] = a[key]
+        
+    #
+    return b
+
+#
+def slm_sequence_forwards(aw,l,m,s=-2,sc=None,verbose=False,span=10):
+    
+    '''
+    unstable for large l values and so should be used in conjunction with slm_sequence_backwards which is also unstable but in the other direction 
+    
+    The relevant spheroidal harmonic ansatz is:
+            u = cos(theta)
+            S_j(u) = exp( -aw_j * u ) Sum( a[k]Y_k(u) )
+    See case london==-4 in leaver_ahelper for recursive formula.
+    
+    '''
+
+    #
+    from positive import red
+    from positive import leaver as lvr
+    from positive import rgb,lim,leaver_workfunction,cyan,alert,pylim,sYlm,error,internal_ssprod
+    from numpy import complex256, cos, ones, mean, isinf, pi, exp, array, ndarray, unwrap, angle, linalg, sqrt, linspace, sin, float128, inf, isnan, argmax
+    from scipy.integrate import trapz
+    from numpy import complex128 as dtyp
+    
+    # NOTE that london=-4 seems to have the most consistent behavior for all \ell and m
+    if sc is None:
+        sc = sc_leaver( dtyp(aw), l, m, s, verbose=verbose,adjoint=False, london=-4)[0]
+        
+    #
+    k1,k2,alpha,beta,gamma,scale_fun_u,u2v_map,theta2u_map = leaver_ahelper( l,m,s,aw,sc, london=-4, verbose=verbose )
+    
+    #
+    a = {} 
+    
+    #
+    tol = 1e-10
+    
+    #
+    k_min = 0
+    k_max = l+span
+    k_ell = l-max(abs(s),abs(m))
+    
+    # Initialize sequence
+    k = 0
+    a[ k + 0 ] = 1.0 if aw else (1 if k==k_ell else 0)
+    a[ k + 1 ] = - a[k] * beta(k) / alpha(k) if aw else (1 if (k+1)==k_ell else 0)
+    
+    #
+    done = False 
+    while not done:
+        
+        #
+        k = k + 1
+        
+        #
+        if aw:
+            
+            #
+            a[k+1] = -( a[k]*beta(k) + a[k-1]*gamma(k) ) / alpha(k)
+            
+            #
+            avals = array(a.values())
+            for p in a:
+                a[p] /= (avals[argmax(abs(avals))] if k<=k_ell else a[k_ell])
+                
+        else:
+            
+            #
+            if (k+1)==k_ell:
+                a[k+1] = 1
+            else:
+                a[k+1] = 0
+            
+        #
+        done = (k+1) == k_max
+    
+    #
+    b = {}
+    kref = max(abs(m),abs(s))
+    for key in a:
+        b[ key+kref ] = a[key]
+        
+    #
+    return b
+
+#
+def slm_sequence(aw,l,m,s=-2,sc=None,verbose=False,span=10):
+    
+    #
+    from numpy import sort 
+    
+    #
+    a = slm_sequence_forwards( aw,l,m,s=s,sc=sc,verbose=verbose,span=span)
+    b = slm_sequence_backwards(aw,l,m,s=s,sc=sc,verbose=verbose,span=span)
+    
+    #
+    c = {} 
+    keys = sort(a.keys()) 
+    for key in keys: 
+        if key <= l :
+            c[key] = a[key]
+        else:
+            c[key] = b[key]
+    
+    #
+    return c
+
+#
+def slmy(aw,l,m,theta,phi,s=-2,tol=None,verbose=False,output_iterations=False,sc=None):
+    
+    '''
+    Calculate spheroidal harmonic using ansatz:
+            u = cos(theta)
+            S_j(u) = exp( -aw_j * u ) Sum( a[k]Y_k(u) )
+    See case london==-4 in leaver_ahelper for recursive formula.
+    NOTE that this method does not use NR conventions.
+    londonl@mit.edu/2020
+    '''
+
+    #
+    from positive import red
+    from positive import leaver as lvr
+    from positive import rgb,lim,leaver_workfunction,cyan,alert,pylim,sYlm,error,internal_ssprod
+    from numpy import complex256, cos, ones, mean, isinf, pi, exp, array, ndarray, unwrap, angle, linalg, sqrt, linspace, sin, float128, inf, isnan, sort
+    from scipy.integrate import trapz
+    from numpy import complex128 as dtyp
+    
+    # NOTE that london=-4 seems to have the most consistent behavior for all \ell and m
+    if sc is None:
+        sc = sc_leaver( dtyp(aw), l, m, s, verbose=verbose,adjoint=False, london=-4)[0]
     
     #
     k1,k2,alpha,beta,gamma,scale_fun_u,u2v_map,theta2u_map = leaver_ahelper( l,m,s,aw,sc, london=-4, verbose=verbose )
     
     #
-    kref = max(abs(s),abs(m))
+    es = 1e-7
+    theta[ theta==0 ] = es 
+    theta[ theta==pi] = pi-es
     
     # Variable map for theta
     u = theta2u_map(theta)
+
+    # Precompute the series precactors
+    a = slm_sequence(aw,l,m,s=s,sc=sc)
     
-    #
-    a0 = 1.0 
-    a1 = -beta(0)/alpha(0)
-    
-    #
-    kref = max(abs(s),abs(m))
-    
-    # the sum part
-    done = False
-    Y = a0*sYlm(s,0+kref,m,theta,phi)
-    
-    k = 0; xx = max(abs( Y ))
-    print( l,k+kref,xx)
-    
-    Y = Y + a1*sYlm(s,1+kref,m,theta,phi)
-    
-    k = 1; xx = max(abs( a1*sYlm(s,1+kref,m,theta,phi) ))
-    print( l,k+kref,xx)
-    
-    k = 1
-    kmax = 5e3
-    err = []
-    et2=1e-7 if tol is None else tol
-    last_xx = inf
-    while not done:
-        k += 1
-        j = k-1
-        a2 = -1.0*( beta(j)*a1 + gamma(j)*a0 ) / alpha(j)
-        Yk = sYlm(s,k+kref,m,theta,phi)
-        dY = a2*Yk
-        xx = max(abs( dY ))
-        k_is_too_large = k>kmax
-        done = (k>(l-kref)) and ( (xx<et2) or k_is_too_large )
-        done = done or (xx<et2) or isnan(xx)
-        done = done or (  (k>(l-kref)) and (xx>last_xx) )
-        if not done:
-            Y += dY
-        last_xx = xx
-        a0 = a1
-        a1 = a2
-        print( l,k+kref,xx)
+    # Compute the theta dependence using the precomputed coefficients
+    Y = 0
+    for k in sort(a.keys()):
+        Yk = sYlm(s,k,m,theta,phi,leaver=True)
+        dY = a[k]*Yk
+        Y += dY
 
     # together now
     S = scale_fun_u(u) * Y 
@@ -3665,7 +3832,7 @@ def slpm( jf,               # Dimentionless spin parameter
     # initial series values
     a0 = 1.0 # a choice, setting the norm of Slm
 
-    a1 = -beta(0)/alpha(0)
+    a1 = -a0*beta(0)/alpha(0)
 
     C = 1.0
     C = C*((-1)**(max(-m,-s)))*((-1)**l)
@@ -3765,6 +3932,11 @@ def slm(  jf,               # Dimentionless spin parameter
     from matplotlib.pyplot import plot as plot_
     # from scipy.misc import factorial as f
     from scipy.integrate import trapz
+    
+    #
+    if london==-4:
+        warning('london=-4 is incompoatible with this function. We will set london=True')
+        london=True
 
     #
     if m<0:
