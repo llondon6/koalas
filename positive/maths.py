@@ -1052,6 +1052,7 @@ def sDlm(s,l,m,theta):
     #
     if isnan(D).any():
         warning('The standard routine has failed. We will now complute Dlm using a different series solution due to Leaver.')
+        from positive.physics import leaver
         D = slm(None,l,m,0,theta,0,s=s,aw=0)
 
     #

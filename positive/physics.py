@@ -2968,7 +2968,7 @@ def aw_leaver( Alm, l, m, s,tol=1e-9, london=True, verbose=False, guess=None, aw
 
 
 # Compute perturbed Kerr separation constant given a frequency
-def sc_london( aw, l, m, s,tol=1e-12, s_included=False, verbose=False, adjoint=False, __CHECK__=True,london=-4  ):
+def sc_london( aw, l, m, s,tol=1e-12, s_included=False, verbose=False, adjoint=False, __CHECK__=True,london=-4,guess = None  ):
     '''
     Given (aw, l, m, s), compute and return separation constant. This method uses a three-term recursion relaition obtained by applying the following ansatz to the spheroidal problem:
     
@@ -3012,7 +3012,7 @@ def sc_london( aw, l, m, s,tol=1e-12, s_included=False, verbose=False, adjoint=F
     # indirect_action = lambda STATE: log( 1.0 + abs( array(  action(STATE[0]+1j*STATE[1])  ) ) )
     aw_guess = aw if isinstance(aw,(float,complex)) else aw
     Alm_guess = scberti(aw_guess,l,m,s,adjoint=False)
-    guess = [Alm_guess.real,Alm_guess.imag]
+    guess = [Alm_guess.real,Alm_guess.imag] if guess is None else guess
     foo  = root( indirect_action, guess, tol=tol )
     Alm = foo.x[0]+1j*foo.x[1]
     fmin = indirect_action( foo.fun )
@@ -3674,6 +3674,46 @@ def slm_sequence(aw,l,m,s=-2,sc=None,verbose=False,span=10):
     return c
 
 #
+def ysprody(aw,ly,ls,m,s=-2,sc=None,sequence=None):
+    '''
+    Calculate spherical spheroidal inner-products using slm_sequence.
+    ~ londonl@mit.edu 2020 
+    '''
+    
+    #
+    from numpy import linspace,pi,cos,exp
+    
+    # NOTE that london=-4 seems to have the most consistent behavior for all \ell and m
+    if sc is None:
+        sc = sc_leaver( dtyp(aw), ls, m, s, verbose=verbose,adjoint=False, london=-4)[0]
+        
+    # Precompute the series precactors
+    if sequence is None:
+        a = slm_sequence(aw,ls,m,s=s,sc=sc)
+    else:
+        a = sequence
+    
+    #
+    theta = linspace(0,pi,1024)
+    u = cos(theta)
+    Yp = sYlm(s,ly,m,theta,0,leaver=True)
+    E = exp(aw*u)
+    
+    #
+    ys = 0
+    for lj in a.keys():
+        
+        #
+        Yj  = sYlm( s,lj,m,theta,0,leaver=True )
+        Qpj = 2*pi*prod( Yp, E*Yj, -u, WEIGHT_FUNCTION=1 )
+        
+        #
+        ys += Qpj * a[lj]
+        
+    #
+    return ys
+
+#
 def slmy(aw,l,m,theta,phi,s=-2,tol=None,verbose=False,output_iterations=False,sc=None):
     
     '''
@@ -3720,6 +3760,7 @@ def slmy(aw,l,m,theta,phi,s=-2,tol=None,verbose=False,output_iterations=False,sc
 
     # together now
     S = scale_fun_u(u) * Y 
+    # normalize
     S = S / sqrt( prod(S,S,theta) )
     
     #
@@ -3744,6 +3785,7 @@ def slpm( jf,               # Dimentionless spin parameter
           aw = None,        # when not none, the separation constant will be found automatically
           adjoint=False,
           tol=None,
+          sc=None,
           verbose = False ):# Be verbose
 
     #
@@ -3790,7 +3832,8 @@ def slpm( jf,               # Dimentionless spin parameter
 
             #
             from numpy import complex128 as dtyp
-            sc = sc_leaver( dtyp(aw), l, m, s, verbose=verbose, adjoint=False, london=london)[0]
+            if sc is None:
+                sc = sc_leaver( dtyp(aw), l, m, s, verbose=verbose, adjoint=False, london=london)[0]
 
     else:
 
@@ -3803,8 +3846,9 @@ def slpm( jf,               # Dimentionless spin parameter
     sc2 = sc_leaver( dtyp(aw), l, m, s, verbose=verbose,adjoint=False, london=london, tol=tol)[0]
     if abs(sc2-sc)>1e-3:
         print('aw  = '+str(aw))
-        print('sc  = '+str(sc))
-        print('sc2 = '+str(sc2))
+        print('sc_input  = '+str(sc))
+        print('sc_leaver = '+str(sc2))
+        print('sc_london = '+str(sc_london( aw,l,m,s )[0]))
         print('err = '+str(abs(sc2-sc)))
         warning('input separation constant not consistent with angular constraint, so we will use a different one to give you an answer that converges.')
         sc = sc2
@@ -3913,6 +3957,7 @@ def slm(  jf,               # Dimentionless spin parameter
           london = False,
           use_nr_convention = True, # Toggle whether to use NR convention for multipoles
           tol = None,
+          sc=None,
           verbose = False ):# Be verbose
 
     # Setup plotting backend
@@ -3948,9 +3993,9 @@ def slm(  jf,               # Dimentionless spin parameter
             aw = -aw
             m = -m
             s = -s
-            S,yy,err = slpm( jf, l, m, n, theta, phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw, tol=tol )
+            S,yy,err = slpm( jf, l, m, n, theta, phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw, tol=tol, sc=sc )
     else:
-        S,yy,err = slpm( jf, l, m, n, theta, phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw, tol=tol )
+        S,yy,err = slpm( jf, l, m, n, theta, phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw, tol=tol, sc=sc )
 
     #
     if plot:
