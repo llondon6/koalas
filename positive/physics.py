@@ -3174,7 +3174,7 @@ def scberti(acw, l,m,s=-2,adjoint=False):
 
 
 #
-def prod(A,B,TH,WEIGHT_FUNCTION=None):
+def prod(A,B,TH,WEIGHT_FUNCTION=None,k=5):
     from numpy import sin,pi
     if WEIGHT_FUNCTION is None:
         WEIGHT_FUNCTION = 2*pi*sin(TH)
@@ -3182,7 +3182,7 @@ def prod(A,B,TH,WEIGHT_FUNCTION=None):
     RE_INTGRND = INTGRND.real
     IM_INTGRND = INTGRND.imag
     TH0,TH1 = lim(TH)
-    return spline(TH,RE_INTGRND).integral(TH0,TH1) + 1j*spline(TH,IM_INTGRND).integral(TH0,TH1)
+    return spline(TH,RE_INTGRND,k=k).integral(TH0,TH1) + 1j*spline(TH,IM_INTGRND,k=k).integral(TH0,TH1)
 
 # ------------------------------------------------------------------ #
 # Calculate the inner-product between a spherical and spheroidal harmonic
@@ -3674,41 +3674,97 @@ def slm_sequence(aw,l,m,s=-2,sc=None,verbose=False,span=10):
     return c
 
 #
-def ysprody(aw,ly,ls,m,s=-2,sc=None,sequence=None):
+def ysprod_sequence_helper(aw,ly,slm_sequence_dict,ylm_dict):
     '''
     Calculate spherical spheroidal inner-products using slm_sequence.
     ~ londonl@mit.edu 2020 
     '''
     
     #
-    from numpy import linspace,pi,cos,exp
+    from numpy import linspace,pi,cos,exp,sort,array,zeros_like
+    
+    #
+    theta = linspace(0,pi,1024)
+    u = cos(theta)
+    E = exp(aw*u)
+    
+    #
+    a = slm_sequence_dict
+    lvals = sort(a.keys())
+    a_arr = array( [ a[ll] for ll in lvals ] )
+    
+    #
+    b_arr = zeros_like(a_arr)
+    for k,lj in enumerate(lvals):
+        
+        #
+        Yp = ylm_dict[ly]
+        Yj = ylm_dict[lj]
+        Qpj = 2*pi*prod( Yp, E*Yj, -u, WEIGHT_FUNCTION=1 )
+        
+        #
+        b_arr[k] = Qpj #if abs(a_arr[k])>1e-10 else 0
+    
+    #
+    ys = sum( a_arr*b_arr )
+        
+    #
+    return ys
+#
+def ysprod_sequence(aw,l,m,s=-2,sc=None,sequence=None):
+    '''
+    Calculate a sequence of spherical-spheroidal inner-products using slm_sequence.
+    ~ londonl@mit.edu 2020 
+    '''
+    
+    #
+    from numpy import linspace,pi,cos,exp,sort,array,zeros_like,sqrt
     
     # NOTE that london=-4 seems to have the most consistent behavior for all \ell and m
     if sc is None:
-        sc = sc_leaver( dtyp(aw), ls, m, s, verbose=verbose,adjoint=False, london=-4)[0]
+        sc = sc_leaver( dtyp(aw), l, m, s, verbose=verbose,adjoint=False, london=-4)[0]
         
     # Precompute the series precactors
     if sequence is None:
-        a = slm_sequence(aw,ls,m,s=s,sc=sc)
+        a = slm_sequence(aw,l,m,s=s,sc=sc)
     else:
         a = sequence
     
     #
     theta = linspace(0,pi,1024)
     u = cos(theta)
-    Yp = sYlm(s,ly,m,theta,0,leaver=True)
     E = exp(aw*u)
     
     #
-    ys = 0
-    for lj in a.keys():
-        
-        #
-        Yj  = sYlm( s,lj,m,theta,0,leaver=True )
-        Qpj = 2*pi*prod( Yp, E*Yj, -u, WEIGHT_FUNCTION=1 )
-        
-        #
-        ys += Qpj * a[lj]
+    lvals = sort(a.keys())
+    a_arr = array( [ a[ll] for ll in lvals ] )
+    ylm_dict = { k:sYlm( s,k,m,theta,0,leaver=True ) for k in lvals }
+    
+    #
+    ys_dict = {k:ysprod_sequence_helper(aw,k,a,ylm_dict) for k in lvals}
+    
+    #
+    kmax = 0
+    for k in sort(ys_dict.keys()):
+        if k>l: 
+            if ys_dict[k]>ys_dict[k-1]:
+                kmax = k#-1 
+                break     
+    #
+    ys_dict = { k:ys_dict[k] for k in ys_dict if k<kmax }
+    
+    #
+    lvals = sort(ys_dict.keys())
+    ys_array = array( [ ys_dict[k] for k in lvals ] )
+    
+    #
+    norm_cont = sqrt( sum(ys_array * ys_array.conj()) )
+    
+    #
+    ys_array /= norm_cont
+    
+    #
+    ys = { lvals[k]:ys_array[k] for k in range(len(lvals)) }
         
     #
     return ys

@@ -218,3 +218,29 @@ def error(msg,fname=None):
         _msg = bold('('+red(fname+'!!')+')')+'>> '+msg
     # Treat all as raise AssertionErrors
     raise AssertionError( _msg )
+
+
+#
+def parts(dict_object):
+    '''
+    Given dictionary with sortable keys [a1,a2,a3 ...] and values [v1,v2,v3 ...]
+    i.e. dict_object = { a1:v1, a2:v2, ... }
+    Output a tuple with [a1,a2,a3 ...] and [v1,v2,v3 ...]
+    i.e. [a1,a2,a3 ...], [ v1,v2,v3 ...] 
+    '''
+    
+    # Import usefuls
+    from numpy import sort, array
+    
+    #
+    if not isinstance(dict_object,dict):
+        error('First input must be dictionary.')
+    
+    #
+    keys = sort(dict_object.keys())
+    
+    #
+    vals = array( [ dict_object[k] for k in keys ] )
+    
+    #
+    return keys,vals
