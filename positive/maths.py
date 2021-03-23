@@ -182,7 +182,7 @@ class smooth:
             width += 1
 
         #
-        # print '>> ',width,polynomial_order
+        # print '>> ',width,polynomial_order,this.scalar_range.shape
         ans = savgol( this.scalar_range, width, polynomial_order )
         return ans
 

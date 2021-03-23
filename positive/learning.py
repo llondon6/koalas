@@ -332,6 +332,11 @@ class mvrfit:
         # Extract desired normal fit
         from scipy.stats import norm
         mu,std = norm.fit( res )
+        
+        #
+        from numpy import isinf 
+        mask = ~isinf(res)
+        res = res[mask]
 
         # Plot histogram
         n, bins, patches = ax.hist( res, 20,normed=True, facecolor=0.92*ones((3,)) if color is 'r' else color, alpha=alpha )
@@ -563,15 +568,15 @@ class mvrfit:
         ax.scatter(this.domain[:,0],this.domain[:,1],_map(this.scalar_range),marker='o',s=35,color='k',label='Data',zorder=1, facecolors='none')
 
         # Plot the raw data points
-        ax.scatter(this.domain[:,0],this.domain[:,1],_map(this.range),marker='o',color='k',label='Data',zorder=1, facecolors='none')
+        ax.scatter(this.domain[:,0],this.domain[:,1],_map(this.scalar_range),marker='o',color='k',label='Data',zorder=1, facecolors='none')
 
         xlabel( '$%s$'%this.labels['latex'][1][0] if len(list(this.labels.keys())) else '$x_0$' )
         ylabel( '$%s$'%this.labels['latex'][1][1] if len(list(this.labels.keys())) else '$x_1$' )
         # ylabel( '$x_1$' )
         ax.set_zlabel( '$f(x_0,x_1)$' )
         ax.set_zlabel( '$%s$'%this.labels['latex'][0] if len(list(this.labels.keys())) else '$f(x_0,x_1)$' )
-        dz = (-amin(_map(this.range))+amax(_map(this.range)))*0.05
-        ax.set_zlim( amin(_map(this.range))-dz, amax(_map(this.range))+dz )
+        dz = (-amin(_map(this.scalar_range))+amax(_map(this.scalar_range)))*0.05
+        ax.set_zlim( amin(_map(this.scalar_range))-dz, amax(_map(this.scalar_range))+dz )
         # title('$%s$'%this)
         legend(frameon=False)
 
@@ -827,7 +832,7 @@ def gmvrfit( domain,
     last_min_est,last_d_est = inf,inf
     for deg in degree_space:
         # Let the people know
-        if verbose: alert('Now working deg = %i' % deg)
+        if verbose: alert('Now working net monomial degree %i' % deg)
         #
         a_bulk = [ s for s in maxbulk if len(s)<=deg ] if deg>0 else mvfilter( mvsyms(domain_dimension,deg), maxdeg_list )
         b_bulk = [ s for s in maxbulk if len(s)<=deg and s!='K' ]
@@ -1716,6 +1721,9 @@ class mvpolyfit:
         mu,std = norm.fit( res )
 
         # Plot histogram
+        from numpy import isinf
+        mask = ~isinf(res)
+        res = res[mask]
         n, bins, patches = ax.hist( res, int(max([len(res)/5,3])), facecolor=0.92*ones((3,)), alpha=1.0 )
 
         # Plot estimate normal distribution
@@ -2508,6 +2516,7 @@ def romline(  domain,           # Domain of Map
               N,                # Number of Lines to keep for final linear interpolator
               positive=True,   # Toggle to use positive greedy algorithm ( where rom points are added rather than removed )
               keep_ends = False,
+              __force_N__=False,
               verbose = False ):
 
     # Use a linear interpolator, and a reverse greedy process
@@ -2522,7 +2531,7 @@ def romline(  domain,           # Domain of Map
     r = (R-R0)/( R1 if abs(R1)!=0 else 1 )
     
     #
-    if N <= 2:
+    if (N <= 2) and ( not __force_N__ ):
         warning('N is %s, but it must be less than or equal to 3. We have set N=3. This course is often desired in cases where N=2 is naively given.'%(red(str(N))) )
         N=3
 

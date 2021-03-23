@@ -89,7 +89,7 @@ def rfind( path , pattern = None, verbose = False, ignore = None ):
 
     #
     import fnmatch
-    import os
+    import os,inspect
     # Create a string with the current process name
     thisfun = inspect.stack()[0][3]
 
@@ -203,19 +203,19 @@ def warning(msg,fname=None,output_string=False,heading=None,header=None,pattern=
         return _msg
 
 # Error wrapper
-def error(msg,fname=None):
-    #
-    if fname is None:
-        fname = thisfun()
-    #
-    import sys,os
+def error(msg,_fname=None):
+    # #
+    # if _fname is None:
+    #     _fname = thisfun()
+    import sys,os,inspect
     exc_type, exc_obj, exc_tb = sys.exc_info()
+    _fname = inspect.stack()[0][3]
     #
     if exc_type is not None:
         flname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        _msg = bold('('+red(fname+'!!,%s,@%i'%(flname,exc_tb.tb_lineno))+')>> ')+msg
+        _msg = bold('('+red(_fname+'!!,%s,@%i'%(flname,exc_tb.tb_lineno))+')>> ')+msg
     else:
-        _msg = bold('('+red(fname+'!!')+')')+'>> '+msg
+        _msg = bold('('+red(_fname+'!!')+')')+'>> '+msg
     # Treat all as raise AssertionErrors
     raise AssertionError( _msg )
 
