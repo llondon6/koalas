@@ -1685,6 +1685,181 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
 ###
 
 
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+''' Class for single QNM Objects '''
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+class qnmobj:
+    
+    # Initialize the object
+    def __init__(this,M,a,l,m,n=0,p=None,s=-2,verbose=False,calc_slm=True,use_nr_convention=True):
+
+        # Import needed things
+        from positive.physics import leaver
+        from numpy import array
+
+        # ----------------------------------------- #
+        #              Validate inputs              #
+        # ----------------------------------------- #
+        this.__validate_inputs__(M,a,l,m,n,p,s,verbose,use_nr_convention)
+        
+        #
+        this.cw,this.sc = leaver( this.a,
+                                  this.l,
+                                  this.m,
+                                  this.n,
+                                  p=this.p if this.__use_nr_convention__ else None,
+                                  Mf=this.M,
+                                  s=s,
+                                  use_nr_convention=this.__use_nr_convention__)
+                                  
+        #
+        this.oblateness = this.aw = this.acw = this.a * this.cw
+        
+        #
+        if calc_slm: this.__calc_slm__()
+
+    # Validate inputs
+    def __validate_inputs__(this,M,a,l,m,n,p,s,verbose,use_nr_convention):
+        
+        # Testing
+        if M<0:
+            error('BH mass must be positive')
+        if a<0:
+            error('This object uses the convention that a>0. To select the retrograde QNM branch, set p=-1')
+        if not isinstance(l,int):
+            error('ell must be integer')
+        if not isinstance(m,int):
+            error('m must be integer')
+        if not isinstance(n,int):
+            error('n must be integer')
+        if use_nr_convention and (p is None):
+            error('NR convention being used, but p has not been defined to be +1 for prograde modes, or -1 for retrograde ones. Please define p.')
+        if use_nr_convention:
+            alert(yellow('Using NR convention')+' for organizing solution space.')
+            if not (p in [-1,1]):
+                error('p must be +1 or -1')
+        else:
+            alert(yellow('Not using NR convention')+' for organizing solution space.')
+        if abs(s) != 2:
+            error('This class currently only supports |s|=2')
+        if abs(m)>l:
+            error('|m|>l and it should not be du to the structure of Teukolsk\'s angular equation')
+        if abs(a)>1:
+            error('Kerr parameter must be non-extremal')
+        if abs(a)>(1-1e-3):
+            warning('You have selected a nearly extremal spin. Please take significant care to ensure that results make sense.')
+        if l<abs(s):
+            error('l must be >= |s| du to the structure of Teukolsk\'s angular equation')
+            
+        # Assign basic class properties from inputs
+        this.M,this.a,this.verbose,this.z,this.s = M,a,verbose,(l,m,n,p),s
+        this.l,this.m,this.n,this.p = this.z
+        
+        #
+        this.__use_nr_convention__ = use_nr_convention
+
+    # Return the spheriodal harmonic at theta ans phi for this QNM
+    def __calc_slm__(this,theta=None,phi=None,num_theta=512,plot=False):
+        
+        #
+        from positive import slm
+        from numpy import linspace,pi,mean,median,sqrt,sin
+        
+        # Define domain 
+        eps = 1e-10
+        this.__theta__ = linspace(0+eps,pi-eps,num_theta) if theta==None else theta
+        this.__phi__   = 0 if phi==None else phi
+        
+        # # Calc and store harmonic as function of theta
+        # this.slm = slm( None,
+        #                 this.l,
+        #                 this.m,
+        #                 this.n,
+        #                 this.__theta__,
+        #                 this.__phi__,
+        #                 s=this.s,
+        #                 p=this.p,
+        #                 norm=False,
+        #                 __aw_sc__ = ( this.aw, this.sc ),
+        #                 use_nr_convention=this.__use_nr_convention__ )
+        
+        
+        #
+        this.slm,_,_ = slm_helper( this.aw, this.l, this.m, this.n, this.__theta__, this.__phi__, this.s, sc=this.sc, tol=None, verbose=False )
+                        
+        # Normalize NOTE that this includes the factor of 2*pi from the phi integral
+        this.slm /= sqrt(  prod(this.slm,this.slm,this.__theta__,WEIGHT_FUNCTION=2*pi*sin(this.__theta__))  )
+                        
+        # Manually verify that output satisfies Tk's angular equation 
+        this.__slm_test_quantity__ = tkangular( this.slm, this.__theta__, this.oblateness, this.m, s=this.s, separation_constant=this.sc)
+        
+        #
+        test_number = median(abs(this.__slm_test_quantity__))
+        if test_number > 1e-6:
+            alert('test_number = %f'%test_number)
+            warning('There may be a bug: the calculated spheroidal harmonic does not appear to solve Teukolsky\'s angular equation. To diagnose, please try this.plot_slm() or call this function with plot=True.')
+        
+        #
+        if plot: this.plot_slm()
+            
+    #
+    def plot_slm(this,ax=None,line_width=1,plot_scale=0.8,colors=None,label=None,show_legend=True,ls='-'):
+          
+        #
+        from matplotlib.pyplot import plot,xlabel,ylabel,show,figure,figaspect,subplots,yscale,gca,sca,xlim,ylim,grid,title,legend
+        from numpy import unwrap,angle,pi
+        
+        #
+        if ax is None:
+            fig,ax = subplots( 1,3, figsize=plot_scale*1.5*figaspect(0.618 * 0.45), sharex=True )
+            ax = ax.flatten()
+            
+        #
+        if colors is None:
+            colors = ['dodgerblue','orange','r']
+            
+        #
+        if label is None:
+            if this.p:
+                label = r'$(\ell,m,n,p) = %s$'%str(this.z)
+            else:
+                label = r'$(\ell,m,n) = %s$'%str(this.z[:-1])
+        
+        #
+        sca( ax[0] )
+        plot( this.__theta__, abs(this.slm),lw=line_width,color=colors[0], label=label,ls=ls )
+        xlim(lim(this.__theta__))
+        xlabel(r'$\theta$')
+        title(r'$|S_{\ell m n p}|$')
+        if show_legend: legend()
+        
+        #
+        sca( ax[1] )
+        pha = unwrap(angle(this.slm))
+        plot( this.__theta__, pha, color=colors[1],lw=line_width, label=label, ls=ls )
+        xlabel(r'$\theta$')
+        title(r'$\arg(S_{\ell m n p})$')
+        if show_legend: legend()
+        
+        #
+        sca( ax[2] )
+        plot( this.__theta__, abs(this.__slm_test_quantity__), color=colors[2],lw=line_width, label=label, ls=ls )
+        yscale('log')
+        grid(True)
+        xlabel(r'$\theta$')
+        title(r'$\mathcal{D}_{\theta}^2 S_{\ell m n p} $')
+        if show_legend: legend()
+        
+        #
+        return ax
+            
+
+
+
+###
+
+
 def leaver_dev( a, l, m, n, s, M=1.0, verbose=False, solve=False ):
 
     # Import usefuls
@@ -1723,6 +1898,8 @@ def leaver( jf,                     # Dimensionless BH Spin
             p = None,               # Parity Number for explicit selection of prograde (p=1) or retrograde (p=-1) solutions.
             s = -2,                 # Spin weight
             Mf = 1.0,               # BH mass. NOTE that the default value of 1 is consistent with the tabulated data. (Geometric units ~ M_bare / M_ADM )
+            use_nr_convention=False, # 
+            full_output=False,
             verbose = False ):      # Toggle to be verbose
 
     #
@@ -1731,15 +1908,19 @@ def leaver( jf,                     # Dimensionless BH Spin
     #
     if isinstance(jf,(tuple,list,ndarray)):
         #
-        cw,sc = array( [ __leaver_helper__(jf_, l, m, n, p , s, Mf, verbose) for jf_ in jf ] ).T
-        return cw,sc
+        if full_output:
+            cw,sc,aw = array( [ __leaver_helper__(jf_, l, m, n, p , s, Mf, verbose=verbose,use_nr_convention=use_nr_convention,full_output=True) for jf_ in jf ] ).T
+            return cw,sc
+        else:
+            cw,sc = array( [ __leaver_helper__(jf_, l, m, n, p , s, Mf, verbose=verbose,use_nr_convention=use_nr_convention) for jf_ in jf ] ).T
+            return cw,sc
 
     else:
         #
-        return __leaver_helper__(jf, l, m, n, p , s, Mf, verbose)
+        return __leaver_helper__(jf, l, m, n, p , s, Mf, verbose=verbose,use_nr_convention=use_nr_convention,full_output=full_output)
 
 
-def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = False):
+def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = False,use_nr_convention=False,full_output=False):
 
 
     # Import useful things
@@ -1758,19 +1939,47 @@ def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = F
     if abs(s) != 2: raise ValueError('This function currently handles on cases with |s|=2, but s=%i was given.'%s)
     # Validate l input
     # Validate m input
+    
+    #
+    if not use_nr_convention:
+        if not (p is None):
+            error('When not using the NR convention, p must remain None. Instead p is %i.'%p)
+    else:
+        if p is None:
+            error('When using NR convention, p must be either 1 or -1.')
 
-    #%%%%%%%%%%%%%%%%%%%%%%%%%# NEGATIVE SPIN HANDLING #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
-    # Define a parity value to be used later:
-    # NOTE that is p>0, then the corotating branch will be loaded, else if p<0, then the counter-rotating solution branch will be loaded.
-    if p is None:
-        p = sign(jf) + ( jf==0 )
-    # NOTE that the norm of the spin input will be used to interpolate the data as the numerical data was mapped according to jf>=0
-    # Given l,m,n,sign(jf) create a RELATIVE file string from which to load the data
+    # #%%%%%%%%%%%%%%%%%%%%%%%%%# NEGATIVE SPIN HANDLING #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+    # # Define a parity value to be used later:
+    # # NOTE that is p>0, then the corotating branch will be loaded, else if p<0, then the counter-rotating solution branch will be loaded.
+    # if p is None:
+    #     p = sign(jf) + ( jf==0 )
+    # # NOTE that the norm of the spin input will be used to interpolate the data as the numerical data was mapped according to jf>=0
+    # # Given l,m,n,sign(jf) create a RELATIVE file string from which to load the data
+    
+    # ENFORCE positive spin convention
+    if jf<0:
+        error('we will use the spin>0 convention. to select a retrograde mode, please set p=-1')
+    
     cmd = parent(os.path.realpath(__file__))
     #********************************************************************************#
-    m_label = 'm%i'%abs(m) if (p>=0) or (abs(m)==0) else 'mm%i'%abs(m)
+    if use_nr_convention:
+        if p < 0:
+            m_label = 'mm%i'%abs(m)
+        else:
+            m_label = 'm%i'%abs(m)
+    else:
+        if m < 0:
+            m_label = 'mm%i'%abs(m)
+        else:
+            m_label = 'm%i'%abs(m)
+    # m_label = 'm%i'%abs(m) if (p>=0) or (abs(m)==0) else 'mm%i'%abs(m)
     #********************************************************************************#
-    data_location = '%s/data/kerr/l%i/n%il%i%s.dat' % (cmd,l,n,l,m_label)
+    data_location = os.path.join( cmd,'data/kerr/l%i/n%il%i%s.dat' % (l,n,l,m_label) )
+    if use_nr_convention:
+        alert(magenta('Using NR convention.'))
+    else:
+        alert(magenta('NOT using NR convention.'))
+    alert('Loading: %s'%cyan(data_location))
     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
     # Validate data location
@@ -1781,9 +1990,8 @@ def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = F
 
     # Extract spin, frequencies and separation constants
     JF = data[:,0]
-    CW = data[:,1] - 1j*data[:,2] # NOTE: The minus sign here sets a phase convention
-                          # where exp(+1j*cw*t) rather than exp(-1j*cw*t)
-    CS = data[:,3] - 1j*data[:,4] # NOTE: There is a minus sign here to be consistent with the line above
+    CW = data[:,1] + 1j*data[:,2] 
+    CS = data[:,3] + 1j*data[:,4] 
 
     # Validate the jf input
     njf = abs(jf) # NOTE that the calculations were done using the jf>=0 convention
@@ -1806,29 +2014,70 @@ def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = F
     # If needed, use symmetry relationships to get correct output.
     def qnmflip(CW,CS):
         return -cw.conj(),cs.conj()
-    if m<0:
-        cw,cs =  qnmflip(cw,cs)
-    if p<0:
-        cw,cs =  qnmflip(cw,cs)
-
-    # NOTE that the signs must be flipped one last time so that output is
-    # directly consistent with the argmin of leaver's equations at the requested spin values
-    cw = cw.conj()
-    cs = cs.conj()
-
-    # Here we scale the frequency by the BH mass according to the optional Mf input
-    cw /= Mf
+        
+    # if use_nr_convention:
+    #     if m<0:
+    #         cw = -cw.conj()
+    #         cs = cs.conj()
+    
+    # alert(p)
+    # if use_nr_convention:
+    #     cw = cw 
+    #     cs = cs 
+    # else:
+    #     cw = -cw.conj() 
+    #     cs = cs.conj()
+        
+    # #
+    # if use_nr_convention:  
+    #     if p*m < 0:
+    #         alert('Flipping convention becuase of p')
+    #         #cw,cs =  qnmflip(cw,cs)
+    #         cw = cw
+    #         cs = array([sc_leaver( jf*cw, l, m, s)[0]])
 
     # Handle positive spin weight
     if s>0:
-        cs = cs - 2*abs(s)
+        cs = cs + 2*abs(s)
+        cw = cw.conj()
+        cs = cs.conj()
+        
+    #
+    if m<0:
+        
+        # NOTE that this is needed when NOT using the NR convention
+        cw,cs = qnmflip(cw,cs)
         
     #
     if REVERT_TO_FLOAT:
         cw,cs = cw[0],cs[0]
+        
+    # Validate the QNM frequency and separation constant found
+    lvrtol=1e-4
+    lvrwrk = norm( leaver_workfunction(jf,l,m,[cw.real,cw.imag,cs.real,cs.imag],s=s, london=1) )
+    if lvrwrk>lvrtol:
+        alert( (l,m,n,p) )
+        alert(cw)
+        alert(cs)
+        msg = 'There is a bug. The values output are not consistent with Leaver\'s characteristic equations within %f.\n%s\n# The mode is (jf,l,m,n,p)=(%f,%i,%i,%i,%s)\n# The leaver_workfunction value is %s\n%s\n'%(lvrtol,'#'*40,jf,l,m,n,p,red(str(lvrwrk)),'#'*40)
+        error(msg,'slm')
+    else:
+        alert(blue('Yes!')+'The QNM frequency and separation constant %s with (l,m)=(%i,%i)'% (bold(blue('satisfy Leaver\'s equations')),l,m) )
+    # If verbose, check the consisitency of the values used
+    if verbose:
+        msg = 'Checking consistency of QNM frequncy and separation constant used against Leaver\'s constraint equations:\n\t*  '+cyan('leaver_workfunction(jf=%1.4f,l,m,[cw,cs]) = %s'%(jf,lvrwrk))+'\n\t*  cw = %s\n\t*  cs = %s'%(cw,cs)
+        alert(msg,'slm')
+        
+    # Here we scale the frequency by the BH mass according to the optional Mf input
+    CW = cw/Mf
+    CS = cs    # NOTE that not scaling is needed for the separation constant
 
     #
-    return cw,cs
+    if full_output:
+        aw = jf*cw
+        return CW,CS,aw 
+    else:
+        return CW,CS
 
 
 # Fit for spherica-sphoidal harmonic inner-product from Berti et al
@@ -2893,11 +3142,6 @@ def leaver_workfunction( j, l, m, state, s=-2, mpm=False, adjoint=False, tol=1e-
 
     #
     x = [ complex128(e) for e in x ]
-    # print x
-
-    # if s!=2:
-    #     alert('s=%i'%s)
-    #     error('something is off with spin weight propogation')
 
     #
     return x
@@ -3864,6 +4108,117 @@ def slmy(aw,l,m,theta,phi,s=-2,tol=None,verbose=False,output_iterations=False,sc
     return S
     
 
+
+# 
+def slm_helper( aw, l, m, n, theta, phi, s, sc=None, tol=None, verbose=False,london=False, output_iterations = False ):
+    
+    '''
+    '''
+    
+    # 
+    from positive import red
+    from positive import leaver as lvr
+    from positive import rgb,lim,leaver_workfunction,cyan,alert,pylim,sYlm,error,internal_ssprod
+    from numpy import complex256, cos, ones, mean, isinf, pi, exp, array, ndarray, unwrap, angle, linalg, sqrt, linspace, sin, float128
+    from scipy.integrate import trapz
+    from numpy import complex128 as dtyp
+
+    # Ensure that thet is iterable
+    if not isinstance(theta,ndarray):
+        theta = array([theta])
+        
+    # Define separation constant if not input
+    if sc is None:
+        #sc = slmcg_eigenvalue( dtyp(aw), s, l, m)
+        sc = sc_leaver( dtyp(aw), l, m, s, verbose=verbose, adjoint=False, london=london)[0]
+        
+    # Sanity check separation constant
+    sc2 = sc_leaver( aw, l, m, s, verbose=verbose,adjoint=False, london=london, tol=tol)[0]
+    if abs(sc2-sc)>1e-3:
+        print('aw  = '+str(aw))
+        print('sc_input  = '+str(sc))
+        print('sc_leaver = '+str(sc2))
+        print('sc_london = '+str(sc_london( aw,l,m,s )[0]))
+        print('aw, s, l, m = ',aw, s, l, m)
+        print('slmcg_eigenvalue = '+str( slmcg_eigenvalue( aw, s, l, m ) ) )
+        print('err = '+str(abs(sc2-sc)))
+        warning('input separation constant not consistent with angular constraint, so we will use a different one to give you an answer that converges.')
+        sc = sc2
+
+    # ------------------------------------------------ #
+    # Angular parameter functions
+    # ------------------------------------------------ #
+
+    # Retrieve desired information from central location
+    k1,k2,alpha,beta,gamma,scale_fun_u,u2v_map,theta2u_map = leaver_ahelper( l,m,s,aw,sc, london=london, verbose=verbose )
+
+    # ------------------------------------------------ #
+    # Calculate the angular eigenfunction
+    # ------------------------------------------------ #
+
+    # Variable map for theta
+    u = theta2u_map(theta)
+    # Calculate the variable used for the series solution
+    v = u2v_map( u )
+
+    # the non-sum part of eq 18
+    X = ones(u.shape,dtype=complex256)
+    X = X * scale_fun_u(u)
+
+    # initial series values
+    a0 = 1.0 # a choice, setting the norm of Slm
+
+    a1 = -a0*beta(0)/alpha(0)
+
+    C = 1.0
+    C = C*((-1)**(max(-m,-s)))*((-1)**l)
+    
+    # the sum part
+    done = False
+    Y = a0*ones(u.shape,dtype=complex256)
+    Y = Y + a1*v
+    k = 1
+    kmax = 5e3
+    err,yy = [],[]
+    et2=1e-8 if tol is None else tol
+    max_a = max(abs(array([a0,a1])))
+    v_pow_k = v
+    while not done:
+        k += 1
+        j = k-1
+        a2 = -1.0*( beta(j)*a1 + gamma(j)*a0 ) / alpha(j)
+        v_pow_k = v_pow_k*v
+        dY = a2*v_pow_k
+        Y += dY
+        xx = max(abs( dY ))
+
+        #
+        if output_iterations:
+            yy.append( C*array(Y)*X*exp(1j*m*phi) )
+            err.append( xx )
+
+        k_is_too_large = k>kmax
+        done = (k>=l) and ( (xx<et2 and k>30) or k_is_too_large )
+        done = done or xx<et2
+        a0 = a1
+        a1 = a2
+
+    # together now
+    S = X*Y*exp(1j*m*phi)
+
+    # Use same sign convention as spherical harmonics
+    # e.g http://en.wikipedia.org/wiki/Spin-weighted_spherical_harmonics#Calculating
+    S = C * S
+
+    # Warn if the series did not appear to converge
+    if k_is_too_large:
+        print(l,m,s,sc,aw)
+        warning('The while-loop exited becuase too many iterations have passed. The series may not converge for given inputs.')
+
+    #
+    return S,yy,err
+
+
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
 ''' Spheroidal Harmonic angular function via leaver's sum FOR m>0 '''
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
@@ -3874,6 +4229,7 @@ def slpm( jf,               # Dimentionless spin parameter
           theta,            # Polar spherical harmonic angle
           phi,              # Azimuthal spherical harmonic angle
           s       = -2,     # Spin weight
+          p = 1,
           __rescale__ = True, # Internal usage only: Recover scaling of spherical harmonics in zero spin limit
           norm = True,     # If true, normalize the waveform
           output_iterations = False,
@@ -3907,19 +4263,19 @@ def slpm( jf,               # Dimentionless spin parameter
 
             # Validate the spin input
             if isinstance(jf,int): jf = float(jf)
-
+                
             # Use tabulated cw and sc values from the core package
-            cw,sc = lvr( jf, l, m, n, s=s )
+            cw,sc = lvr( jf, l, m, n, s=s,p=p )
 
             # Validate the QNM frequency and separation constant used
             lvrtol=1e-4
             lvrwrk = linalg.norm( leaver_workfunction(jf,l,m,[cw.real,cw.imag,sc.real,sc.imag],adjoint=adjoint,s=s, london=1) )
             if lvrwrk>lvrtol:
-                msg = 'There is a problem in '+cyan('kerr.core.leaver')+'. The values output are not consistent with leaver''s characteristic equations within %f.\n%s\n# The mode is (jf,l,m,n)=(%f,%i,%i,%i)\n# The leaver_workfunction value is %s\n%s\n'%(lvrtol,'#'*40,jf,l,m,n,red(str(lvrwrk)),'#'*40)
+                msg = 'There is a bug. The values output are not consistent with Leaver\'s characteristic equations within %f.\n%s\n# The mode is (jf,l,m,n)=(%f,%i,%i,%i)\n# The leaver_workfunction value is %s\n%s\n'%(lvrtol,'#'*40,jf,l,m,n,red(str(lvrwrk)),'#'*40)
                 error(msg,'slm')
             # If verbose, check the consisitency of the values used
             if verbose:
-                msg = 'Checking consistency of QNM frequncy and separation constant used against Leaver''s constraint equations:\n\t*  '+cyan('leaver_workfunction(jf=%1.4f,l,m,[cw,sc]) = %s'%(jf,lvrwrk))+'\n\t*  cw = %s\n\t*  sc = %s'%(cw,sc)
+                msg = 'Checking consistency of QNM frequncy and separation constant used against Leaver\'s constraint equations:\n\t*  '+cyan('leaver_workfunction(jf=%1.4f,l,m,[cw,sc]) = %s'%(jf,lvrwrk))+'\n\t*  cw = %s\n\t*  sc = %s'%(cw,sc)
                 alert(msg,'slm')
 
             # Define dimensionless deformation parameter
@@ -3941,13 +4297,15 @@ def slpm( jf,               # Dimentionless spin parameter
 
     #
     from numpy import complex128 as dtyp
-    sc2 = sc_leaver( dtyp(aw), l, m, s, verbose=verbose,adjoint=False, london=london, tol=tol)[0]
-    #sc2 = slmcg_eigenvalue( dtyp(aw), s, l, m)
+    sc2 = sc_leaver( aw, l, m, s, verbose=verbose,adjoint=False, london=london, tol=tol)[0]
+    #sc2 = slmcg_eigenvalue( dtyp(aw), s, l, m) # NOTE that we don't use this function becuase it is slow!
     if abs(sc2-sc)>1e-3:
         print('aw  = '+str(aw))
         print('sc_input  = '+str(sc))
         print('sc_leaver = '+str(sc2))
         print('sc_london = '+str(sc_london( aw,l,m,s )[0]))
+        print('aw, s, l, m = ',aw, s, l, m)
+        print('slmcg_eigenvalue = '+str( slmcg_eigenvalue( aw, s, l, m ) ) )
         print('err = '+str(abs(sc2-sc)))
         warning('input separation constant not consistent with angular constraint, so we will use a different one to give you an answer that converges.')
         sc = sc2
@@ -4030,7 +4388,8 @@ def slpm( jf,               # Dimentionless spin parameter
 
     # Warn if the series did not appear to converge
     if k_is_too_large:
-        warning('The while-loop exited becuase too many iterations have passed. The series may not converge for given inputs.')
+        print(l,m,s,sc,aw,jf)
+        error('The while-loop exited becuase too many iterations have passed. The series may not converge for given inputs.')
 
     #
     return S,yy,err
@@ -4047,6 +4406,7 @@ def slm(  jf,               # Dimentionless spin parameter
           theta,            # Polar spherical harmonic angle
           phi,              # Azimuthal spherical harmonic angle
           s       = -2,     # Spin weight
+          p = 1,
           plot    = False,  # Toggel for plotting
           __rescale__ = True, # Internal usage only: Recover scaling of spherical harmonics in zero spin limit
           norm = True,     # If true, normalize the waveform
@@ -4057,6 +4417,7 @@ def slm(  jf,               # Dimentionless spin parameter
           use_nr_convention = True, # Toggle whether to use NR convention for multipoles
           tol = None,
           sc=None,
+          __no_warn__=False,
           verbose = False ):# Be verbose
 
     # Setup plotting backend
@@ -4085,14 +4446,18 @@ def slm(  jf,               # Dimentionless spin parameter
     #
     if m<0:
         if use_nr_convention:
-            S,yy,err = slpm( jf, l, -m, n, pi-theta, pi+phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw, tol=tol )
-            S = ((-1)**(l+m)) * S.conj()
-            warning('NR convention being used for m<0 multipole. This results in a spheroidal function that does not satisfy Teukolsky\'s equation with the given labeling. To disable this warning, use keyword input use_nr_convention=False.')
+            # S,yy,err = slpm( jf, l, -m, n, pi-theta, pi+phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw, tol=tol )
+            # S = ((-1)**(l+m)) * S.conj()
+            # warning('NR convention being used for m<0 multipole. This results in a spheroidal function that does not satisfy Teukolsky\'s equation with the given labeling. To disable use of the NR convention, use keyword input use_nr_convention=False OR set the __no_warn__ keyword input to True.',verbose=not __no_warn__)
+            
+            # NOTE that here we equate negative m with the solution whose QNM frequency's real part has the opposite sign that m has.
+            S,yy,err = slpm(jf, l,-m, n, theta, phi, s=-s,p=p, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw, tol=tol, sc=sc )
         else:
-            aw = -aw
+            if aw: aw = -aw 
+            p = -1
             m = -m
-            s = -s
-            S,yy,err = slpm( jf, l, m, n, theta, phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw, tol=tol, sc=sc )
+            # s = -s
+            S,yy,err = slpm( jf, l, m, n, theta, phi, s=s,p=p, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw, tol=tol, sc=sc )
     else:
         S,yy,err = slpm( jf, l, m, n, theta, phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw, tol=tol, sc=sc )
 
@@ -5945,10 +6310,9 @@ def tkangular( S, theta, acw, m, s=-2, separation_constant=None,adjoint=False  )
     Apply Teukolsy's angular operator to input
     '''
     #
-    from numpy import sin, cos, isnan, diff,sign
+    from numpy import sin, cos, isnan, diff,sign,pi
     #
-    zero = 1e-10
-    theta[theta==0]=zero
+    mask = (theta!=0) & (theta!=pi)
     if separation_constant is None:
         separation_constant = sc_leaver( acw, 2, m, s,verbose=False,adjoint=False)[0]
     A = separation_constant
@@ -5964,7 +6328,7 @@ def tkangular( S, theta, acw, m, s=-2, separation_constant=None,adjoint=False  )
     VS = (  -mscs*mscs/(sn*sn) + s + acwcs*( acwcs - 2*s ) + A  ) * S
 
     #
-    ans = D2S + VS
+    ans = (D2S + VS)[mask]
 
     #
     return ans

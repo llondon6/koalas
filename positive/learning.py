@@ -2518,6 +2518,21 @@ def romline(  domain,           # Domain of Map
               keep_ends = False,
               __force_N__=False,
               verbose = False ):
+              
+    '''
+    ROMLINE
+    ---
+    Function that approximates a 1d curve as a series of lines
+    
+    USAGE
+    ---
+    knots,rom = romline( domain, scalar_range, Number_of_lines, keep_ends=False, verbose=False )
+    
+    PRIMARY PURPOSES
+    ---
+    * Approximation
+    * Feature detection
+    '''
 
     # Use a linear interpolator, and a reverse greedy process
     from numpy import interp, linspace, array, inf, arange, mean, zeros, std, argmax, argmin
@@ -2597,6 +2612,95 @@ def romline(  domain,           # Domain of Map
     # print min_sigma
 
     return knots,rom
+
+
+#
+def flatpart( domain, scalar_range, log_scale=False, plot=False, verbose=False, romline_N=5, __smooth__=True, __full_output__=False ):
+    
+    '''
+    
+    FLATVALUE
+    ---
+    Determine region over which input data behaves most like a 
+    line, and then return the region, and the mean of the 
+    input data in that region.
+    
+    USAGE
+    ---
+    flat_value,mask = flatpart( domain, scalar_range, \
+    log_scale=False, plot=False, verbose=False, romline_N=10 )
+    
+    AUTHOR
+    ---
+    pilondon2@gmail.com,londonl@mit.edu 2021
+    
+    NOTE
+    ---
+    The output of this function will ONLY correspond to a flat 
+    part in the data if such a region exists.  Otherwise, the 
+    function return the most linear part, and the "flat value" 
+    will ONLY describe the mean of that region.
+    
+    '''
+    
+    # Import usefuls 
+    from numpy import log,exp,mean,diff,argmax,argmin
+    from positive import romline,smooth
+    
+    # Define short-hand
+    do = domain
+    ra = log( abs(scalar_range) ) if log_scale else scalar_range
+    
+    #
+    if __smooth__:
+        ra = ra
+        smooth_ra = smooth(ra).answer
+    else:
+        smooth_ra = ra
+    
+    # Create romline representation
+    knots,rom = romline( do, smooth_ra, romline_N, keep_ends=True )
+    
+    # # Determine the largest gap between knots 
+    # dkn = diff(knots)
+    # opt_dkn = argmax(dkn)
+    
+    # Determine the flattest inter-knot region 
+    dkn = abs(diff(ra[knots])) / diff(do[knots])
+    opt_dkn = argmin(dkn)
+    
+    # Create a mask for this region
+    left_ref  = knots[opt_dkn]
+    right_ref = knots[opt_dkn+1]
+    mask = range(left_ref,right_ref+1)
+    
+    # 
+    flat_value = exp(mean(ra[mask])) if log_scale else mean(ra[mask])
+    
+    #
+    if plot:
+        #
+        from matplotlib.pyplot import plot,axhline,show,legend
+        #
+        if log_scale:
+            plot( do, exp(ra), color='k', ls='-',alpha=0.3 )
+            plot( do[knots], exp(ra)[knots], marker='o', ls='none',color='dodgerblue',alpha=0.3 )
+            plot( do, exp(rom(do)), color='dodgerblue',alpha=0.3 )
+        else:
+            plot( do, ra, color='k', ls='-',alpha=0.3 )
+            plot( do[knots], ra[knots], marker='o', ls='none',color='dodgerblue',alpha=0.3 )
+            plot( do, rom(do), color='dodgerblue',alpha=0.3 )
+        #
+        axhline( flat_value, ls=':', color='r',label='%1.4g'%flat_value )
+        legend()
+    
+    #
+    if __full_output__:
+        #
+        return mask,flat_value,knots,rom
+    else:
+        #
+        return mask,flat_value
 
 
 # Hey, here's a function related to romline

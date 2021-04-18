@@ -260,6 +260,17 @@ def sYlm_mollweide_plot(l,m,ax=None,title=None,N=100,form=None,s=-2,colorbar_shr
     gcf().canvas.draw_idle()
 
 
+# 
+def plot3Dpoint(ax,vec,label,note,marker='o',s=40,color='g',mfc='none',va='bottom',ha='right',la=0.8,ts=16,normalize=True):
+    '''Plot 3D point'''
+    # Import usefuls 
+    from numpy import linalg
+    # Plot 3D point
+    foo = vec/ ( ( linalg.norm(vec) if linalg.norm(vec) else 1.0 ) if normalize else 1 )
+    ax.scatter( foo[0], foo[1], foo[2],  label=label, color=color, marker=marker, s=s, facecolor=mfc,zorder=-80 )
+    ax.text(foo[0], foo[1], foo[2],note,alpha=la,verticalalignment=va,ha=ha,size=ts)
+                
+
 # Plot a 3d meshed sphere
 def plot_3d_mesh_sphere(ax=None,nth=30,nph=30,r=1,color='k',lw=1,alpha=0.1,axes_on=True,axes_alpha=0.35,view=None):
     #
@@ -349,12 +360,18 @@ def plot_single_3d_trajectory( xx, yy, zz, color='black', alpha=0.6, lw=2, plot_
     return ax
 
 #
-def alpha_plot_trajectory( xx,yy,zz, nmasks=10, color='b', lw=1,label=None, ax=None,alpha_min=0.05,alpha_max=0.99 ):
+def alpha_plot_trajectory( xx,yy,zz, nmasks=10, color='b', lw=1,label=None, ax=None,alpha_min=0.05,alpha_max=0.99,normalize=False ):
 
     #
     from numpy import sin,cos,linspace,ones_like,array,pi,max,sqrt,linalg
     from mpl_toolkits.mplot3d import Axes3D
     from matplotlib.pyplot import figure,plot,figaspect,text,axis,gca
+    
+    # Normalize
+    if normalize:
+        rr = sqrt(xx**2 + yy**2 + zz**2)
+        rr = array( [ r if r>0 else 1.0 for r in rr ] )
+        [xx,yy,zz] = [ k/rr for k in [xx,yy,zz] ]
 
     #
     if ax is None:
