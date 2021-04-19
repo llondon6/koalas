@@ -1920,6 +1920,7 @@ def leaver( jf,                     # Dimensionless BH Spin
     
     #
     if __legacy__:
+        alert('Using legacy version of leaver_helper.')
         helper = __leaver_helper_legacy__
     else:
         helper = __leaver_helper__
@@ -1936,7 +1937,7 @@ def leaver( jf,                     # Dimensionless BH Spin
 
     else:
         #
-        return __leaver_helper__(jf, l, m, n, p , s, Mf, verbose=verbose,use_nr_convention=use_nr_convention,full_output=full_output)
+        return helper(jf, l, m, n, p , s, Mf, verbose=verbose,use_nr_convention=use_nr_convention,full_output=full_output)
 
 
 def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = False,use_nr_convention=False,full_output=False):
@@ -1982,7 +1983,7 @@ def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = F
     cmd = parent(os.path.realpath(__file__))
     #********************************************************************************#
     if use_nr_convention:
-        if p < 0:
+        if (p < 0) and (m!=0):
             m_label = 'mm%i'%abs(m)
         else:
             m_label = 'm%i'%abs(m)
@@ -2079,7 +2080,7 @@ def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = F
 
 
 
-def __leaver_helper_legacy__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = False):
+def __leaver_helper_legacy__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = False,use_nr_convention=None,full_output=None):
 
 
     # Import useful things
@@ -3589,7 +3590,7 @@ def ysprod( jf,
     if m_eff==mm:
         #
         y = ylm(s,ll,mm,th,ph)
-        _s = slm(jf,l,m,n,th,ph,s=s,norm=False,__rescale__=False,aw=aw) if not so else slm(jf,l,m,n,th,ph,norm=False,__rescale__=False,use_nr_convention=use_nr_convention,aw=aw)*slm(jf,l2,m2,n2,th,ph,norm=False,__rescale__=False,use_nr_convention=use_nr_convention,aw=aw)
+        _s = __slm_legacy__(jf,l,m,n,th,ph,s=s,norm=False,__rescale__=False,aw=aw) if not so else slm(jf,l,m,n,th,ph,norm=False,__rescale__=False,use_nr_convention=use_nr_convention,aw=aw)*slm(jf,l2,m2,n2,th,ph,norm=False,__rescale__=False,use_nr_convention=use_nr_convention,aw=aw)
         ss = _s / sqrt(prod(_s,_s,th))
         ans = prod( y,ss,th ) # note that this is consistent with the matlab implementation modulo the 2*pi convention
     else:
@@ -3631,8 +3632,8 @@ def ssprod(jf, z1, z2, N=2**8,verbose=False,theta=None, london=False,s=-2,aw=Non
         #
         if m1 == m2 :
             th, phi = pi*linspace(0,1,N), 0
-            s1 = slm( jf, l1, m1, n1, th, phi, norm=False, __rescale__=False, london=london,aw=aw, use_nr_convention=use_nr_convention,s=s )
-            s2 = slm( jf, l2, m2, n2, th, phi, norm=False, __rescale__=False, london=london,aw=aw, use_nr_convention=use_nr_convention,s=s ) if (l2,m2,n2) != (l1,m1,n1) else s1
+            s1 = __slm_legacy__( jf, l1, m1, n1, th, phi, norm=False, __rescale__=False, london=london,aw=aw, use_nr_convention=use_nr_convention,s=s )
+            s2 = __slm_legacy__( jf, l2, m2, n2, th, phi, norm=False, __rescale__=False, london=london,aw=aw, use_nr_convention=use_nr_convention,s=s ) if (l2,m2,n2) != (l1,m1,n1) else s1
             #
             ans = helper(s1,s2,th)
         else:
@@ -3672,8 +3673,8 @@ def internal_ssprod( jf, z1, z2, s=-2, verbose=False, N=2**9, london=False,aw=No
         # if prod is None:
         #     prod = lambda A,B: 2*pi * trapz( A.conj()*B*sin(th), x=th )
         #
-        s1 = slm( jf, l1, m1, n1, th, phi,s=s, norm=False, __rescale__=False, london=london,aw=aw )
-        s2 = slm( jf, l2, m2, n2, th, phi,s=s, norm=False, __rescale__=False, london=london,aw=aw ) if (l2,m2,n2) != (l1,m1,n1) else s1
+        s1 = __slm_legacy__( jf, l1, m1, n1, th, phi,s=s, norm=False, __rescale__=False, london=london,aw=aw )
+        s2 = __slm_legacy__( jf, l2, m2, n2, th, phi,s=s, norm=False, __rescale__=False, london=london,aw=aw ) if (l2,m2,n2) != (l1,m1,n1) else s1
         #
         ans = prod(s1,s2,th)
     else:
@@ -4338,7 +4339,7 @@ def slpm( jf,               # Dimentionless spin parameter
           theta,            # Polar spherical harmonic angle
           phi,              # Azimuthal spherical harmonic angle
           s       = -2,     # Spin weight
-          p = 1,
+          p = None,
           __rescale__ = True, # Internal usage only: Recover scaling of spherical harmonics in zero spin limit
           norm = True,     # If true, normalize the waveform
           output_iterations = False,
@@ -4374,7 +4375,7 @@ def slpm( jf,               # Dimentionless spin parameter
             if isinstance(jf,int): jf = float(jf)
                 
             # Use tabulated cw and sc values from the core package
-            cw,sc = lvr( jf, l, m, n, s=s,p=p )
+            cw,sc = lvr( jf, l, m, n, s=s,p=None )
 
             # Validate the QNM frequency and separation constant used
             lvrtol=1e-4
@@ -4613,6 +4614,281 @@ def slm(  jf,               # Dimentionless spin parameter
     return S
 
 
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+''' Spheroidal Harmonic angular function via leaver's sum FOR m>0 '''
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+def __slpm_legacy__( jf,               # Dimentionless spin parameter
+          l,
+          m,
+          n,
+          theta,            # Polar spherical harmonic angle
+          phi,              # Azimuthal spherical harmonic angle
+          s       = -2,     # Spin weight
+          __rescale__ = True, # Internal usage only: Recover scaling of spherical harmonics in zero spin limit
+          norm = True,     # If true, normalize the waveform
+          output_iterations = False,
+          __aw_sc__ = None, # optional frequency and separation parameter pair
+          london = False,   # toggle for which series solution to use (they are all largely equivalent)
+          aw = None,        # when not none, the separation constant will be found automatically
+          adjoint=False,
+          tol=None,
+          sc=None,
+          verbose = False ):# Be verbose
+
+    #
+    from positive import red
+    from positive import leaver as lvr
+    from positive import rgb,lim,leaver_workfunction,cyan,alert,pylim,sYlm,error,internal_ssprod
+    from numpy import complex256, cos, ones, mean, isinf, pi, exp, array, ndarray, unwrap, angle, linalg, sqrt, linspace, sin, float128
+    # from scipy.misc import factorial as f
+    from scipy.integrate import trapz
+
+    #
+    if m<0: error('this low level routine is only valid for m>0; use slm() for general m cases')
+
+    # Ensure that thet is iterable
+    if not isinstance(theta,ndarray):
+        theta = array([theta])
+
+    #
+    if __aw_sc__ is None:
+
+        if aw is None:
+
+            # Validate the spin input
+            if isinstance(jf,int): jf = float(jf)
+
+            # Use tabulated cw and sc values from the core package
+            cw,sc = lvr( jf, l, m, n, s=s, __legacy__ = True )
+
+            # Validate the QNM frequency and separation constant used
+            lvrtol=1e-4
+            lvrwrk = linalg.norm( leaver_workfunction(jf,l,m,[cw.real,cw.imag,sc.real,sc.imag],adjoint=adjoint,s=s, london=1) )
+            if lvrwrk>lvrtol:
+                msg = 'There is a problem in '+cyan('kerr.core.leaver')+'. The values output are not consistent with leaver''s characteristic equations within %f.\n%s\n# The mode is (jf,l,m,n)=(%f,%i,%i,%i)\n# The leaver_workfunction value is %s\n%s\n'%(lvrtol,'#'*40,jf,l,m,n,red(str(lvrwrk)),'#'*40)
+                error(msg,'slm')
+            # If verbose, check the consisitency of the values used
+            if verbose:
+                msg = 'Checking consistency of QNM frequncy and separation constant used against Leaver''s constraint equations:\n\t*  '+cyan('leaver_workfunction(jf=%1.4f,l,m,[cw,sc]) = %s'%(jf,lvrwrk))+'\n\t*  cw = %s\n\t*  sc = %s'%(cw,sc)
+                alert(msg,'slm')
+
+            # Define dimensionless deformation parameter
+            aw = complex256( jf*cw )
+
+        else:
+
+            #
+            from numpy import complex128 as dtyp
+            if sc is None:
+                #sc = slmcg_eigenvalue( dtyp(aw), s, l, m)
+                sc = sc_leaver( dtyp(aw), l, m, s, verbose=verbose, adjoint=False, london=london)[0]
+
+    else:
+
+        # Use input values
+        aw,sc = __aw_sc__
+
+
+    #
+    from numpy import complex128 as dtyp
+    sc2 = sc_leaver( dtyp(aw), l, m, s, verbose=verbose,adjoint=False, london=london, tol=tol)[0]
+    #sc2 = slmcg_eigenvalue( dtyp(aw), s, l, m)
+    if abs(sc2-sc)>1e-3:
+        print('aw  = '+str(aw))
+        print('sc_input  = '+str(sc))
+        print('sc_leaver = '+str(sc2))
+        print('sc_london = '+str(sc_london( aw,l,m,s )[0]))
+        print('err = '+str(abs(sc2-sc)))
+        warning('input separation constant not consistent with angular constraint, so we will use a different one to give you an answer that converges.')
+        sc = sc2
+
+    # ------------------------------------------------ #
+    # Angular parameter functions
+    # ------------------------------------------------ #
+
+    # Retrieve desired information from central location
+    k1,k2,alpha,beta,gamma,scale_fun_u,u2v_map,theta2u_map = leaver_ahelper( l,m,s,aw,sc, london=london, verbose=verbose )
+
+    # ------------------------------------------------ #
+    # Calculate the angular eighenfunction
+    # ------------------------------------------------ #
+
+    # Variable map for theta
+    u = theta2u_map(theta)
+    # Calculate the variable used for the series solution
+    v = u2v_map( u )
+
+    # the non-sum part of eq 18
+    X = ones(u.shape,dtype=complex256)
+    X = X * scale_fun_u(u)
+
+    # initial series values
+    a0 = 1.0 # a choice, setting the norm of Slm
+
+    a1 = -a0*beta(0)/alpha(0)
+
+    C = 1.0
+    C = C*((-1)**(max(-m,-s)))*((-1)**l)
+
+    # Apply normalization
+    if norm:
+        if __aw_sc__: error('this function is not configured to output normalized harmonics when manually specifying the deformation parameter and separation consant')
+        z = (l,m,n)
+        if norm == -1:
+            # Scale such that spherical counterpart is normalized
+            C /= ysprod(jf,l,m,z,s,london=london)
+        else:
+            C /= sqrt( internal_ssprod(jf,z,z,s,london=london,aw=aw) )
+
+
+    # the sum part
+    done = False
+    Y = a0*ones(u.shape,dtype=complex256)
+    Y = Y + a1*v
+    k = 1
+    kmax = 5e3
+    err,yy = [],[]
+    et2=1e-8 if tol is None else tol
+    max_a = max(abs(array([a0,a1])))
+    v_pow_k = v
+    while not done:
+        k += 1
+        j = k-1
+        a2 = -1.0*( beta(j)*a1 + gamma(j)*a0 ) / alpha(j)
+        v_pow_k = v_pow_k*v
+        dY = a2*v_pow_k
+        Y += dY
+        xx = max(abs( dY ))
+
+        #
+        if output_iterations:
+            yy.append( C*array(Y)*X*exp(1j*m*phi) )
+            err.append( xx )
+
+        k_is_too_large = k>kmax
+        done = (k>=l) and ( (xx<et2 and k>30) or k_is_too_large )
+        done = done or xx<et2
+        a0 = a1
+        a1 = a2
+
+    # together now
+    S = X*Y*exp(1j*m*phi)
+
+    # Use same sign convention as spherical harmonics
+    # e.g http://en.wikipedia.org/wiki/Spin-weighted_spherical_harmonics#Calculating
+    S = C * S
+
+    # Warn if the series did not appear to converge
+    if k_is_too_large:
+        warning('The while-loop exited becuase too many iterations have passed. The series may not converge for given inputs.')
+
+    #
+    return S,yy,err
+
+
+
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+''' Spheroidal Harmonic angular function via leaver's sum '''
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+def __slm_legacy__(  jf,               # Dimentionless spin parameter
+          l,
+          m,
+          n,
+          theta,            # Polar spherical harmonic angle
+          phi,              # Azimuthal spherical harmonic angle
+          s       = -2,     # Spin weight
+          plot    = False,  # Toggel for plotting
+          __rescale__ = True, # Internal usage only: Recover scaling of spherical harmonics in zero spin limit
+          norm = True,     # If true, normalize the waveform
+          ax = None,        # axes handles for plotting to; must be length 1(single theta) or 2(many theta)
+          __aw_sc__ = None,
+          aw = None,        # when not none, the separation constant will be found automatically
+          london = False,
+          use_nr_convention = True, # Toggle whether to use NR convention for multipoles
+          tol = None,
+          sc=None,
+          verbose = False ):# Be verbose
+
+    # Setup plotting backend
+    if plot:
+        import matplotlib as mpl
+        mpl.rcParams['lines.linewidth'] = 0.8
+        mpl.rcParams['font.family'] = 'serif'
+        mpl.rcParams['font.size'] = 16
+        mpl.rcParams['axes.labelsize'] = 16
+
+    #
+    from positive import red
+    from positive import leaver as lvr
+    from positive import rgb,lim,leaver_workfunction,cyan,alert,pylim,sYlm,error,internal_ssprod
+    from numpy import complex256,cos,ones,mean,isinf,pi,exp,array,ndarray,unwrap,angle,linalg,sqrt,linspace,sin,float128
+    from matplotlib.pyplot import subplot,gca,xlabel,ylabel,xlim,ylim,title,figure,sca
+    from matplotlib.pyplot import plot as plot_
+    # from scipy.misc import factorial as f
+    from scipy.integrate import trapz
+    
+    #
+    if london==-4:
+        warning('london=-4 is incompoatible with this function. We will set london=True')
+        london=True
+
+    #
+    if m<0:
+        if use_nr_convention:
+            S,yy,err = __slpm_legacy__( jf, l, -m, n, pi-theta, pi+phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw, tol=tol )
+            S = ((-1)**(l+m)) * S.conj()
+            warning('NR convention being used for m<0 multipole. This results in a spheroidal function that does not satisfy Teukolsky\'s equation with the given labeling. To disable this warning, use keyword input use_nr_convention=False.')
+        else:
+            aw = -aw
+            m = -m
+            s = -s
+            S,yy,err = __slpm_legacy__( jf, l, m, n, theta, phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw, tol=tol, sc=sc )
+    else:
+        S,yy,err = __slpm_legacy__( jf, l, m, n, theta, phi, s=s, __rescale__=__rescale__, norm=norm, output_iterations=plot, verbose=verbose, __aw_sc__=__aw_sc__, london=london, aw=aw, tol=tol, sc=sc )
+
+    #
+    if plot:
+        def ploterr():
+            plot_( err, '-ob',mfc='w',mec='b' )
+            gca().set_yscale("log", nonposy='clip')
+            title( '$l = %i$, $m = %i$, $jf = %s$'%(l,m,'%1.4f'%jf if jf is not None else 'n/a') )
+            ylabel('Error Estimate')
+            xlabel('Iteration #')
+        if isinstance(theta,(float,int)):
+            if ax is None:
+                figure(figsize=3*array([3,3]))
+            else:
+                sca(ax[0])
+            ploterr()
+        elif isinstance(theta,ndarray):
+            if ax is None:
+                figure(figsize=3*array([6,2.6]))
+                subplot(1,2,1)
+            else:
+                sca(ax[0])
+            ploterr()
+            if ax is not None:
+                sca(ax[-1])
+            else:
+                subplot(1,2,2)
+            clr = rgb( max(len(yy),1),reverse=True )
+            for k,y in enumerate(yy):
+                plot_(theta,abs(y),color=clr[k],alpha=float(k+1)/len(yy))
+            plot_(theta,abs(S),'--k')
+            pylim(theta,abs(S))
+            fs=20
+            xlabel(r'$\theta$',size=fs)
+            ylabel(r'$|S_{%i%i%i}(\theta,\phi)|$'%(l,m,n),size=fs )
+            title(r'$\phi=%1.4f$'%phi)
+
+    #
+    if len(S) is 1:
+        return S[0]
+
+    #
+    return S
+
+
 # Validate list of l,m values
 def validate_lm_list( lm_space,s=-2 ):
 
@@ -4707,8 +4983,8 @@ def ysprod_matrix( dimensionless_spin, lm_space, N_theta=128, s=-2 ):
             #
             if m==m_:
                 
-                Sk = slm(dimensionless_spin,l_,m_,n_,theta,phi,norm=False,london=False)
-                # Sk = slm(None,l_,m_,n_,theta,phi,norm=False,aw = aw,london=False)
+                Sk = __slm_legacy__(dimensionless_spin,l_,m_,n_,theta,phi,norm=False,london=False)
+                # Sk = __slm_legacy__(None,l_,m_,n_,theta,phi,norm=False,aw = aw,london=False)
                 # Sk = slmcg(aw,s,l_,m_,theta,phi)
                 # Q,vals,vecs,lrange = slmcg_helper( aw, s, l_, m_ )
                 # dex_map = { ll:lrange.index(ll) for ll in lrange }
