@@ -990,9 +990,14 @@ def sYlm(s,l,m,theta,phi,return_mesh=False,leaver=False):
 #
 def sDlm_leaver(s,l,m,theta):
     #
-    from positive import slm
+    from numpy import sqrt 
     # Use leaver's representation for the spheroidals at zero oblateness
-    return slm(None,l,m,0,theta,0,s=s,aw=0,use_nr_convention=False)
+    # return slm(None,l,m,0,theta,0,s=s,aw=0,use_nr_convention=False)
+    Y,_ = slm_helper(0, l, m, theta, 0, s, sc=None )
+    # Normalize 
+    y = Y / sqrt(prod( Y,Y,theta ))
+    # Return
+    return y
 
 # Use formula from wikipedia to calculate the harmonic
 # See http://en.wikipedia.org/wiki/Spin-weighted_spherical_harmonics#Calculating
