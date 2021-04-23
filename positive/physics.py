@@ -1713,7 +1713,7 @@ class qnmobj:
         # ----------------------------------------- #
         this.__validate_inputs__(M,a,l,m,n,p,s,verbose,use_nr_convention)
         
-        #
+        # Get dimesionless QNM frequency (under the M=1 convention) and separation constant
         this.cw,this.sc = leaver( this.a,
                                   this.l,
                                   this.m,
@@ -1727,7 +1727,7 @@ class qnmobj:
         #
         this.oblateness = this.aw = this.acw = this.a * this.cw 
         
-        # 
+        # Calculate the M=this.M QNM frequency
         this.CW = this.cw / this.M
         
         # Calculate the spheroidal harmonic for this QNM and store related information to the current object

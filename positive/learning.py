@@ -2615,11 +2615,11 @@ def romline(  domain,           # Domain of Map
 
 
 #
-def flatpart( domain, scalar_range, log_scale=False, plot=False, verbose=False, romline_N=5, __smooth__=True, __full_output__=False ):
+def flatpart( domain, scalar_range, log_scale=False, plot=False, verbose=False, romline_N=5, __smooth__=True, __full_output__=False,ax=None ):
     
     '''
     
-    FLATVALUE
+    FLATPART
     ---
     Determine region over which input data behaves most like a 
     line, and then return the region, and the mean of the 
@@ -2680,16 +2680,16 @@ def flatpart( domain, scalar_range, log_scale=False, plot=False, verbose=False, 
     #
     if plot:
         #
-        from matplotlib.pyplot import plot,axhline,show,legend
+        from matplotlib.pyplot import plot,axhline,show,legend,sca
+        #
+        if ax: sca(ax)
         #
         if log_scale:
             plot( do, exp(ra), color='k', ls='-',alpha=0.3 )
-            plot( do[knots], exp(ra)[knots], marker='o', ls='none',color='dodgerblue',alpha=0.3 )
-            plot( do, exp(rom(do)), color='dodgerblue',alpha=0.3 )
+            plot( do[knots], exp(smooth_ra)[knots], marker='o', ls='-',color='dodgerblue',alpha=0.3 )
         else:
             plot( do, ra, color='k', ls='-',alpha=0.3 )
-            plot( do[knots], ra[knots], marker='o', ls='none',color='dodgerblue',alpha=0.3 )
-            plot( do, rom(do), color='dodgerblue',alpha=0.3 )
+            plot( do[knots], smooth_ra[knots], marker='o', ls='-',color='dodgerblue',alpha=0.3 )
         #
         axhline( flat_value, ls=':', color='r',label='%1.4g'%flat_value )
         legend()
@@ -2697,7 +2697,16 @@ def flatpart( domain, scalar_range, log_scale=False, plot=False, verbose=False, 
     #
     if __full_output__:
         #
-        return mask,flat_value,knots,rom
+        foo = {}
+        foo['value']           = flat_value
+        foo['mask']            = mask
+        foo['domain']          = domain
+        foo['scalar_range']    = scalar_range
+        foo['scalar_range_smoothed'] = exp(smooth_ra) if log_scale else smooth_ra 
+        foo['romline_knots']   = knots
+        foo['romline_rom']     = rom if not log_scale else lambda X: exp(rom(X))
+        #
+        return foo
     else:
         #
         return mask,flat_value
