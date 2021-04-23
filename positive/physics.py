@@ -1691,6 +1691,16 @@ def phenom2td( fstart, N, dt, model_data, plot=False, verbose=False, force_t=Fal
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
 class qnmobj:
     
+    '''
+    DESCRIPTION
+    ---
+    Class for Kerr QNMs. Self-consistent handling of frequencies, and spheroidal harmonics under different conventions.
+    
+    AUTHOR
+    ---
+    londonl@mit.edu, pilondon2@gmail.com 2021
+    '''
+    
     # Initialize the object
     def __init__(this,M,a,l,m,n,p=None,s=-2,verbose=False,calc_slm=True,use_nr_convention=True):
 
@@ -1740,12 +1750,12 @@ class qnmobj:
         if use_nr_convention and (p is None):
             error('NR convention being used, but p has not been defined to be +1 for prograde modes, or -1 for retrograde ones. Please define p.')
         if use_nr_convention:
-            alert(yellow('Using NR convention')+' for organizing solution space and setting the sign of the QNM freuency imaginary part.')
+            alert(yellow('Using NR convention')+' for organizing solution space and setting the sign of the QNM freuency imaginary part.',verbose=verbose)
             if not (p in [-1,1]):
                 error('p must be +1 or -1')
         else:
-            alert(yellow('Not using NR convention')+' for organizing solution space and setting the sign of the QNM freuency imaginary part.')
-            if not (p is None):
+            alert(yellow('Not using NR convention')+' for organizing solution space and setting the sign of the QNM freuency imaginary part.',verbose=verbose)
+            if not ((p is None) or (p is 0)):
                 error('p is not used when NR conventions are not used; p must be None (default)')
         if abs(s) != 2:
             error('This class currently only supports |s|=2')
@@ -1759,6 +1769,7 @@ class qnmobj:
             error('l must be >= |s| du to the structure of Teukolsk\'s angular equation')
             
         # Assign basic class properties from inputs
+        if p is None: p=0
         this.M,this.a,this.verbose,this.z,this.s = M,a,verbose,(l,m,n,p),s
         this.l,this.m,this.n,this.p = this.z
         
@@ -1863,8 +1874,10 @@ One must never mix conventions.
 
 The practical outcomes of using one convention over the other are:
 
-    * Inner products, such as those between spherical and spheroidal harmonics are conjugated between conventions. 
-    * Similarly the spheroidal harmonic functions are conjugated between conventions.
+    * Inner products, such as those between spherical and spheroidal harmonics are conjugated between conventions when p=1. When p=-1, they are related by negation and conjugation. 
+    * Similarly the spheroidal harmonic functions are similarly related between conventions.
+    * Note that the spheroidal harmonic type functions are defined up to a phase which may be unique for each harmonic.
+    * There is a factor of (-1)^l when mapping +m to -m spherical-spheroidal inner-products
         ''')
         
 
@@ -1903,7 +1916,7 @@ The practical outcomes of using one convention over the other are:
             this.__slm_test_quantity__ = __slm_test_quantity__
             
     #
-    def plot_slm(this,ax=None,line_width=1,plot_scale=0.8,colors=None,label=None,show_legend=True,ls='-',show=False):
+    def plot_slm(this,ax=None,line_width=1,plot_scale=0.99,colors=None,label=None,show_legend=True,ls='-',show=False):
           
         #
         from matplotlib.pyplot import plot,xlabel,ylabel,figure,figaspect,subplots,yscale,gca,sca,xlim,ylim,grid,title,legend
@@ -2054,7 +2067,7 @@ def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = F
     
     #
     if not use_nr_convention:
-        if not (p is None):
+        if not ((p is None) or (p is 0)):
             error('When not using the NR convention, p must remain None. Instead p is %i.'%p)
     else:
         if p is None:
@@ -2091,7 +2104,7 @@ def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = F
         alert(magenta('Using NR convention ')+'for organizing solution space and setting the sign of the QNM freuency imaginary part (via nrutils convention).',verbose=verbose)
     else:
         alert(magenta('NOT using NR convention ')+'for organizing solution space and setting the sign of the QNM freuency imaginary part.',verbose=verbose)
-    alert('Loading: %s'%cyan(data_location))
+    alert('Loading: %s'%cyan(data_location),verbose=verbose)
     #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
     # Validate data location
