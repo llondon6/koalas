@@ -1794,22 +1794,78 @@ class qnmobj:
         alert('General Explaination',header=True)
         
         #
-        print( '''
-            Hi This is some explaination.
+        print( '''Hi, this is an explaination of what the NR convention is for Black Hole(BH)\nQuasiNormal Modes (QNMs). There are approximately two conventions used when\nworking with BH QNMs. They are the NR convention, and the Perturbation\nTheory (PT) convention. 
         ''' )
         
-        alert('Use of Numerical Relativity Conventions',header=True)
-        
-        #
-        print( '''
-            Hi This is some explaination.
-        ''' )
-        alert('Use of Perturabtion Theory Conventions',header=True)
+        alert('Numerical Relativity Conventions',header=True)
         
         #
         print( '''
-            Hi This is some explaination.
-        ''' )
+  * QNM are defined by 4 numbers
+  * the usual l,m,n, but also a number p which labels whether modes are prograde
+    (p=1) or retrograde (p=-1).
+  * The QNM frequencies are generally complex valued (ie complex omegas, thus the
+    vairable name "cw"). The real part of the frequency, Re(cw), is the time domain 
+    waveform's central frequency. The imaginary part is the time domain amplitude's
+    expontntial decay rate.
+  * In the NR convention, Im(cw)>0, always. This is due to a convention in how the phase
+    is defined. In particular, there is no minus sign explicitly present when writing
+    down phases.
+  * PROGRADE QNMs have frequencies correspond to perturbations which propigate at the
+    source *in the direction of* the BH spin.
+  * RETROGRADE QNMs have frequencies correspond to perturbations which propigate at the
+    source *against the direction of* the BH spin.
+
+
+        Prograde            Retrograde
+------------------------------------------
+m>0     Re(cw)>0             Re(cw)<0
+
+m<0     Re(cw)<0             Re(cw)>0
+
+''' )
+
+        alert('Perturabtion Theory Conventions',header=True)
+
+        #
+        print( '''
+  * QNM are defined by 3 numbers, the usual l,m and n
+  * The QNM frequencies are generally complex valued (ie complex omegas, thus the
+    vairable name "cw"). The real part of the frequency, Re(cw), is the time domain 
+    waveform's central frequency. The imaginary part is the time domain amplitude's
+    expontntial decay rate.
+  * In the PT convention, Im(cw)<0, always. This is due to a convention in how the phase
+    is defined. In particular, there must be a minus sign explicitly present when writing
+    down phases.
+  * Positive m QNMs have frequencies correspond to perturbations which propigate at the
+    source *in the direction of* the BH spin.
+  * Negative m QNMs have frequencies correspond to perturbations which propigate at the
+    source *against the direction of* the BH spin.
+  * There are harmonics defined above and below the x-y plane. Viewing the plane from 
+    below corresponds to the transformation of QNM frequencies, cw, where 
+                    cw --> -cw.conj() . 
+    To accomodate this, the concept of MIRROR MODES is imagined. 
+  * When generally writing down radation, mirror modes must be added manually using the 
+    conjugate symmetry cited above. Note that this symmetry applies to the spheroial
+    harmonics also.
+
+        Prograde            Retrograde
+------------------------------------------
+m>0     Re(cw)>0      Must manually define "mirror mode"
+
+m<0     Re(cw)<0      Must manually define "mirror mode"
+                ''' )
+        
+        alert('Final Comments',header=True)
+        
+        print(''' 
+One must never mix conventions.
+
+The practical outcomes of using one convention over the other are:
+
+    * Inner products, such as those between spherical and spheroidal harmonics are conjugated between conventions. 
+    * Similarly the spheroidal harmonic functions are conjugated between conventions.
+        ''')
         
 
 
@@ -3582,8 +3638,15 @@ def scberti(acw, l,m,s=-2,adjoint=False,verbose=True,nowarn=False):
 
 
 
-#
+# Function to calculate the 1D inner-product using spline interpolation.
 def prod(A,B,TH,WEIGHT_FUNCTION=None,k=5):
+    '''
+    Function to calculate the 1D inner-product using spline interpolation. 
+    ---
+    NOTE that by default this function assumes that an inner-product over the spherical solid angle is desired and that the azimuthal integral can be trivially evaluated as 2*Pi as encapsulated in the defualt behavior of the WEIGHT_FUNCTION. This convention is extremely useful when working with spherical harmonic inner-products.
+    ---
+    londonl@mit.edu
+    '''
     from numpy import sin,pi
     if WEIGHT_FUNCTION is None:
         WEIGHT_FUNCTION = 2*pi*sin(TH)
