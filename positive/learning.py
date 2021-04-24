@@ -2654,7 +2654,7 @@ def flatpart( domain, scalar_range, log_scale=False, plot=False, verbose=False, 
     #
     if __smooth__:
         ra = ra
-        smooth_ra = smooth(ra).answer
+        smooth_ra = smooth(ra,width=int(len(ra)/romline_N)).answer
     else:
         smooth_ra = ra
     

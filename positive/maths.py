@@ -991,8 +991,8 @@ def sYlm(s,l,m,theta,phi,return_mesh=False,leaver=False):
 def sDlm_leaver(s,l,m,theta):
     #
     from numpy import sqrt 
+    from positive.physics import slm_helper,prod
     # Use leaver's representation for the spheroidals at zero oblateness
-    # return slm(None,l,m,0,theta,0,s=s,aw=0,use_nr_convention=False)
     Y,_ = slm_helper(0, l, m, theta, 0, s, sc=None )
     # Normalize 
     y = Y / sqrt(prod( Y,Y,theta ))
