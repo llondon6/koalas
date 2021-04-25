@@ -1702,7 +1702,7 @@ class qnmobj:
     '''
     
     # Initialize the object
-    def __init__(this,M,a,l,m,n,p=None,s=-2,verbose=False,calc_slm=True,use_nr_convention=True):
+    def __init__(this,M,a,l,m,n,p=None,s=-2,verbose=False,calc_slm=True,use_nr_convention=True,refine=False):
 
         # Import needed things
         from positive.physics import leaver
@@ -1711,7 +1711,7 @@ class qnmobj:
         # ----------------------------------------- #
         #              Validate inputs              #
         # ----------------------------------------- #
-        this.__validate_inputs__(M,a,l,m,n,p,s,verbose,use_nr_convention)
+        this.__validate_inputs__(M,a,l,m,n,p,s,verbose,use_nr_convention,refine)
         
         # Get dimesionless QNM frequency (under the M=1 convention) and separation constant
         this.cw,this.sc = leaver( this.a,
@@ -1721,6 +1721,7 @@ class qnmobj:
                                   p=this.p,
                                   Mf=1.0,
                                   s=s,
+                                  refine=this.__refine__,
                                   verbose=this.verbose,
                                   use_nr_convention=this.__use_nr_convention__)
                                   
@@ -1737,7 +1738,7 @@ class qnmobj:
         if calc_slm: this.__calc_slm__(__return__=False)
 
     # Validate inputs
-    def __validate_inputs__(this,M,a,l,m,n,p,s,verbose,use_nr_convention):
+    def __validate_inputs__(this,M,a,l,m,n,p,s,verbose,use_nr_convention,refine):
         
         # Testing
         if M<0:
@@ -1778,6 +1779,7 @@ class qnmobj:
         
         #
         this.__use_nr_convention__ = use_nr_convention
+        this.__refine__ = refine
 
     #
     def ysprod(this,lj,mj):
@@ -2025,6 +2027,7 @@ def leaver( jf,                     # Dimensionless BH Spin
             use_nr_convention=False, # 
             full_output=False,
             __legacy__ = False,
+            refine=False,
             verbose = False ):      # Toggle to be verbose
 
     #
@@ -2041,18 +2044,18 @@ def leaver( jf,                     # Dimensionless BH Spin
     if isinstance(jf,(tuple,list,ndarray)):
         #
         if full_output:
-            cw,sc,aw = array( [ helper(jf_, l, m, n, p , s, Mf, verbose=verbose,use_nr_convention=use_nr_convention,full_output=True) for jf_ in jf ] ).T
+            cw,sc,aw = array( [ helper(jf_, l, m, n, p , s, Mf, verbose=verbose,use_nr_convention=use_nr_convention,refine=refine,full_output=True) for jf_ in jf ] ).T
             return cw,sc
         else:
-            cw,sc = array( [ helper(jf_, l, m, n, p , s, Mf, verbose=verbose,use_nr_convention=use_nr_convention) for jf_ in jf ] ).T
+            cw,sc = array( [ helper(jf_, l, m, n, p , s, Mf, verbose=verbose,use_nr_convention=use_nr_convention,refine=refine) for jf_ in jf ] ).T
             return cw,sc
 
     else:
         #
-        return helper(jf, l, m, n, p , s, Mf, verbose=verbose,use_nr_convention=use_nr_convention,full_output=full_output)
+        return helper(jf, l, m, n, p , s, Mf, verbose=verbose,use_nr_convention=use_nr_convention,refine=refine,full_output=full_output)
 
 
-def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = False,use_nr_convention=False,full_output=False):
+def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = False,use_nr_convention=False,full_output=False,refine=False):
 
 
     # Import useful things
@@ -2158,7 +2161,7 @@ def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = F
         
         # NOTE that this is needed when NOT using the NR convention
         cw,cs = qnmflip(cw,cs)
-        
+    
     #
     if REVERT_TO_FLOAT:
         cw,cs = cw[0],cs[0]
@@ -2170,10 +2173,27 @@ def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = F
         cs = cs.conj()
         
     # Validate the QNM frequency and separation constant found
-    lvrtol=1e-3
+    lvrtol=1e-6
     # NOTE that leaver_workfunction evals Leaver's angular and radial constraint functions. Only the angular problem is invariant under conjugation of the QNM ferquency and separation constant. Thus we treat it's test differently below.
     lvrwrk_vector = leaver_workfunction(jf,l,m,[cw.real,cw.imag,cs.real,cs.imag],s=s, london=1, use_nr_convention = use_nrutils_sign_convention)
     lvrwrk = norm( lvrwrk_vector )
+      
+    #
+    refine = refine or (lvrwrk>lvrtol)
+    if refine:
+        #
+        print_method = warning if (lvrwrk>lvrtol) else alert
+        print_method('Refining results becuase' + ( 'we have been aske to by the user.' if (lvrwrk<lvrtol) else 'the interpolated values are below the internally set accuracy standard.'  ), verbose=verbose  )
+        #
+        guess = array([cw.real,cw.imag,cs.real,cs.imag],dtype=float)
+        refined_cw,refined_cs,refined_lvrwrk,retry = lvrsolve(jf,l,m,guess,tol=1e-8,s=s, use_nr_convention = use_nrutils_sign_convention)
+        #
+        cw = refined_cw
+        cs = refined_cs
+        lvrwrk = refined_lvrwrk
+        
+    
+    #
     if lvrwrk>lvrtol:
         alert( (l,m,n,p) )
         alert(cw)
@@ -2197,7 +2217,7 @@ def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = F
 
 
 
-def __leaver_helper_legacy__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = False,use_nr_convention=None,full_output=None):
+def __leaver_helper_legacy__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = False,use_nr_convention=None,full_output=None,refine=False):
 
 
     # Import useful things
@@ -3312,7 +3332,7 @@ def leaver_2D_workfunction( j, l, m, cw, s, tol=1e-10 ):
 
 
 # Work function for QNM solver
-def leaver_workfunction( j, l, m, state, s=-2, mpm=False, adjoint=False, tol=1e-10, use21=True, use27=True, london=None, use_nr_convention=False ):
+def leaver_workfunction( j, l, m, state, s=-2, mpm=False, tol=1e-10, use21=True, use27=True, london=None, use_nr_convention=False ):
     '''
     work_function_to_zero = leaver( state )
 
@@ -3320,7 +3340,7 @@ def leaver_workfunction( j, l, m, state, s=-2, mpm=False, adjoint=False, tol=1e-
     '''
 
     #
-    from numpy import complex128
+    from numpy import complex128,array,double
     if mpm:
         import mpmath
         mpmath.mp.dps = 8
@@ -3347,19 +3367,19 @@ def leaver_workfunction( j, l, m, state, s=-2, mpm=False, adjoint=False, tol=1e-
     # concat list outputs
     #print adjoint
 
-    # x = leaver21(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,adjoint=adjoint,tol=tol) +  leaver27(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,adjoint=adjoint,tol=tol)
+    # x = leaver21(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,tol=tol) +  leaver27(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,tol=tol)
 
     x = []
     if use21:
-        x += leaver21(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,adjoint=adjoint,tol=tol,london=london)
+        x += leaver21(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,tol=tol,london=london)
     if use27:
-        x += leaver27(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,adjoint=adjoint,tol=tol,london=london,use_nr_convention=use_nr_convention)
+        x += leaver27(a,l,m,complex_w,ceigenval,vec=True,s=s,mpm=mpm,tol=tol,london=london,use_nr_convention=use_nr_convention)
     if not x:
         error('use21 or/and use27 must be true')
 
 
     #
-    x = [ complex128(e) for e in x ]
+    x = [ float(e) for e in x ]
 
     #
     return x
@@ -4698,7 +4718,7 @@ def validate_lm_list( lm_space,s=-2 ):
 
 
 # Function to compute matrix of spheroidal to spherical harmic inner-products
-def ysprod_matrix(a,m,n,p,s=-2,span=6,verbose=False,usecg=True,lrange=None,conjugate=False):
+def ysprod_matrix(a,m,n,p,s=-2,span=6,verbose=False,spectral=True,lrange=None,conjugate=False):
     '''
     DESCRIPTION
     ---
@@ -4757,13 +4777,13 @@ def ysprod_matrix(a,m,n,p,s=-2,span=6,verbose=False,usecg=True,lrange=None,conju
     numl = len(lrange)               # number of ell vals
         
     # Create list of QNM objects
-    qnmo = [ qnmobj( M,a,ll,m,n,p,verbose=verbose,use_nr_convention=True,calc_slm = not usecg ) for ll in lrange ]
+    qnmo = [ qnmobj( M,a,ll,m,n,p,verbose=verbose,use_nr_convention=True,calc_slm = not spectral ) for ll in lrange ]
     
     # Pre-allocate output
     ysmat = zeros( (numl,numl), dtype=complex )
     
     # NOTE that profiling implies that the Clebsh-Gordan method is indeed slightly faster
-    if usecg:
+    if spectral:
         
         '''
         This method uses the spehroidal eigenvalue problem to define rows of the inner-product matrix. This is a spectral approach that solves for spheroidal
@@ -4950,7 +4970,7 @@ def validate_inputs_for_calc_spheroidal_moments( spherical_moments_dict, a, m, n
 
 
 # Calc spheroidal moments from spherical ones
-def calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, s=-2, usecg=True ):
+def calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, s=-2, spectral=True ):
     
     '''
     GENERAL
@@ -4976,7 +4996,7 @@ def calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, 
     
     USAGE
     ---
-    spheroidal_moments_dict = calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, span=6 )
+    spheroidal_moments_dict = calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, spectral=True )
     
     INPUTS
     ---
@@ -4990,6 +5010,10 @@ def calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, 
                                    to all values of m in the spherical_moments_dict
     n,                             Overtone index
     p,                             Parity index in the NR convention for labeling QNMs
+    spectral,                      Toggle to use a spectral method for the determination
+                                   of spherical-spheroidal inner products. True by default
+                                   as it is slightly faster than directo integration as
+                                   would be triggered by spectral=False.
                                    
     OUTPUTS
     ---
@@ -5020,7 +5044,7 @@ def calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, 
     # Calculate the relevant matrix of spherical-spheroidal inner products
     # NOTE that we conjugate here. Does this signal a remaining inconsistency in conventions?
     # ---
-    T = ysprod_matrix(a,m,n,p,s=-2,lrange=lrange,verbose=verbose,usecg=usecg)
+    T = ysprod_matrix(a,m,n,p,s=-2,lrange=lrange,verbose=verbose,spectral=spectral)
     
     # Invert map
     # ---
@@ -5747,7 +5771,7 @@ class cwbox:
 
         # Try using root
         # Define the intermediate work function to be used for this iteration
-        fun = lambda STATE: log( 1.0 + abs(array(leaver_workfunction( jf,this.l,this.m, STATE, s=this.s, adjoint=this.adjoint ))) )
+        fun = lambda STATE: log( 1.0 + abs(array(leaver_workfunction( jf,this.l,this.m, STATE, s=this.s ))) )
         X  = root( fun, guess, tol=tol )
         cw1,sc1 = X.x[0]+1j*X.x[1], X.x[2]+1j*X.x[3]
         __lvrfmin1__ = linalg.norm(array( exp(X.fun)-1.0 ))
@@ -5756,7 +5780,7 @@ class cwbox:
 
         # Try using fmin
         # Define the intermediate work function to be used for this iteration
-        fun = lambda STATE: log(linalg.norm(  leaver_workfunction( jf,this.l,this.m, STATE, s=this.s, adjoint=this.adjoint )  ))
+        fun = lambda STATE: log(linalg.norm(  leaver_workfunction( jf,this.l,this.m, STATE, s=this.s )  ))
         X  = fmin( fun, guess, disp=False, full_output=True, ftol=tol )
         cw2,sc2 = X[0][0]+1j*X[0][1], X[0][2]+1j*X[0][3]
         __lvrfmin2__ = exp(X[1])
@@ -5893,7 +5917,7 @@ class cwbox:
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
 
 # Try solving the 4D equation near a single guess value [ cw.real cw.imag sc.real sc.imag ]
-def lvrsolve(jf,l,m,guess,tol=1e-8,s=-2, adjoint=False):
+def lvrsolve(jf,l,m,guess,tol=1e-8,s=-2, use_nr_convention=False):
 
     '''
     Low-level function for numerically finding the root of leaver's equations
@@ -5906,8 +5930,8 @@ def lvrsolve(jf,l,m,guess,tol=1e-8,s=-2, adjoint=False):
 
     # Try using root
     # Define the intermediate work function to be used for this iteration
-    fun = lambda STATE: log( 1.0 + abs(array(leaver_workfunction( jf,l,m, STATE, s=s, adjoint=adjoint ))) )
-    X  = root( fun, guess, tol=tol )
+    fun = lambda STATE: log( 1.0 + abs(array(leaver_workfunction( jf,l,m, STATE, s=s, use_nr_convention=use_nr_convention ))) )
+    X  = root( fun, guess, tol=tol, method='lm' )
     cw1,sc1 = X.x[0]+1j*X.x[1], X.x[2]+1j*X.x[3]
     __lvrfmin1__ = linalg.norm(array( exp(X.fun)-1.0 ))
     retry1 = ( 'not making good progress' in X.message.lower() ) or ( 'error' in X.message.lower() )
@@ -5915,7 +5939,7 @@ def lvrsolve(jf,l,m,guess,tol=1e-8,s=-2, adjoint=False):
 
     # Try using fmin
     # Define the intermediate work function to be used for this iteration
-    fun = lambda STATE: log(linalg.norm(  leaver_workfunction( jf,l,m, STATE, s=s, adjoint=adjoint )  ))
+    fun = lambda STATE: log(linalg.norm(  leaver_workfunction( jf,l,m, STATE, s=s, use_nr_convention=use_nr_convention )  ))
     X  = fmin( fun, guess, disp=False, full_output=True, ftol=tol )
     cw2,sc2 = X[0][0]+1j*X[0][1], X[0][2]+1j*X[0][3]
     __lvrfmin2__ = exp(X[1])
