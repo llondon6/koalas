@@ -1787,6 +1787,10 @@ class qnmobj:
         from positive import sYlm
         
         #
+        if not ('slm' in this.__dict__):
+            this.calc_slm(__return__=False)
+        
+        #
         yj = sYlm(this.s,lj,mj,this.__theta__,this.__phi__)
         yj = yj / sqrt( prod(yj,yj,this.__theta__,WEIGHT_FUNCTION=2*pi*sin(this.__theta__)) )
         
@@ -1815,75 +1819,74 @@ class qnmobj:
         
         #
         print( '''
-  * QNM are defined by 4 numbers
-  * the usual l,m,n, but also a number p which labels whether modes are prograde
-    (p=1) or retrograde (p=-1).
-  * The QNM frequencies are generally complex valued (ie complex omegas, thus the
-    vairable name "cw"). The real part of the frequency, Re(cw), is the time domain 
-    waveform's central frequency. The imaginary part is the time domain amplitude's
-    expontntial decay rate.
-  * In the NR convention, Im(cw)>0, always. This is due to a convention in how the phase
-    is defined. In particular, there is no minus sign explicitly present when writing
-    down phases.
-  * PROGRADE QNMs have frequencies correspond to perturbations which propigate at the
-    source *in the direction of* the BH spin.
-  * RETROGRADE QNMs have frequencies correspond to perturbations which propigate at the
-    source *against the direction of* the BH spin.
+        * QNM are defined by 4 numbers
+        * the usual l,m,n, but also a number p which labels whether modes are prograde
+            (p=1) or retrograde (p=-1).
+        * The QNM frequencies are generally complex valued (ie complex omegas, thus the
+            vairable name "cw"). The real part of the frequency, Re(cw), is the time domain 
+            waveform's central frequency. The imaginary part is the time domain amplitude's
+            expontntial decay rate.
+        * In the NR convention, Im(cw)>0, always. This is due to a convention in how the phase
+            is defined. In particular, there is no minus sign explicitly present when writing
+            down phases.
+        * PROGRADE QNMs have frequencies correspond to perturbations which propigate at the
+            source *in the direction of* the BH spin.
+        * RETROGRADE QNMs have frequencies correspond to perturbations which propigate at the
+            source *against the direction of* the BH spin.
 
 
-        Prograde            Retrograde
-------------------------------------------
-m>0     Re(cw)>0             Re(cw)<0
+                Prograde            Retrograde
+        ------------------------------------------
+        m>0     Re(cw)>0             Re(cw)<0
 
-m<0     Re(cw)<0             Re(cw)>0
+        m<0     Re(cw)<0             Re(cw)>0
 
-''' )
+        ''' )
 
         alert('Perturabtion Theory Conventions',header=True)
 
-        #
+                #
         print( '''
-  * QNM are defined by 3 numbers, the usual l,m and n
-  * The QNM frequencies are generally complex valued (ie complex omegas, thus the
-    vairable name "cw"). The real part of the frequency, Re(cw), is the time domain 
-    waveform's central frequency. The imaginary part is the time domain amplitude's
-    expontntial decay rate.
-  * In the PT convention, Im(cw)<0, always. This is due to a convention in how the phase
-    is defined. In particular, there must be a minus sign explicitly present when writing
-    down phases.
-  * Positive m QNMs have frequencies correspond to perturbations which propigate at the
-    source *in the direction of* the BH spin.
-  * Negative m QNMs have frequencies correspond to perturbations which propigate at the
-    source *against the direction of* the BH spin.
-  * There are harmonics defined above and below the x-y plane. Viewing the plane from 
-    below corresponds to the transformation of QNM frequencies, cw, where 
-                    cw --> -cw.conj() . 
-    To accomodate this, the concept of MIRROR MODES is imagined. 
-  * When generally writing down radation, mirror modes must be added manually using the 
-    conjugate symmetry cited above. Note that this symmetry applies to the spheroial
-    harmonics also.
+        * QNM are defined by 3 numbers, the usual l,m and n
+        * The QNM frequencies are generally complex valued (ie complex omegas, thus the
+            vairable name "cw"). The real part of the frequency, Re(cw), is the time domain 
+            waveform's central frequency. The imaginary part is the time domain amplitude's
+            expontntial decay rate.
+        * In the PT convention, Im(cw)<0, always. This is due to a convention in how the phase
+            is defined. In particular, there must be a minus sign explicitly present when writing
+            down phases.
+        * Positive m QNMs have frequencies correspond to perturbations which propigate at the
+            source *in the direction of* the BH spin.
+        * Negative m QNMs have frequencies correspond to perturbations which propigate at the
+            source *against the direction of* the BH spin.
+        * There are harmonics defined above and below the x-y plane. Viewing the plane from 
+            below corresponds to the transformation of QNM frequencies, cw, where 
+                            cw --> -cw.conj() . 
+            To accomodate this, the concept of MIRROR MODES is imagined. 
+        * When generally writing down radation, mirror modes must be added manually using the 
+            conjugate symmetry cited above. Note that this symmetry applies to the spheroial
+            harmonics also.
 
-        Prograde            Retrograde
-------------------------------------------
-m>0     Re(cw)>0      Must manually define "mirror mode"
+                Prograde            Retrograde
+        ------------------------------------------
+        m>0     Re(cw)>0      Must manually define "mirror mode"
 
-m<0     Re(cw)<0      Must manually define "mirror mode"
-                ''' )
+        m<0     Re(cw)<0      Must manually define "mirror mode"
+        ''' )
         
         alert('Final Comments',header=True)
         
         print(''' 
-One must never mix conventions.
+        One must never mix conventions.
 
-The practical outcomes of using one convention over the other are:
+        The practical outcomes of using one convention over the other are:
 
-    * Inner products, such as those between spherical and spheroidal harmonics are conjugated between conventions when p=1. When p=-1, they are related by negation and conjugation. 
-    * Similarly the spheroidal harmonic functions are similarly related between conventions.
-    * Note that the spheroidal harmonic type functions are defined up to a phase which may be unique for each harmonic.
-    * There is a factor of (-1)^l when mapping +m to -m spherical-spheroidal inner-products
+            * Inner products, such as those between spherical and spheroidal harmonics are conjugated between conventions when p=1. When p=-1, they are related by negation and conjugation. 
+            * Similarly the spheroidal harmonic functions are similarly related between conventions.
+            * Note that the spheroidal harmonic type functions are defined up to a phase which may be unique for each harmonic.
+            * There is a factor of (-1)^l when mapping +m to -m spherical-spheroidal inner-products
         ''')
         
-
 
     # Return the spheriodal harmonic at theta ans phi for this QNM
     def __calc_slm__(this,theta=None,phi=None,num_theta=2**9,plot=False,__return__=True):
@@ -4754,7 +4757,7 @@ def ysprod_matrix(a,m,n,p,s=-2,span=6,verbose=False,usecg=True,lrange=None,conju
     numl = len(lrange)               # number of ell vals
         
     # Create list of QNM objects
-    qnmo = [ qnmobj(M,a,ll,m,n,p,verbose=verbose,use_nr_convention=True,calc_slm=~usecg) for ll in lrange ]
+    qnmo = [ qnmobj( M,a,ll,m,n,p,verbose=verbose,use_nr_convention=True,calc_slm = not usecg ) for ll in lrange ]
     
     # Pre-allocate output
     ysmat = zeros( (numl,numl), dtype=complex )
@@ -4763,7 +4766,9 @@ def ysprod_matrix(a,m,n,p,s=-2,span=6,verbose=False,usecg=True,lrange=None,conju
     if usecg:
         
         '''
-        This method uses the spehroidal eigenvalue problem to define rows of the inner-product matrix.
+        This method uses the spehroidal eigenvalue problem to define rows of the inner-product matrix. This is a spectral approach that solves for spheroidal
+        harmonics as represented in the spherical harmonic basis. Thus, it outputs
+        spherical-spheroidal inner-products.
         '''
         for k,llk in enumerate( lrange ):
 
@@ -4774,14 +4779,14 @@ def ysprod_matrix(a,m,n,p,s=-2,span=6,verbose=False,usecg=True,lrange=None,conju
             _,vals_k,vecs_k,lrange_k = slmcg_helper(aw,s,llk,m)
             dex_map = { ll:lrange_k.index(ll) for ll in lrange_k }
             raw_ysmat_k = vecs_k[ :,dex_map[llk] ]
-
+            # Determine the min and max l for this k. These are used to determine rows of ysmat for the k'th columns.
             lmin_k = min(lrange_k); lmax_k = max(lrange_k)
-            # Create mask for wanted values in raw_beta_k
+            # Create mask for wanted values in raw_ysmat_k
             start_dex_k = lrange_k.index(lmin) if lmin in lrange_k else  0
             end_dex_k   = lrange_k.index(lmax) if lmax in lrange_k else -1
             # Select wanted values 
             wanted_raw_ysmat_k = raw_ysmat_k[ start_dex_k : end_dex_k+1 ]
-            # Seed beta with wanted values after determining the lrange mask of interest
+            # Seed ysmat with wanted values after determining the lrange mask of interest
             start_dex = lrange.index( lrange_k[start_dex_k] )
             end_dex   = lrange.index( lrange_k[end_dex_k] )
             ysmat[start_dex:end_dex+1,k] = wanted_raw_ysmat_k
@@ -4789,7 +4794,7 @@ def ysprod_matrix(a,m,n,p,s=-2,span=6,verbose=False,usecg=True,lrange=None,conju
     else:
         
         '''
-        This method is a relatively staightforward computation of the integrals.
+        This method is a relatively staightforward computation of the integrals. It is slightly less computationally efficient for typical inputs.
         '''
 
         #
@@ -4894,33 +4899,7 @@ def __ysprod_matrix_legacy__( dimensionless_spin, lm_space, N_theta=128, s=-2 ):
     return ans
 
 
-# Given a dictionary of spherical multipole moment data values (i.e. l,m: spherical_multipole_float ), calculate the spheroidal counterpart
-def ys_change( spherical_basis_vector, lm_space, dimensionless_spin, N_theta=128, __aw_sc__=None, return_sigma=False ):
-    '''
-    Given a dictionary of spherical multipole moment data values (i.e. l,m: spherical_multipole_float ), calculate the spheroidal counterpart
-    '''
-
-    #
-    from numpy import dot
-    from numpy.linalg import inv,pinv,lstsq
-
-    # Calculate the mixing matrix
-    sigma = __ysprod_matrix_legacy__( dimensionless_spin, lm_space, N_theta=N_theta )
-
-    # Take the inverse of the mixing matrix
-    inv_sigma = pinv( sigma )
-
-    # Calculate the spheroidal vector
-    spheroidal_basis_vector = dot( inv_sigma, spherical_basis_vector )
-
-    # Return desired information
-    if return_sigma:
-        return spheroidal_basis_vector,sigma
-    else:
-        return spheroidal_basis_vector
-
-
-#
+# Validation for calc_spheroidal_moments
 def validate_inputs_for_calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose, s ):
     '''
     Input validation method for calc_spheroidal_moments
@@ -4970,8 +4949,8 @@ def validate_inputs_for_calc_spheroidal_moments( spherical_moments_dict, a, m, n
         run calc_spheroidal_moments in a loop whith spherical_moments_dict defined by single time samples')
 
 
-#
-def calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, s=-2 ):
+# Calc spheroidal moments from spherical ones
+def calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, s=-2, usecg=True ):
     
     '''
     GENERAL
@@ -5025,7 +5004,7 @@ def calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, 
     
     # Import usefuls 
     from numpy import sort,array,zeros,dot
-    from numpy.linalg import inv
+    from numpy.linalg import inv,pinv
     
     # Validate inputs
     # ---
@@ -5039,14 +5018,13 @@ def calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, 
     
     
     # Calculate the relevant matrix of spherical-spheroidal inner products
-    # NOTE that we conjugate here to get <S|Y> rather than <Y|S> as the former
-    # is needed for this calculation
+    # NOTE that we conjugate here. Does this signal a remaining inconsistency in conventions?
     # ---
-    V = ysprod_matrix(a,m,n,p,s=-2,lrange=lrange,verbose=verbose,conjugate=True)
+    T = ysprod_matrix(a,m,n,p,s=-2,lrange=lrange,verbose=verbose,usecg=usecg)
     
-    # Invert spehroidal to spherical map to get spherical to spheroidal map
+    # Invert map
     # ---
-    T = inv(V)
+    V = inv(T)
     
     # Define index domain and pre-allocate spheroidal output
     # ---
@@ -5061,7 +5039,7 @@ def calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, 
         Y = array( [ spherical_moments_dict[l,m][k] for l in lrange ] )
     
         # Apply spherical to spheroidal to spherical moments to get spheroidal ones
-        S.T[k] = dot( T, Y )
+        S[:,k] = dot( V, Y )
     
     # Create a dictionary of spheroidal moments
     # ---
@@ -5071,68 +5049,6 @@ def calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, 
     # Output
     # ---
     return spheroidal_moments_dict
-
-
-#
-def __calc_spheroidal_multipoles_legacy__( domain_vals, spherical_multipole_dict, dimensionless_spin_series, s=-2, verbose=False ):
-    '''
-    Low level function to convert spherical multipole time or frequency series to spheroidal ones GIVEN the dimensionless_spin_series associated with the spacetime. This method interprets the spacetime as Kerr at all radii. All values of m in the spherical multipole dict must be identical
-    '''
-
-    # Import usefuls
-    from numpy import diff,array,ones_like,mod
-
-    # Collect spherical multipole indeces and sort by l
-    j_space = spherical_multipole_dict.keys()
-    # Validate list of l,m values
-    validate_lm_list(j_space,s=s)
-    # Sort
-    j_space.sort(key=lambda X: X[0])
-
-    #
-    if len(set( [ j[-1] for j in j_space ] ))>1:
-        error( 'all values of m in the spherical multipole dict must be identical' )
-
-    #
-    spheroidal_multipole_dict = { (l,m,0):ones_like(spherical_multipole_dict[l,m]) for l,m in spherical_multipole_dict }
-    sigmas = []
-
-    #
-    q=0
-    for u,v in enumerate(domain_vals):
-
-        #
-        q += 1
-        if 0==mod(q,51):
-            if verbose: print('.',end='')
-
-        # Construct spherical basis vector
-        spherical_basis_vector = [ spherical_multipole_dict[j][u] for j in j_space ]
-
-        # Get the associated spin
-        dimensionless_spin = dimensionless_spin_series[u]
-
-        #
-        spheroidal_basis_vector,sigma = ys_change( spherical_basis_vector, j_space, dimensionless_spin, return_sigma=True )
-
-        #
-        sigmas.append(sigma)
-
-        #
-        for dex,(l,m) in enumerate(j_space):
-
-            #
-            k = (l,m,0)
-
-            #
-            spheroidal_multipole_dict[k][u] = spheroidal_basis_vector[dex]
-
-    #
-    sigmas = array(sigmas)
-
-
-    return spheroidal_multipole_dict,sigmas
-
 
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
