@@ -4835,7 +4835,68 @@ def ysprod_matrix(a,m,n,p,s,lrange,verbose=False,spectral=True,full_output=False
             
     #
     if full_output:
-        return ysmat,A,qnmo_dict
+        
+        '''
+        Prepare quantities for full output mode
+        '''
+        
+        # Invert ysmat to get spherical-adjoint-spheroidal inner products for this p and n subset 
+        # --- 
+        from numpy.linalg import inv 
+        # NOTE that there is a difference of conventions 
+        # * the discrete inner-product space does not conjugate in its inner-products
+        # * the continuous space does
+        # AS A RESULT WE CONJUGATE HERE TO CONVERT TO THE CONTIUOUS SPACE CONVENTION
+        adj_ysmat = inv( ysmat ).conj()
+          
+        # Create dictionary representation of inner-product matrix
+        # ---
+        adj_ysdict,ysdict = {},{}
+        Adict = {}
+        adj_spheroidal_vector,spheroidal_vector = {},{}
+        for j,lj in enumerate(lrange):
+            # For spheroidal eigenvalues
+            Adict[ lj,m,n,p ] = A[j,j]
+            # For the vector representation of the spheroidal harmonic
+            spheroidal_vector[ lj,m,n,p ] = ysmat[:,j]
+            # For the vector representation of the adjoint spheroidal harmonic
+            adj_spheroidal_vector[ lj,m,n,p ] = adj_ysmat[j,:]
+            #
+            for k,lk in enumerate(lrange):
+                # For the spherical to spheroidal inner products 
+                ysdict[     (lj,m), (lk,m,n,p) ] = ysmat[j,k]
+                # For the spherical to adjoint-spheroidal inner products 
+                adj_ysdict[ (lj,m), (lk,m,n,p) ] = adj_ysmat[k,j]
+        
+        #
+        foo = {} 
+        
+        # Matrix of spherical-spheroidal inner products
+        foo['ys_matrix']      = ysmat  
+        # Dictionary of spherical-spheroidal inner products
+        foo['ys_dict']        = ysdict
+        
+        # Matrix of adjoint spherical-spheroidal inner products
+        foo['adj_ys_matrix']   = adj_ysmat  
+        # Dictionary of adjoint spherical-spheroidal inner products
+        foo['adj_ys_dict']     = adj_ysdict
+        
+        # Matrix of spheroidal harmonic eigenvalues
+        foo['eigval_matrix']  = A 
+        # Dictionary of spheroidal harmonic eigenvalues
+        foo['eigval_dict']    = Adict
+        
+        # Matrix of spheroidal harmonic eigenvalues
+        foo['spheroidal_vector_dict']  = spheroidal_vector
+        # Dictionary of spheroidal harmonic eigenvalues
+        foo['adj_spheroidal_vector_dict']    = adj_spheroidal_vector
+        
+        # Dictionary of QNM class objects
+        foo['qnmo_dict']      = qnmo_dict
+            
+    #
+    if full_output:
+        return foo
     else:
         return ysmat
 
