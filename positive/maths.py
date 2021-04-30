@@ -1415,14 +1415,23 @@ def spline_diff(t,y,k=3,n=1):
     '''
     Wrapper for InterpolatedUnivariateSpline derivative function
     '''
+    
+    #
+    if not isinstance(k,int):
+        error('k must be int')
+    if not isinstance(n,int):
+        error('n must be int')
 
     #
     from numpy import sum
     from scipy.interpolate import InterpolatedUnivariateSpline as spline
 
     # Calculate the desired number of derivatives
-    ans = spline(t,y.real,k=k).derivative(n=n)(t) \
-          + ( 1j*spline(t,y.imag,k=k).derivative(n=n)(t) if (sum(abs(y.imag))!=0) else 0 )
+    if n!=0:
+        ans = spline(t,y.real,k=k).derivative(n=n)(t) \
+            + ( 1j*spline(t,y.imag,k=k).derivative(n=n)(t) if (sum(abs(y.imag))!=0) else 0 )
+    else:
+        ans = y
 
     return ans
 

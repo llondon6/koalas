@@ -1802,6 +1802,12 @@ class qnmobj:
         #
         return ys
 
+
+    #
+    def __calc_aslm__(this):
+        #
+        error('Please use calc_adjoint_slm_subset to calculate a family of spheroidal harmonics and their adjoint duals all at once.')
+
     #
     def explain_conventions(this,plot=False):
         
@@ -3883,6 +3889,8 @@ def slm_dual_set( jf, l, m, n, theta, phi, s=-2, lmax=8, lmin=2, aw=None, verbos
     '''
     Construct set of dual-spheroidals
     '''
+    
+    error('please use calc_adjoint_slm_subset')
 
     # Import usefuls
     from numpy import array,pi,arange,linalg,dot,conj,zeros,double
@@ -4788,7 +4796,7 @@ def ysprod_matrix(a,m,n,p,s,lrange,verbose=False,spectral=True,full_output=False
         '''
         
         # Define span to used in determination of lrange within slmcg_helper
-        slmcg_span = max(6,int(len(lrange)/2))
+        slmcg_span = max(6,int(len(lrange)))
         
         #
         for k,llk in enumerate( lrange ):
@@ -4844,7 +4852,7 @@ def ysprod_matrix(a,m,n,p,s,lrange,verbose=False,spectral=True,full_output=False
         # --- 
         from numpy.linalg import inv 
         # NOTE that there is a difference of conventions 
-        # * the discrete inner-product space does not conjugate in its inner-products
+        # * the numpy discrete inner-product space does not conjugate in its inner-products
         # * the continuous space does
         # AS A RESULT WE CONJUGATE HERE TO CONVERT TO THE CONTIUOUS SPACE CONVENTION
         adj_ysmat = inv( ysmat ).conj()
@@ -4854,6 +4862,7 @@ def ysprod_matrix(a,m,n,p,s,lrange,verbose=False,spectral=True,full_output=False
         adj_ysdict,ysdict = {},{}
         Adict = {}
         adj_spheroidal_vector,spheroidal_vector = {},{}
+        cwmat = zeros_like(ysmat)
         for j,lj in enumerate(lrange):
             # For spheroidal eigenvalues
             Adict[ lj,m,n,p ] = A[j,j]
@@ -4867,6 +4876,8 @@ def ysprod_matrix(a,m,n,p,s,lrange,verbose=False,spectral=True,full_output=False
                 ysdict[     (lj,m), (lk,m,n,p) ] = ysmat[j,k]
                 # For the spherical to adjoint-spheroidal inner products 
                 adj_ysdict[ (lj,m), (lk,m,n,p) ] = adj_ysmat[k,j]
+                #
+                cwmat[j,k] = qnmo[k].cw
         
         #
         foo = {} 
@@ -4893,6 +4904,10 @@ def ysprod_matrix(a,m,n,p,s,lrange,verbose=False,spectral=True,full_output=False
         
         # Dictionary of QNM class objects
         foo['qnmo_dict']      = qnmo_dict
+        
+        #
+        foo['lrange']         = lrange
+        foo['cw_matrix']      = cwmat
             
     #
     if full_output:
@@ -5098,7 +5113,7 @@ def validate_inputs_for_calc_spheroidal_moments_helper( spherical_moments_dict, 
 
 
 # Calc spheroidal moments from spherical ones
-def calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, s=-2, spectral=True ):
+def calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, s=-2, spectral=True, method=None, time=None ):
     
     '''
     '''
@@ -5112,6 +5127,10 @@ def calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, 
     # ---
     validate_inputs_for_calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose, s )
     
+    
+    # 
+    if method is None:
+        method = 'gradient'
     
     # Handle cases:
     # ---
@@ -5137,134 +5156,295 @@ def calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, 
         # Case (2)
         # ~- -~ ~- -~ ~- -~ ~- -~ #
         
+        #
+        if method in ('grad','gradient'):
+            
+            # Use derivatives of input sperical multipoles as features
+            spheroidal_moments_dict,L,Z,qnmo_dict = __calc_spheroidal_moments_via_gradient__(spherical_moments_dict, a, m, n, p, verbose=verbose, s=s, spectral=spectral,time=time)
+            
+        else:
+            
+            # Use projects as features 
+            spheroidal_moments_dict,L,Z,qnmo_dict = __calc_spheroidal_moments_via_projection__(spherical_moments_dict, a, m, n, p, verbose=verbose, s=s, spectral=spectral)
+            
+    #
+    return spheroidal_moments_dict,L,Z,qnmo_dict
+            
         
-        # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
-        # PART 1: Construct the linear system's matrix operator
-        # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#
+def __calc_spheroidal_moments_via_gradient__(spherical_moments_dict, a, m, n, p, verbose=False, s=-2, spectral=True, spheroidal_moments_dict=None, T_dict=None, V_dict=None, qnmo_dict=None, time=None):
+    
+    # Import usefuls 
+    # ---
+    from numpy import ndarray,zeros,sort,array,dot,hstack,vstack,arange
+    from numpy.linalg import inv,pinv
+    
+    
+    # Determine if iterables are given
+    # ---
+    
+    #
+    p_is_iterable = isinstance(p,(list,tuple,ndarray))
+    n_is_iterable = isinstance(n,(list,tuple,ndarray))
+    
+    #
+    if not p_is_iterable: p = [p]
+    if not n_is_iterable: n = [n]
+    
+    #
+    if time is None:
+        error('the gradient method requires a time input')
+    
+    #
+    if (not p_is_iterable) and (not n_is_iterable):
+        error('either p or n should be iterable')
+    
+    #
+    p_iterable,n_iterable = p,n 
+    
+    # #
+    # if p_iterable[0]==-1: 
+    #     p_iterable = p_iterable[::-1]
+    
+    
+    # Initiate dictionaries
+    # ---
+    
+    # For output spheroidal moments
+    spheroidal_moments_dict = {} if spheroidal_moments_dict is None else spheroidal_moments_dict.copy()
+    # For the spherical to spheroidal map
+    T_dict = {} if T_dict is None else T_dict.copy()
+    # For the spheroidal to spherical map
+    V_dict = {} if V_dict is None else V_dict.copy()
+    # For the QNM objects
+    qnmo_dict = {} if qnmo_dict is None else qnmo_dict.copy()
+    
+    
+    # Extract vector of spherical moments from the input dict 
+    # ---
+    lrange = sort( [ l for l,_ in spherical_moments_dict ] )
+    t = time
+    Y_raw = array( [ spherical_moments_dict[l,m] for l in lrange ] )
+    
+    # Construct dict of derivatives
+    DY = {}
+    k = 0
+    for pk in p_iterable:
+        for nk in n_iterable:
+            for l in lrange:
+                DY[l,m,k] = spline_diff( t, spherical_moments_dict[l,m], n=k )
+            k += 1
+    
+    # Construct seed mixing matrices (ie the matrices for the 0th derivatives)
+    foo = {}
+    for pk in p_iterable:
+        for nk in n_iterable:
+            foo[nk,pk] = ysprod_matrix(a,m,nk,pk,s=s,lrange=lrange,verbose=verbose,spectral=spectral,qnmo_dict=qnmo_dict,full_output=True)
+            
+    # Stack the matrices horizontally
+    T1 = None
+    for pk in p_iterable:
+        for nk in n_iterable:
+            T0  = foo[nk,pk]['ys_matrix']
+            if T1 is None:
+                T1  =  T0
+            else:
+                T1  = hstack( [ T1, T0] )
+    CW1=None
+    for pk in p_iterable:
+        for nk in n_iterable:
+            CW0 = foo[nk,pk]['cw_matrix']
+            if CW1 is None:
+                CW1 = CW0
+            else:
+                CW1 = hstack( [CW1,CW0] )
+                
+    # Add derivative cases by scaling and then vertically staking
+    T,Y = None,None
+    k = 0
+    CW = CW1
+    for pk in p_iterable:
+        for nk in n_iterable:
+            if T is None:
+                T = T1 
+            else:
+                T = vstack( [T,T1 * ((1j*CW)**k) ] )
+            #
+            k += 1
+            
+    #
+    L = T 
+    Z = inv(L)
+            
+    #
+    N = len(p) * len(n) * len(spherical_moments_dict)
+    S = zeros( (N,len(t)), dtype=complex )
+    for kref,tref in enumerate(t):
         
         #
-        spheroidal_moments_dict = {}
-        T_dict, V_dict, qnmo_dict = {}, {}, {}
-        
-        #
-        p_is_iterable = isinstance(p,(list,tuple,ndarray))
-        n_is_iterable = isinstance(n,(list,tuple,ndarray))
-        
-        #
-        if not p_is_iterable: p = [p]
-        if not n_is_iterable: n = [n]
-        
-        #
-        if (not p_is_iterable) and (not n_is_iterable):
-            error('either p or n should be iterable')
-        
-        #
-        p_iterable,n_iterable = p,n 
-        
-        #
+        Y = []
+        j = 0
         for pk in p_iterable:
             for nk in n_iterable:
-                
-                #
-                spheroidal_moments_dict,T_dict,V_dict,qnmo_dict = calc_spheroidal_moments_helper( spherical_moments_dict, a, m, nk, pk, verbose=verbose, s=s, spectral=spectral, spheroidal_moments_dict=spheroidal_moments_dict,T_dict=T_dict,V_dict=V_dict, qnmo_dict=qnmo_dict )
-          
-        # # 
-        # return spheroidal_moments_dict,T_dict,V_dict,qnmo_dict
+                for l in lrange:
+                    Y.append( DY[l,m,j][kref] )
+                j +=1
+        Y = array(Y)    
         
-        # -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- #
+        #    
+        S[:,kref] = dot( Z,Y )
         
-        # The square matrix we wish to constrcut will have a width of widL
-        N = len(p) * len(n) * len(spherical_moments_dict)
-
-        # Preallocate the matrix 
-        L = zeros( (N,N), dtype=complex )
-
-        # Preallocate the output array
-        Y = zeros( (N,), dtype=complex )
-
-        # Y = L X ---> L^-1 Y = X
-
-        #
-        lrange = sort( [ l for l,_ in spherical_moments_dict ] )
-
-        #
-        row_index = -1
-        for a,pa in enumerate(p):
-            for b,nb in enumerate(n):
-                for c,lc in enumerate(lrange):
-                    
-                    # ROWS
-                    
-                    #
-                    row_index += 1
-                    
-                    #
-                    col_index = -1
-                    for d,pd in enumerate(p):
-                        for e,ne in enumerate(n):
-                            for f,lf in enumerate(lrange):
-                                
-                                # COLUMNS
-                                
-                                #
-                                col_index += 1
-                                
-                                #
-                                LT = array([  T_dict[ (ll,m), (lc,m,nb,pa) ] for ll in lrange ])
-                                LV = array([  V_dict[ (lf,m,ne,pd),(ll,m) ] for ll in lrange ] )
-                                
-                                #
-                                weight = 1.0 
-                                
-                                # NOTE that this line is corrently wrong
-                                # NOTE that dot does not complex conjugate
-                                #error('Please try to calculate spheroidal-spheroidal inner product manually rather than use results from calc_spheroidal_moments_helper')
-                                L[row_index,col_index] = weight * dot( LT.conj(), LV )
-
-
-        
-        # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
-        # PART 2: Construct the linear system's output vector at all 
-        # domain points
-        # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
-        
-        # Invert the array representation of the mixing tensor 
-        Z = pinv(L)
-
-        # Define index domain and pre-allocate spheroidal output
-        # ---
-        index_domain = range(len( spherical_moments_dict[ spherical_moments_dict.keys()[0] ] ))
-        S = zeros( (N,len(index_domain)), dtype=complex )
-        
-        # Collect spheroidal information over all domain samples
-        # ---
-        for k in index_domain:
-        
-            #
-            row_index = -1
-            for a,pa in enumerate(p):
-                for b,nb in enumerate(n):
-                    for c,lc in enumerate(lrange):
-                        row_index += 1
-                        Y[row_index] = spheroidal_moments_dict[ lc, m, ( nb, pa ) ][k]
-                        
-            # Solve for all spheroidal amplitudes 
-            S[:,k] = dot( Z, Y )
-        
-        # Construct dictionaries
-        final_spheroidal_moments_dict = {}
-        #
-        row_index = -1
-        for a,pa in enumerate(p):
-            for b,nb in enumerate(n):
-                for c,lc in enumerate(lrange):
-                    row_index += 1
-                    final_spheroidal_moments_dict[ ( lc,m,nb,pa ) ] = S[row_index]
-                    
+    # Construct dictionaries
+    final_spheroidal_moments_dict = {}
+    #
+    row_index = -1
+    for a,pa in enumerate(p_iterable):
+        for b,nb in enumerate(n_iterable):
+            for c,lc in enumerate(lrange):
+                row_index += 1
+                final_spheroidal_moments_dict[ ( lc,m,nb,pa ) ] = S[row_index]
+    
     
     # Output
     # ---
-    return final_spheroidal_moments_dict,L,Z,qnmo_dict
+    return (final_spheroidal_moments_dict,L,Z,qnmo_dict)
+
+#
+def __calc_spheroidal_moments_via_projection__(spherical_moments_dict, a, m, n, p, verbose=False, s=-2, spectral=True):
+    
+    # Import usefuls 
+    # ---
+    from numpy import ndarray,zeros,sort,array,dot
+    from numpy.linalg import inv,pinv
+    
+    #
+    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+    # PART 1: Construct the linear system's matrix operator
+    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+    
+    #
+    spheroidal_moments_dict = {}
+    T_dict, V_dict, qnmo_dict = {}, {}, {}
+    
+    #
+    p_is_iterable = isinstance(p,(list,tuple,ndarray))
+    n_is_iterable = isinstance(n,(list,tuple,ndarray))
+    
+    #
+    if not p_is_iterable: p = [p]
+    if not n_is_iterable: n = [n]
+    
+    #
+    if (not p_is_iterable) and (not n_is_iterable):
+        error('either p or n should be iterable')
+    
+    #
+    p_iterable,n_iterable = p,n 
+    
+    #
+    for pk in p_iterable:
+        for nk in n_iterable:
+            
+            #
+            spheroidal_moments_dict,T_dict,V_dict,qnmo_dict = calc_spheroidal_moments_helper( spherical_moments_dict, a, m, nk, pk, verbose=verbose, s=s, spectral=spectral, spheroidal_moments_dict=spheroidal_moments_dict,T_dict=T_dict,V_dict=V_dict, qnmo_dict=qnmo_dict )
+        
+    # # 
+    # return spheroidal_moments_dict,T_dict,V_dict,qnmo_dict
+    
+    # -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- -~- #
+    
+    # The square matrix we wish to constrcut will have a width of widL
+    N = len(p) * len(n) * len(spherical_moments_dict)
+
+    # Preallocate the matrix 
+    L = zeros( (N,N), dtype=complex )
+
+    # Preallocate the output array
+    Y = zeros( (N,), dtype=complex )
+
+    # Y = L X ---> L^-1 Y = X
+
+    #
+    lrange = sort( [ l for l,_ in spherical_moments_dict ] )
+
+    #
+    row_index = -1
+    for a,pa in enumerate(p):
+        for b,nb in enumerate(n):
+            for c,lc in enumerate(lrange):
+                
+                # ROWS
+                
+                #
+                row_index += 1
+                
+                #
+                col_index = -1
+                for d,pd in enumerate(p):
+                    for e,ne in enumerate(n):
+                        for f,lf in enumerate(lrange):
+                            
+                            # COLUMNS
+                            
+                            #
+                            col_index += 1
+                            
+                            #
+                            LT = array([  T_dict[ (ll,m), (lc,m,nb,pa) ] for ll in lrange ])
+                            LV = array([  V_dict[ (lf,m,ne,pd),(ll,m) ] for ll in lrange ] )
+                            
+                            #
+                            weight = (1j*qnmo_dict[lc,m,nb,pa].cw) ** ( pa * nb )
+                            
+                            # NOTE that this line is corrently wrong
+                            # NOTE that dot does not complex conjugate
+                            #error('Please try to calculate spheroidal-spheroidal inner product manually rather than use results from calc_spheroidal_moments_helper')
+                            L[row_index,col_index] = weight * dot( LT, LV )
+
+
+    
+    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+    # PART 2: Construct the linear system's output vector at all 
+    # domain points
+    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+    
+    # Invert the array representation of the mixing tensor 
+    Z = pinv(L)
+
+    # Define index domain and pre-allocate spheroidal output
+    # ---
+    index_domain = range(len( spherical_moments_dict[ spherical_moments_dict.keys()[0] ] ))
+    S = zeros( (N,len(index_domain)), dtype=complex )
+    
+    # Collect spheroidal information over all domain samples
+    # ---
+    for k in index_domain:
+    
+        #
+        row_index = -1
+        for a,pa in enumerate(p):
+            for b,nb in enumerate(n):
+                for c,lc in enumerate(lrange):
+                    row_index += 1
+                    Y[row_index] = spheroidal_moments_dict[ lc, m, ( nb, pa ) ][k]
+                    
+        # Solve for all spheroidal amplitudes 
+        S[:,k] = dot( Z, Y )
+    
+    # Construct dictionaries
+    final_spheroidal_moments_dict = {}
+    #
+    row_index = -1
+    for a,pa in enumerate(p):
+        for b,nb in enumerate(n):
+            for c,lc in enumerate(lrange):
+                row_index += 1
+                final_spheroidal_moments_dict[ ( lc,m,nb,pa ) ] = S[row_index]
+                
+
+    # Output
+    # ---
+    return (final_spheroidal_moments_dict,L,Z,qnmo_dict)
 
 
 # Calc spheroidal moments from spherical ones
@@ -5355,7 +5535,7 @@ def calc_spheroidal_moments_helper( spherical_moments_dict, a, m, n, p, verbose=
     # Calculate the relevant matrix of spherical-spheroidal inner products
     # NOTE that we conjugate here. Does this signal a remaining inconsistency in conventions?
     # ---
-    T = ysprod_matrix(a,m,n,p,s=-2,lrange=lrange,verbose=verbose,spectral=spectral,qnmo_dict=qnmo_dict)
+    T = ysprod_matrix(a,m,n,p,s=s,lrange=lrange,verbose=verbose,spectral=spectral,qnmo_dict=qnmo_dict)
     
     # Invert map
     # ---
@@ -5390,7 +5570,7 @@ def calc_spheroidal_moments_helper( spherical_moments_dict, a, m, n, p, verbose=
             this_T_dict[ (lj,m), (lk,m,n,p) ] = T[k,j]
             
             #
-            this_V_dict[ (lk,m,n,p), (lj,m) ] = V[k,j]
+            this_V_dict[ (lk,m,n,p), (lj,m) ] = V[j,k]
             
             
     # Update the output dictionaries with this instance's information
@@ -7186,12 +7366,187 @@ def swsh_clebsh_gordan_prods(k,m,s,left_shift,u_power,right_shift):
        return 0
 
 
+# Function for the calculation of a biorthogonal spheroidal harmonic subset
+def calc_adjoint_slm_subset(a,m,n,p,s,lrange,theta=None,full_output=False):
+    
+    '''
+    DESCRIPTION
+    ---
+    Function for the calculation of a biorthogonal spheroidal harmonic subset
+    hainv fixed values of overtone and partiy indeces n and p, but varuing 
+    values of the legendre index l.
+    
+    USAGE
+    ---
+    output = calc_adjoint_slm_subset(a,m,n,p,s,lrange,theta=None,full_output=False)
+    
+    INPUTS
+    ---
+    aw,             The oblateness 
+    m,              The azimuthal eigenvalue (aka the polar index for the associated
+                    legendre problem)
+    n,              The overtone label. NOTE that we use the convention where 
+                    n starts
+                    at zero.
+    s,              The spin weight (the original iteration of this function 
+                    only handles |s|=2)
+    lrange,         Values of the legendre indeces to consider. 
+    theta,          OPTIONAL. The polar angle. If not given, a default stencil will 
+                    be generated and output.
+    full_output,    OPTIONAL. Toggle for output a dictionary of various data products
+                    rather than standard minimal output.
+                    
+    OUTPUT
+    ---
+    
+    IF full_output=True THEN output is a dictionary with fields inhereited from ysprod_matrix along with additional fields:
+    
+        spheroidal_of_theta_dict,           a dictionary with keys (l,m,n,p) and values
+                                            given by spheroidal harmonics in theta 
+    
+        adjoint_spheroidal_of_theta_dict,   a dictionary with keys (l,m,n,p) and values
+                                            given by adjoint spheroidal harmonics in theta 
+                                            
+    IF full_output=False THEN output is 
+    
+        theta, adjoint_spheroidal_of_theta_dict, spheroidal_of_theta_dict
+    
+    AUTHOR
+    ---
+    londonl@mit, pilondon2@gmail.com, 2021
+    
+    '''
+    
+    #
+    foo = aslm_helper( a,m,n,p,s,lrange,theta=theta,full_output=full_output )
+    
+    #
+    return foo
+
+
+
+# Function to validate inputs to adjoint spheroidal harmonic type functions
+# NOTE that this function and related ones use the NR convention for labeling the QNMs
+def validate_aslm_inputs(a,m,n,p,s,lrange):
+    
+    '''
+    Function to test whether theta input to a spheroidal harmonic method is appropriate
+    '''
+    
+    # Import usefuls 
+    from positive import lim
+    from numpy import ndarray,pi,double,complex
+    
+    # Check indices
+    if not isinstance(s,int):
+        error('spin wieght, s, must be int, but %g found'%s)
+    
+    # Check for sign convention on spin
+    if a<0:
+        error('This object uses the convention that a>0. To select the retrograde QNM branch, set p=-1')
+    
+    # Check for acceptable p values
+    if not (p in [-1,1]):
+        error('p must be +1 (for prograde) or -1 (for retrograde), instead it is %s'%str(p))
+        
+    # Check for extremal or nearly extremal cases
+    if abs(a)>1:
+        error('Kerr parameter must be non-extremal')
+    if abs(a)>(1-1e-3):
+        warning('You have selected a nearly extremal spin. Please take significant care to ensure that results make sense.')
+    
+    # Check for consistent definition of l values
+    for l in lrange:
+        if not isinstance(l,int):
+            error('legendre, l, index must be int, but %g found'%l)
+        if not isinstance(l,int):
+            error('azimuthal, m, index must be int, but %g found'%m)
+        if l<abs(s):
+            error('l must be >= |s| due to the structure of Teukolsk\'s angular equation')
+        if abs(m)>l:
+            error('|m|>l and it should not be du to the structure of Teukolsk\'s angular equation')
+    
+
+
+# Helper function for adjoint spheroidal harmoinc calculator
+def aslm_helper( a,m,n,p,s,lrange,theta=None,full_output=False ):
+    
+    '''
+    Helper function for the calculation of adjoint spheroidal harmonics. Sets of these functions must be computed simulteneously at present.
+    '''
+    
+    # Import usefuls 
+    # ---
+    from numpy import linspace,pi,zeros_like
+    
+    # Validate inputs
+    # ---
+    validate_aslm_inputs(a,m,n,p,s,lrange)
+    
+    # Handle theta input 
+    # ---
+    if theta is None:
+        zero = 1e-6
+        num_theta = 2**9
+        theta = linspace(zero,pi-zero,num_theta)
+    
+    # NOTE that the use must apply the phi dependence externally via exp( 1j * m * phi )
+    # ---
+    phi = 0
+    
+    # Get all of the relevant info
+    # ---
+    foo = ysprod_matrix(a,m,n,p,s,lrange,verbose=False,spectral=True,full_output=True)
+    
+    # Prepare dictionaries for spheroidal and adjoint spheroidal arrays
+    aS = {}
+    S  = {}
+    
+    # Compute spheroidal and adjoint spheroidal harmonics as a sum over their spherical harmonic multipole moments.
+    # ---
+    for l in lrange:
+        
+        #
+        aS_vector = foo['adj_spheroidal_vector_dict'][ l,m,n,p ]
+        S_vector  = foo['spheroidal_vector_dict'][     l,m,n,p ]
+        
+        #
+        Sl  = zeros_like(theta,dtype=complex)
+        aSl = zeros_like(theta,dtype=complex)
+        
+        for k,lk in enumerate(lrange):
+            #
+            Y = sYlm(s,lk,m,theta,phi,leaver=True)
+            Sl  +=  S_vector[k] * Y
+            aSl += aS_vector[k] * Y
+            
+        # Store in dictionaries for ease of access
+        S[l,m,n,p]  =  Sl
+        aS[l,m,n,p] = aSl
+    
+    # Either output all data, or only the minimal products
+    if full_output:
+        #
+        foo['theta']                            = theta
+        foo[        'spheroidal_of_theta_dict'] =  S
+        foo['adjoint_spheroidal_of_theta_dict'] = aS
+        #
+        return foo
+    else:
+        #
+        return (theta,aS,S)
+
+
+
 #
 def aslmcg( a, s, l, m, n, p, theta, phi, kerr=True, lmin=None, lmax=None, span=6, force_norm=True, lrange=None ):
     '''
     Compute adjoint spheroidal harmonic functoin using the spherical harmonic clensch-gordan method. By default, kerr adjoint functions are computed.
     londonl@mit.edu 2020
     '''
+    
+    #
+    error('please use calc_adjoint_slm_subset')
     
     #
     from numpy.linalg import inv
@@ -7234,44 +7589,6 @@ def aslmcg( a, s, l, m, n, p, theta, phi, kerr=True, lmin=None, lmax=None, span=
     
     # Define index range and perform precomputations
     num_ell = len(lrange)
-    
-    # # -------------------------------------- #
-    # # ALTERNATE ROUTE -- Perform the integrals directly 
-    # # NOTE that this is faster but less accurate
-    # # in phase for small amplitudes
-    # # -------------------------------------- #
-    # # Use spheroidals directly
-    # beta = zeros( (num_ell,num_ell), dtype=complex )
-    # for j,llj in enumerate(lrange):
-    #     for k,llk in enumerate(lrange):
-    #         beta[j,k] = ysprod(a, llj,m, (llk,m,n), N=2**10, use_nr_convention=False )
-    
-    #
-    # beta = zeros( (num_ell,num_ell), dtype=complex )
-    # A = zeros_like(beta)
-    # for k,llk in enumerate( lrange ):
-        
-    #     # Calculate spherical-spheroidal mixing coefficients using matrix method
-    #     aw = a * leaver( a, llk, m, n )[0]
-        
-    #     # Use helper function to calculate matrx elements
-    #     _,vals_k,vecs_k,lrange_k = slmcg_helper(aw,s,llk,m,span=span)
-    #     dex_map = { ll:lrange_k.index(ll) for ll in lrange_k }
-    #     raw_beta_k = vecs_k[ :,dex_map[llk] ]
-        
-    #     #
-    #     A[ k,k ] = vals_k[ dex_map[llk] ]
-        
-    #     lmin_k = min(lrange_k); lmax_k = max(lrange_k)
-    #     # Create mask for wanted values in raw_beta_k
-    #     start_dex_k = lrange_k.index(lmin) if lmin in lrange_k else  0
-    #     end_dex_k   = lrange_k.index(lmax) if lmax in lrange_k else -1
-    #     # Select wanted values 
-    #     wanted_raw_beta_k = raw_beta_k[ start_dex_k : end_dex_k+1 ]
-    #     # Seed beta with wanted values after determining the lrange mask of interest
-    #     start_dex = lrange.index( lrange_k[start_dex_k] )
-    #     end_dex   = lrange.index( lrange_k[end_dex_k] )
-    #     beta[start_dex:end_dex+1,k] = wanted_raw_beta_k
     
     #
     beta,A,qnmo_dict = ysprod_matrix(a,m,n,p,s,lrange,spectral=True,full_output=True)
@@ -7326,136 +7643,7 @@ def aslmcg( a, s, l, m, n, p, theta, phi, kerr=True, lmin=None, lmax=None, span=
     return ans
 
   
-#
-def aslmcg_dev( a, s, l, m, n, theta, phi, kerr=True, lmin=None, lmax=None, span=6, force_norm=True ):
-    '''
-    Compute adjoint spheroidal harmonic functoin using the spherical harmonic clensch-gordan method. By default, kerr adjoint functions are computed.
-    londonl@mit.edu 2020
-    '''
-    
-    #
-    from numpy.linalg import inv
-    from numpy import zeros,array,double,ndarray,dot,sqrt,zeros_like
-    
-    # Return standard adjoint if requested -- NOTE the keyword here is confusing and should be changed!
-    if not kerr:
-        aw = a * leaver( a, l, m, n )[0]
-        S,A = slmcg( aw, s, l, m, theta, phi )
-        return S.conj(), A.conj()
-        
-    #
-    if not isinstance(phi,(float,int,double)):
-        error('phi must be number; zero makes sense as the functions phi dependence is exp(1j*m*phi), and so can be added externally')
-        
-    # Otherwise proceed to computeation of Kerr "adjoint" function(s)
-    
-    #
-    if l is not 2:
-        error('This function currently works when l=2 is given, but it will generate and output harmonics for all l<=lmax.')
-    
-    # Handle input format
-    if isinstance(a,(list,ndarray)):
-        if len(a)>1:
-            error('first input as iterable not handled; fun function on each element')
-        else:
-            a = a[0]
-            
-    # if lmin in None, set it relative to l
-    if lmin is None: lmin = max(l-span,max(abs(s),abs(m)))
-    # if lmax in None, set it relative to l
-    if lmax is None: lmax = l+span
-    
-    # Define index range and perform precomputations
-    lrange = range(lmin,lmax+1); num_ell = len(lrange)
-    
-    # # -------------------------------------- #
-    # # ALTERNATE ROUTE -- Perform the integrals directly 
-    # # NOTE that this is faster but less accurate
-    # # in phase for small amplitudes
-    # # -------------------------------------- #
-    # # Use spheroidals directly
-    # beta = zeros( (num_ell,num_ell), dtype=complex )
-    # for j,llj in enumerate(lrange):
-    #     for k,llk in enumerate(lrange):
-    #         beta[j,k] = ysprod(a, llj,m, (llk,m,n), N=2**10, use_nr_convention=False )
-    
-    #
-    beta = zeros( (num_ell,num_ell), dtype=complex )
-    A = zeros_like(beta)
-    for k,llk in enumerate( lrange ):
-        
-        # Calculate spherical-spheroidal mixing coefficients using matrix method
-        aw = a * leaver( a, llk, m, n )[0]
-        
-        # Use helper function to calculate matrx elements
-        _,vals_k,vecs_k,lrange_k = slmcg_helper(aw,s,llk,m,span=span)
-        dex_map = { ll:lrange_k.index(ll) for ll in lrange_k }
-        raw_beta_k = vecs_k[ :,dex_map[llk] ]
-        
-        #
-        A[ k,k ] = vals_k[ dex_map[llk] ]
-        
-        lmin_k = min(lrange_k); lmax_k = max(lrange_k)
-        # Create mask for wanted values in raw_beta_k
-        start_dex_k = lrange_k.index(lmin) if lmin in lrange_k else  0
-        end_dex_k   = lrange_k.index(lmax) if lmax in lrange_k else -1
-        # Select wanted values 
-        wanted_raw_beta_k = raw_beta_k[ start_dex_k : end_dex_k+1 ]
-        # Seed beta with wanted values after determining the lrange mask of interest
-        start_dex = lrange.index( lrange_k[start_dex_k] )
-        end_dex   = lrange.index( lrange_k[end_dex_k] )
-        beta[start_dex:end_dex+1,k] = wanted_raw_beta_k
-        
-    # Compute the inverse conjugate matrix
-    X, Z = beta, inv(beta)
-    nu = Z.conj()
-    
-    # Compute the related operator's matrix rep (a "heterogeneous adjoint")
-    L_ddag = dot( Z, dot( A, X ) ).conj()
-    
-    # Construct space of spherical harmonics to use 
-    Yspace = array( [ sYlm(s,llj,m,theta,phi,leaver=True) for llj in lrange ] )
-    
-    # Compute adjoint functions 
-    # NOTE that this line can be slow if many (thousand) values of theta are used
-    aSspace = dot( nu, Yspace )
-    # Compute regular spheroidal function
-    Sspace = dot(beta.T,Yspace)
-    
-    # Enforce normalization
-    # NOTE that this is very optional as harmonics are arlready normalized to high
-    # accuracy by construction. However, the stencil in theta may cause minor departures
-    if force_norm:
-        norm = lambda x: x/sqrt( prod(x,x,theta) )
-        for k,llk in enumerate(lrange):
-            aSspace[k,:] = norm( aSspace[k,:] )
-            Yspace[k,:]  = norm(  Yspace[k,:] )
-            Sspace[k,:]  = norm(  Sspace[k,:] )
-    
-    # Create maps between ell and harmonics
-    foo,bar,sun = {},{},{}
-    for k,llk in enumerate(lrange):
-        foo[ llk ] = aSspace[k,:]
-        bar[ llk ] =  Yspace[k,:]
-        sun[ llk ] =  Sspace[k,:]
-        
-    # Package output
-    ans = {}
-    ans['Ylm'] = bar
-    ans['AdjSlm'] = foo
-    ans['Slm'] = sun
-    ans['lnspace'] = lrange 
-    ans['Yspace'] = Yspace
-    ans['aSspace'] = aSspace
-    ans['YSGramian'] = beta
-    ans['overtone_index'] = n
-    ans['matrix_op'] = L_ddag
-    ans['ZAX'] = (Z,A,X)
-    
-    # Return output
-    return ans
-
-      
+       
 #
 def slmcg_helper( aw, s, l, m, lmin=None, lmax=None, span=6, case=None, lrange=None ):
     '''
