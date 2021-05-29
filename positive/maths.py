@@ -658,6 +658,78 @@ def ffintegrate(t,y,w0,n=1):
     return x
 
 
+# Low level function for fixed frequency differentiation 
+def ffdiff( domain, scalar_range, n=1, wlim=None ):
+    '''
+    Low level function for fixed frequency differentiation
+    londonl@mit.edu, pilondon2@gmail.com 2021
+    '''
+    
+    #
+    from scipy.fftpack import fft, fftfreq, fftshift, ifft
+    from numpy import diff,pi,allclose
+    
+    #
+    t = domain 
+    y = scalar_range
+    
+    #
+    lent = len(t)
+    dt = t[1]-t[0]
+    if abs(sum(diff(t,2)))/lent > 1e-5:
+        error('all domain pionts must be evenly spaced')
+        
+    #
+    w = 2*pi*fftfreq( lent, dt )
+    
+    #
+    if wlim is None:
+        wlim = lim( abs(w) )
+    #
+    w0,w1 = wlim
+    #
+    if (w0<0) or (w1<0):
+        error('frequency bounds must be positive')
+    if w0>w1:
+        error('frequency limit must be increasing')
+    
+    #
+    template_w = w.copy()
+    # From left to right 
+    mask0 = (w<0) & ( w < -w1 )
+    mask1 = (w<0) & ( w > -w0 )
+    mask2 = (w>0) & ( w <  w0 )
+    mask3 = (w>0) & ( w >  w1 )
+    # Prepare ferquencies that will be used for differentiation
+    template_w[ mask0 ] = -w1
+    template_w[ mask1 ] = -w0
+    template_w[ mask2 ] =  w0
+    template_w[ mask3 ] =  w1
+    
+    #
+    fd_y = fft( y )
+    
+    #
+    frequency_factor = ( 1j * template_w ) ** n
+    
+    #
+    diff_fd_y = frequency_factor * fd_y
+    
+    # Inverse transorm, and make sure that the inverse is of the same nuerical type as what was input
+    tol = 1e-8
+    y_isreal = allclose(y.imag,0,atol=tol)
+    y_isimag = allclose(y.real,0,atol=tol)
+    if y_isreal:
+        diff_y = ifft( diff_fd_y ).real
+    elif y_isimag:
+        diff_y = ifft( diff_fd_y ).imag
+    else:
+        diff_y = ifft( diff_fd_y )
+
+    # Share knowledge with the people.
+    return diff_y
+
+
 # Derivative function that preserves array length: [(d/dt)^n y(t)] is returned
 def intrp_diff( t,        # domain values
                 y,        # range values

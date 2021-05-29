@@ -1702,7 +1702,7 @@ class qnmobj:
     '''
     
     # Initialize the object
-    def __init__(this,M,a,l,m,n,p=None,s=-2,verbose=False,calc_slm=True,use_nr_convention=True,refine=False,num_theta=2**9):
+    def __init__(this,M,a,l,m,n,p=None,s=-2,verbose=False,calc_slm=True,calc_rlm=True,use_nr_convention=True,refine=False,num_x=2**9,num_theta=2**9,harmonic_norm_convention=None,amplitude=None):
 
         # Import needed things
         from positive.physics import leaver
@@ -1711,7 +1711,7 @@ class qnmobj:
         # ----------------------------------------- #
         #              Validate inputs              #
         # ----------------------------------------- #
-        this.__validate_inputs__(M,a,l,m,n,p,s,verbose,use_nr_convention,refine)
+        this.__validate_inputs__(M,a,l,m,n,p,s,verbose,use_nr_convention,refine,harmonic_norm_convention,amplitude)
         
         # Get dimesionless QNM frequency (under the M=1 convention) and separation constant
         this.cw,this.sc = leaver( this.a,
@@ -1719,7 +1719,7 @@ class qnmobj:
                                   this.m,
                                   this.n,
                                   p=this.p,
-                                  Mf=1.0,
+                                  Mf=1.0, # NOTE that mass is applied below
                                   s=s,
                                   refine=this.__refine__,
                                   verbose=this.verbose,
@@ -1735,10 +1735,13 @@ class qnmobj:
         this.CW = this.cw / this.M
         
         # Calculate the spheroidal harmonic for this QNM and store related information to the current object
-        if calc_slm: this.__calc_slm__(__return__=False,num_theta=num_theta)
+        if calc_slm: this.__calc_slm__(__return__=False,num_theta=num_theta,norm_convention=harmonic_norm_convention)
+        
+        # Calculate the spheroidal harmonic for this QNM and store related information to the current object
+        if calc_rlm: this.__calc_rlm__(__return__=False,num_x=num_x)
 
     # Validate inputs
-    def __validate_inputs__(this,M,a,l,m,n,p,s,verbose,use_nr_convention,refine):
+    def __validate_inputs__(this,M,a,l,m,n,p,s,verbose,use_nr_convention,refine,harmonic_norm_convention,amplitude):
         
         # Testing
         if M<0:
@@ -1776,8 +1779,11 @@ class qnmobj:
         if p is None: p=0
         this.M,this.a,this.verbose,this.z,this.s = M,a,verbose,(l,m,n,p),s
         this.l,this.m,this.n,this.p = this.z
+        this.amplitude = amplitude
         
         #
+        this.__slm_norm_constant__ = 1.0
+        this.__harmonic_norm_convention__ = harmonic_norm_convention
         this.__use_nr_convention__ = use_nr_convention
         this.__refine__ = refine
 
@@ -1807,6 +1813,22 @@ class qnmobj:
     def __calc_aslm__(this):
         #
         error('Please use calc_adjoint_slm_subset to calculate a family of spheroidal harmonics and their adjoint duals all at once.')
+        
+    #
+    def eval_time_domain_waveform( this, geometric_complex_amplitude, geometric_times,NDIFF=None ):
+        
+        '''
+        Method to evaluate time domain ringdown in the form of exponential decal for the QNM object current
+        '''
+        
+        #
+        from numpy import exp
+        
+        #
+        IW = 1j * this.CW
+        
+        #
+        return geometric_complex_amplitude * exp( IW *  geometric_times ) * ( 1 if None==NDIFF else IW**NDIFF )
 
     #
     def explain_conventions(this,plot=False):
@@ -1896,11 +1918,42 @@ class qnmobj:
         ''')
         
 
-    # Return the spheriodal harmonic at theta ans phi for this QNM
-    def __calc_slm__(this,theta=None,phi=None,num_theta=2**9,plot=False,__return__=True):
+    #
+    def __calc_rlm__(this,x=None,num_x=2**9,plot=False,__return__=True):
         
         #
         from numpy import linspace,pi,mean,median,sqrt,sin
+        
+        # Define domain
+        zero = 1e-8
+        this.__x__ = linspace(0,0.96,num_x) if x==None else x
+        
+        #
+        rlm_array = rlm_helper( this.a, this.cw, this.sc, this.l, this.m, this.__x__, this.s,london=False)
+        
+        #
+        # Test whether a spheroidal harmonic array satisfies TK's radial equation
+        __rlm_test_quantity__,test_state = test_rlm(rlm_array,this.sc,this.a/2,2*this.cw,this.l,this.m,this.s,this.__x__,M=1,verbose=this.verbose)
+        
+        #
+        if __return__:
+            return this.__x__,rlm_array
+        else:
+            this.rlm = rlm_array
+            this.__rlm_test_quantity__ = __rlm_test_quantity__
+
+    # Return the spheriodal harmonic at theta and phi for this QNM
+    def __calc_slm__(this,theta=None,phi=None,num_theta=2**9,plot=False,__return__=True,norm_convention=None):
+        
+        #
+        from numpy import linspace,pi,mean,median,sqrt,sin
+        
+        #
+        allowed_norm_conventions = ['unit','aw','cw','cwn','cwp','cwnp','cwpn']
+        if norm_convention is None:
+            norm_convention = 'unit'
+        if not ( norm_convention in allowed_norm_conventions ):
+            error('unknown option for norm convention; must be in %s'%allowed_norm_conventions)
         
         # Define domain 
         zero = 1e-8
@@ -1915,10 +1968,35 @@ class qnmobj:
         # slm_array,_ = slm( this.aw, this.l, this.m, this.__theta__, this.__phi__, this.s, sc=this.sc, verbose=this.verbose, test=False )
                         
         # Normalize NOTE that this includes the factor of 2*pi from the phi integral
+        # this line imposes norm convention "unit" for unit norm
         slm_array /= sqrt(  prod(slm_array,slm_array,this.__theta__,WEIGHT_FUNCTION=2*pi*sin(this.__theta__))  )
                         
-        # Test whether a spheroidal harmonic array satisfies TK's radial equation
+        # Test whether a spheroidal harmonic array satisfies TK's angular equation
         __slm_test_quantity__,test_state = test_slm(slm_array,this.sc,this.aw,this.l,this.m,this.s,this.__theta__,verbose=this.verbose)
+        
+        # Initiate default norm convention
+        norm_constant = 1.0 # NOTE that this is the default convention applied for norm_convention='unit'
+        '''
+        NOTE that we use a `1+cw` normalization constant here. This is becuase:
+            * If only aw (or some homogeneous function thereof) is used, then when aw=0, the norm constant would be 0, which is nonsense
+            * The rigorous view has the norm constant be, approximately (when |aw|<<1), be 1+aw*(a sum of two clecsh gordam coefficients)
+        TODO: add clebsch gordan coefficients
+        '''
+        if norm_convention is 'aw':
+            norm_constant = 1 + this.aw
+        '''
+        NOTE that this brnach of convention options is well behavied in the zero spin limit and thus does not need the addition of 1
+        '''
+        if norm_convention is 'cw':
+            norm_constant = this.cw
+        if norm_convention in ('cwn'):
+            norm_constant = this.cw ** this.n
+        if norm_convention in ('cwp'):
+            norm_constant = this.cw ** (1-this.p) 
+        if norm_convention in ('cwnp','cwpn'):
+            norm_constant = this.cw ** (this.n+this.p)
+        #
+        slm_array *= sqrt( norm_constant )
         
         #
         if plot: this.plot_slm()
@@ -1928,6 +2006,7 @@ class qnmobj:
             return slm_array, __slm_test_quantity__
         else:
             this.slm = slm_array
+            this.__slm_norm_constant__ = norm_constant
             this.__slm_test_quantity__ = __slm_test_quantity__
             
     #
@@ -1976,6 +2055,63 @@ class qnmobj:
         grid(True)
         xlabel(r'$\theta$')
         title(r'$\mathcal{D}_{\theta}^2 S_{\ell m n p} $')
+        if show_legend: legend(loc='best')
+        
+        #
+        if show:
+            from matplotlib.pyplot import show 
+            show()
+        
+        #
+        return ax
+            
+            
+    #
+    def plot_rlm(this,ax=None,line_width=1,plot_scale=0.99,colors=None,label=None,show_legend=True,ls='-',show=False):
+          
+        #
+        from matplotlib.pyplot import plot,xlabel,ylabel,figure,figaspect,subplots,yscale,gca,sca,xlim,ylim,grid,title,legend
+        from numpy import unwrap,angle,pi
+        
+        #
+        if ax is None:
+            fig,ax = subplots( 1,3, figsize=plot_scale*1.5*figaspect(0.618 * 0.45), sharex=True )
+            ax = ax.flatten()
+            
+        #
+        if colors is None:
+            colors = ['dodgerblue','orange','r']
+            
+        #
+        if label is None:
+            if this.p:
+                label = r'$(\ell,m,n,p) = %s$'%str(this.z)
+            else:
+                label = r'$(\ell,m,n) = %s$'%str(this.z[:-1])
+        
+        #
+        sca( ax[0] )
+        plot( this.__x__, abs(this.rlm),lw=line_width,color=colors[0], label=label,ls=ls )
+        xlim(lim(this.__x__))
+        xlabel(r'$x$')
+        title(r'$|R_{\ell m n p}|$')
+        if show_legend: legend(loc='best')
+        
+        #
+        sca( ax[1] )
+        pha = unwrap(angle(this.rlm))
+        plot( this.__x__, pha, color=colors[1],lw=line_width, label=label, ls=ls )
+        xlabel(r'$x$')
+        title(r'$\arg(R_{\ell m n p})$')
+        if show_legend: legend(loc='best')
+        
+        #
+        sca( ax[2] )
+        plot( this.__x__, abs(this.__rlm_test_quantity__), color=colors[2],lw=line_width, label=label, ls=ls )
+        yscale('log')
+        grid(True)
+        xlabel(r'$x$')
+        title(r'$\mathcal{D}_{x}^2 R_{\ell m n p} $')
         if show_legend: legend(loc='best')
         
         #
@@ -2059,6 +2195,7 @@ def leaver( jf,                     # Dimensionless BH Spin
     else:
         #
         return helper(jf, l, m, n, p , s, Mf, verbose=verbose,use_nr_convention=use_nr_convention,refine=refine,full_output=full_output)
+
 
 
 def __leaver_helper__( jf, l, m, n =  0, p = None, s = -2, Mf = 1.0, verbose = False,use_nr_convention=False,full_output=False,refine=False):
@@ -4047,9 +4184,38 @@ def depreciated_slm_dual_set_slow( jf, l, m, n, theta, phi, s=-2, lmax=8, lmin=2
     ans['SGramian'] = u
     return ans
 
+#
+def rlm_sequence_backwards(a,cw,sc,l,m,s=-2,verbose=False,span=50,london=False):
+    '''
+    Function for calulating recursive sequence elements for Leaver's representation of the Teukolsky function (ie solutions to Teukolsky's radial equation).
+    '''
+    
+    
+    # 
+    b = slm_sequence_backwards(None,l,m,s=s,sc=sc,verbose=verbose,span=span,__COMPUTE_RADIAL_SEQUENCE__=True,__a__=a,__cw__=cw)
+    
+    b_ = { k: b[k]/b[0] for k in b }
+    
+    #
+    return b_
+#
+def rlm_sequence_forwards(a,cw,sc,l,m,s=-2,verbose=False,span=50,london=False):
+    '''
+    Function for calulating recursive sequence elements for Leaver's representation of the Teukolsky function (ie solutions to Teukolsky's radial equation).
+    '''
+    
+    
+    # 
+    b = slm_sequence_forwards(None,l,m,s=s,sc=sc,verbose=verbose,span=span,__COMPUTE_RADIAL_SEQUENCE__=True,__a__=a,__cw__=cw)
+    
+    b_ = { k: b[k]/b[0] for k in b }
+    
+    #
+    return b_
+    
 
 #
-def slm_sequence_backwards(aw,l,m,s=-2,sc=None,verbose=False,span=10):
+def slm_sequence_backwards(aw,l,m,s=-2,sc=None,verbose=False,span=10,__COMPUTE_RADIAL_SEQUENCE__=False,__a__=None,__cw__=None):
     
     '''
     unstable for large l values and so should be used in conjunction with slm_sequence_forwards which is also unstable but in the other direction 
@@ -4073,8 +4239,24 @@ def slm_sequence_backwards(aw,l,m,s=-2,sc=None,verbose=False,span=10):
         sc = slmcg_eigenvalue( dtyp(aw), s, l, m)
         # sc = sc_leaver( dtyp(aw), l, m, s, verbose=verbose,adjoint=False, london=-4)[0]
         
+        
     #
-    k1,k2,alpha,beta,gamma,scale_fun_u,u2v_map,theta2u_map = leaver_ahelper( l,m,s,aw,sc, london=-4, verbose=verbose )
+    if __COMPUTE_RADIAL_SEQUENCE__:
+        if not isinstance(__a__,(float,int)):
+            error('You have requested that we compute the radial sequence, but you have not provided a FLOAT or INT value of the BH spin in the __a__ keyword.')
+        if not isinstance(__cw__,complex):
+            error('You have requested that we compute the radial sequence, but you have not provided a COMPLEX value of the QNM frequency in the __cw__ keyword.')
+            
+            
+    #
+    if not __COMPUTE_RADIAL_SEQUENCE__:
+        # NOTE that london=-4 here is not only correct but required for this method
+        k1,k2,alpha,beta,gamma,scale_fun_u,u2v_map,theta2u_map = leaver_ahelper( l,m,s,aw,sc, london=-4, verbose=verbose )
+    else:
+        aa = __a__ # NOTE that we use aa here to differ from the dict defined below
+        cw = __cw__
+        aw = aa*cw
+        k1,k2,alpha,beta,gamma,r_exp_scale = leaver_rhelper( l,m,s,float(aa)/2,cw*2,sc, london=False, verbose=verbose )
     
     #
     a = {} 
@@ -4084,12 +4266,18 @@ def slm_sequence_backwards(aw,l,m,s=-2,sc=None,verbose=False,span=10):
     
     #
     k_min = 0
-    k_max = l+span
-    k_ell = l-max(abs(s),abs(m))
+    
+    if not __COMPUTE_RADIAL_SEQUENCE__:
+        k_max = l+span
+        k_ell = l-max(abs(s),abs(m))
+    else:
+        k_max = span-1
+        k_ell = 0
     
     # Initialize sequence
     k = k_max
-    # a[ k + 1 ] = 0
+    
+    #
     a[ k + 0 ]     = (tol if aw else 0) if k!=k_ell else 1
     a[ k - 1 ] = - a[k] * beta(k) / gamma(k) if aw else 0
     
@@ -4124,7 +4312,7 @@ def slm_sequence_backwards(aw,l,m,s=-2,sc=None,verbose=False,span=10):
     
     #
     b = {}
-    kref = max(abs(m),abs(s))
+    kref = max(abs(m),abs(s)) if (not __COMPUTE_RADIAL_SEQUENCE__) else 0
     for key in a:
         b[ key+kref ] = a[key]
         
@@ -4132,7 +4320,7 @@ def slm_sequence_backwards(aw,l,m,s=-2,sc=None,verbose=False,span=10):
     return b
 
 #
-def slm_sequence_forwards(aw,l,m,s=-2,sc=None,verbose=False,span=10):
+def slm_sequence_forwards(aw,l,m,s=-2,sc=None,verbose=False,span=10,__COMPUTE_RADIAL_SEQUENCE__=False,__a__=None,__cw__=None):
     
     '''
     unstable for large l values and so should be used in conjunction with slm_sequence_backwards which is also unstable but in the other direction 
@@ -4158,7 +4346,21 @@ def slm_sequence_forwards(aw,l,m,s=-2,sc=None,verbose=False,span=10):
         # sc = sc_leaver( dtyp(aw), l, m, s, verbose=verbose,adjoint=False, london=-4)[0]
         
     #
-    k1,k2,alpha,beta,gamma,scale_fun_u,u2v_map,theta2u_map = leaver_ahelper( l,m,s,aw,sc, london=-4, verbose=verbose )
+    if __COMPUTE_RADIAL_SEQUENCE__:
+        if not isinstance(__a__,(float,int)):
+            error('You have requested that we compute the radial sequence, but you have not provided a FLOAT or INT value of the BH spin in the __a__ keyword.')
+        if not isinstance(__cw__,complex):
+            error('You have requested that we compute the radial sequence, but you have not provided a COMPLEX value of the QNM frequency in the __cw__ keyword.')
+        
+    #
+    if not __COMPUTE_RADIAL_SEQUENCE__:
+        # NOTE that london=-4 here is not only correct but required for this method
+        k1,k2,alpha,beta,gamma,scale_fun_u,u2v_map,theta2u_map = leaver_ahelper( l,m,s,aw,sc, london=-4, verbose=verbose )
+    else:
+        aa = __a__ # NOTE that we use aa here to differ from the dict defined below
+        cw = __cw__
+        aw = aa*cw
+        k1,k2,alpha,beta,gamma,r_exp_scale = leaver_rhelper( l,m,s,float(aa)/2,cw*2,sc, london=False, verbose=verbose )
     
     #
     a = {} 
@@ -4168,13 +4370,22 @@ def slm_sequence_forwards(aw,l,m,s=-2,sc=None,verbose=False,span=10):
     
     #
     k_min = 0
-    k_max = l+span
-    k_ell = l-max(abs(s),abs(m))
+
+    if not __COMPUTE_RADIAL_SEQUENCE__:
+        k_max = l+span
+        k_ell = l-max(abs(s), abs(m))
+    else:
+        k_max = span-1
+        k_ell = 0
     
     # Initialize sequence
     k = 0
-    a[ k + 0 ] = 1.0 if aw else (1 if k==k_ell else 0)
-    a[ k + 1 ] = - a[k] * beta(k) / alpha(k) if aw else (1 if (k+1)==k_ell else 0)
+    if __COMPUTE_RADIAL_SEQUENCE__:
+        a[ k + 0 ] = 1.0 
+        a[ k + 1 ] = - a[k] * beta(k) / alpha(k) 
+    else:
+        a[ k + 0 ] = 1.0 if aw else (1 if k==k_ell else 0)
+        a[ k + 1 ] = - a[k] * beta(k) / alpha(k) if aw else (1 if (k+1)==k_ell else 0)
     
     #
     done = False 
@@ -4207,7 +4418,7 @@ def slm_sequence_forwards(aw,l,m,s=-2,sc=None,verbose=False,span=10):
     
     #
     b = {}
-    kref = max(abs(m),abs(s))
+    kref = max(abs(m),abs(s)) if (not __COMPUTE_RADIAL_SEQUENCE__) else 0
     for key in a:
         b[ key+kref ] = a[key]
         
@@ -4347,6 +4558,140 @@ def ysprod_sequence(aw,l,m,s=-2,sc=None,lmax=None,span=None,case=None):
         
     # #
     # return ys
+
+
+# 
+def rlm_helper( a,cw,sc, l, m, x, s, tol=None, verbose=False,london=False, full_output = False,conjugate=False ):
+    
+    '''
+    RLM_HELPER
+    ---
+    LOW LEVEL function for evaluating tuekolsky radial function for a give oblateness.
+    
+    USAGE
+    ---
+    foo = rlm_helper( a,cw,sc, l, m, x, s, tol=None, verbose=False,london=False, full_output = False )
+    
+    NOTE that x = (r-rp) / (r-rm) where rp and rm are Kerr outer and inner radii and r is Boyer-Lidquist r
+    
+    IF full output, then foo is a dictionary of information inluding field Slm containing the harmonic 
+    
+    ELSE foo is a tuple of the radial spheroidal harmonic and its eigenvalue (Slm,Alm)
+    
+    IF full output, then foo is a dictionary with the following fields (more may be present as this functions is updated):
+    
+    * Rlm,    The radial spheroidal harmonic. NOT normalized.
+    * Itr,    Iterations of the sphoidal harmonic.
+    * Err,    The change in prefactor between iterations.
+    * Alm,    The spheroidal harmonic eigenvalue
+    
+    AUTHOR
+    ---
+    londonl@mit, pilondon2@gmail.com, 2021
+    
+    '''
+    
+    # 
+    from positive import red
+    from positive import leaver as lvr
+    from positive import rgb,lim,leaver_workfunction,cyan,alert,pylim,sYlm,error,internal_ssprod
+    from numpy import complex256, cos, ones, mean, isinf, pi, exp, array, ndarray, unwrap, angle, linalg, sqrt, linspace, sin, float128, zeros_like, sort, ones_like
+    from scipy.integrate import trapz
+    from numpy import complex128 as dtyp
+    
+    #
+    aw = a*cw
+
+    # ------------------------------------------------ #
+    # Calculate the radial eigenfunction
+    # aka the Teukolsky function
+    # ------------------------------------------------ #
+    
+    # Precompute useful quantities for the overall prefactor
+    # NOTE that this prefactor encodes the QNM radial boundary conditions
+    # --
+    M = 1.0 # NOTE that a and cw must be defined uner this convention for consistency
+    b = sqrt( M*M - a*a )
+    rp = M + b 
+    rm = M - b 
+    # Compute the prefactor. This is Leaver's prefactor but in x=(r-rp)/(r-rm) coordinates
+    pre_solution = exp((1j*cw*(-rp + rm*x))*1.0/(-1 + x))*(-(b*1.0/(-1 + x)))**(1j*cw + (1j*(-(a*m) + rp*cw))*1.0/b)*(-1 + x)
+
+    # the non-sum part 
+    X = ones(x.shape,dtype=complex256)
+    X = X * pre_solution
+    
+    #
+    Y = zeros_like(X,dtype=complex)
+    b = rlm_sequence_backwards(a,cw,sc,l,m,s=-2,span=50)
+    
+    #
+    kspace = sort(b.keys())
+    last_pow_x = ones_like(x)
+    for k in kspace:
+        Y += last_pow_x * b[k]
+        last_pow_x *= x
+
+    # _,_,alpha,beta,gamma,_ = leaver_rhelper( l,m,s,float(a)/2,cw*2,sc, london=False, verbose=verbose, adjoint=False )
+
+    # # initial series values
+    # a0 = 1.0 # a choice, setting the norm of Rlm
+
+    # a1 = -a0*beta(0)/alpha(0)
+    
+    # # the sum part
+    # done = False
+    # Y = a0*ones(x.shape,dtype=complex256)
+    # Y = Y + a1*x
+    # k = 1
+    # kmax = 5e3
+    # err,yy = [],[]
+    # et2=1e-8 if tol is None else tol
+    # max_a = max(abs(array([a0,a1])))
+    # x_pow_k = x
+    # while not done:
+    #     k += 1
+    #     j = k-1
+    #     a2 = -1.0*( beta(j)*a1 + gamma(j)*a0 ) / alpha(j)
+    #     x_pow_k = x_pow_k*x
+    #     dY = a2*x_pow_k
+    #     Y += dY
+    #     xx = max(abs( dY ))
+
+    #     #
+    #     if full_output:
+    #         yy.append( C*array(Y)*X )
+    #         err.append( xx )
+
+    #     k_is_too_large = k>kmax
+    #     done = (k>=l) and ( (xx<et2 and k>30) or k_is_too_large )
+    #     done = done or xx<et2
+    #     a0 = a1
+    # #     a1 = a2
+
+    # together now
+    R = X*Y
+
+    # # Warn if the series did not appear to converge
+    # if k_is_too_large:
+    #     print(l,m,s,sc,aw)
+    #     warning('The while-loop exited becuase too many iterations have passed. The series may not converge for given inputs. This may be cuased by the use of an inapproprate eigenvalue.')
+
+    #
+    if conjugate:
+        R = R.conj()
+        
+    #
+    if full_output:
+        foo['Rlm'] = R 
+        foo['Iterant_Rlm'] = yy 
+        foo['Iterant_Error'] = err 
+        foo['Alm'] = sc
+        return foo
+    else:
+        return R
+
+
 
 #
 def slmy(aw,l,m,theta,phi,s=-2,tol=None,verbose=False,output_iterations=False,sc=None,leaver=True,test=True):
@@ -4669,7 +5014,7 @@ def validate_slm_inputs(aw,theta,s,l,m):
     if len_theta<256:
         warning('There are less than 256 points in theta. This may reduce precision of results. At least 256 points are recommended.')
 
-# Function to check whether a spheroidal harmonic array satisfies TK's radial equation
+# Function to check whether a spheroidal harmonic array satisfies TK's angular equation
 def test_slm(Slm,Alm,aw,l,m,s,theta,tol=1e-5,verbose=True):
     
     '''
@@ -4696,6 +5041,36 @@ def test_slm(Slm,Alm,aw,l,m,s,theta,tol=1e-5,verbose=True):
         
     #
     return __slm_test_quantity__,test_state
+
+
+# Function to check whether a radial spheroidal harmonic array satisfies TK's radial equation
+def test_rlm(Rlm,Alm,a,cw,l,m,s,x,M=1,tol=1e-5,verbose=True):
+    
+    '''
+    Function to test whether an input RADIAL spheroidal harmonic satisfies the RADIAL spheroidal differential equation
+    '''
+    
+    # Import usefuls 
+    from numpy import median
+    
+    # Evaluate spheroidal differential equation
+    __rlm_test_quantity__ = tkradial( Rlm, x,M, a, cw, m, s=s, separation_constant=Alm)
+   
+    # Perform the test
+    test_number = median(abs(__rlm_test_quantity__))
+    test_state = test_number > tol
+    if test_state:
+        # Only print test restults if verbose
+        alert(red('Check Failed: ')+'This object\'s radial harmonic does not seem to solve Teukolsky\'s radial equation with zero poorly approximated by %s.'%yellow('%1.2e'%test_number),verbose=verbose)
+        # Always show warning
+        warning('There may be a bug: the calculated radial harmonic does not appear to solve Teukolsky\'s radial equation. The user should decide whether zero is poorly approximated by %s.'%red('%1.2e'%test_number))
+    else:
+        # Only print test restults if verbose
+        alert(blue('Check Passed: ')+'This object\'s radial harmonic solves Teukolsky\'s radial equation with zero approximated by %s.'%magenta('%1.2e'%test_number),verbose=verbose)
+        
+    #
+    return __rlm_test_quantity__,test_state
+
 
 
 # Validate list of l,m values
@@ -4726,7 +5101,7 @@ def validate_lm_list( lm_space,s=-2 ):
 
 
 # Function to compute matrix of spheroidal to spherical harmic inner-products
-def ysprod_matrix(a,m,n,p,s,lrange,verbose=False,spectral=True,full_output=False, qnmo_dict=None):
+def ysprod_matrix(a,m,n,p,s,lrange,verbose=False,spectral=True,full_output=False, qnmo_dict=None,norm_convention=None,__suppress_warnings__=False):
     '''
     DESCRIPTION
     ---
@@ -4739,6 +5114,7 @@ def ysprod_matrix(a,m,n,p,s,lrange,verbose=False,spectral=True,full_output=False
     p        Parity number in [-1,1]. NOTE that this means that this function uses NR conventions for teh QNMs (see qnmobj.explain_conventions)
     s        Spin weight of harmonics 
     lrange   List of l values to consider. 
+    norm_convention     Convention used for setting norm of harmonics. See qnmobj.__calc_slm__ for further detail.
     
     OUTPUTS
     ---
@@ -4746,7 +5122,7 @@ def ysprod_matrix(a,m,n,p,s,lrange,verbose=False,spectral=True,full_output=False
     '''
     
     # Import usefuls 
-    from numpy import pi,zeros,ndarray,sort,alltrue,diff,zeros_like
+    from numpy import pi,zeros,ndarray,sort,alltrue,diff,zeros_like,sqrt
     
     # Validate inputs 
     if not isinstance(a,float):
@@ -4771,6 +5147,15 @@ def ysprod_matrix(a,m,n,p,s,lrange,verbose=False,spectral=True,full_output=False
             error('lrange must increment by exactly 1')
     if qnmo_dict is None: qnmo_dict = {}
         
+        
+    #
+    if spectral and not (norm_convention is None):
+        if not (norm_convention is 'unit'):
+            warning('You hae asked for spectral calculation of inner-products AND a non-unit norm convention. The spectral method does not currently support non-unit norms, and so we will disable it. To disable this warning, use the __suppress_warnings__=True keyword option.',verbose=not __suppress_warnings__)
+            # Diable use of the spectral method
+            spectral=False
+    
+    
     # Define workflow constants 
     M = 1.0                          # BH Mass
     lrange = list(lrange)
@@ -4778,7 +5163,7 @@ def ysprod_matrix(a,m,n,p,s,lrange,verbose=False,spectral=True,full_output=False
     numl = len(lrange)               # number of ell vals
         
     # Create list of QNM objects
-    qnmo = [ qnmobj( M,a,ll,m,n,p,verbose=verbose,use_nr_convention=True,calc_slm = not spectral, num_theta=2**9 ) for ll in lrange ]
+    qnmo = [ qnmobj( M,a,ll,m,n,p,verbose=verbose,use_nr_convention=True,calc_slm = not spectral, harmonic_norm_convention=norm_convention, num_theta=2**9 ) for ll in lrange ]
     
     # Define dict of QNM objects for output 
     qnmo_dict.update( { (ll,m,n,p):qnmo[k] for k,ll in enumerate(lrange) } )
@@ -4838,8 +5223,8 @@ def ysprod_matrix(a,m,n,p,s,lrange,verbose=False,spectral=True,full_output=False
                 ysmat[j,k] = qnmo[k].ysprod(lj,m)
                 
         # Set phases such that the diagonal is real. NOTE that this makes the output of direct integration use the same phase convention that is inherent to the spetral route above.
-        for k,lk in enumerate(lrange):
-            ysmat[:,k] *= (  ysmat[k,k].conj() / abs(ysmat[k,k])  )
+        # for k,lk in enumerate(lrange):
+        #     ysmat[:,k] *= (  ysmat[k,k].conj() / abs(ysmat[k,k])  )
             
     #
     if full_output:
@@ -4851,11 +5236,17 @@ def ysprod_matrix(a,m,n,p,s,lrange,verbose=False,spectral=True,full_output=False
         # Invert ysmat to get spherical-adjoint-spheroidal inner products for this p and n subset 
         # --- 
         from numpy.linalg import inv 
+        '''
         # NOTE that there is a difference of conventions 
         # * the numpy discrete inner-product space does not conjugate in its inner-products
         # * the continuous space does
         # AS A RESULT WE CONJUGATE HERE TO CONVERT TO THE CONTIUOUS SPACE CONVENTION
+        '''
         adj_ysmat = inv( ysmat ).conj()
+        
+        #
+        for j,lj in enumerate(lrange):
+            adj_ysmat[:,j] *= sqrt(qnmo[j].__slm_norm_constant__).conj()
           
         # Create dictionary representation of inner-product matrix
         # ---
@@ -4867,9 +5258,9 @@ def ysprod_matrix(a,m,n,p,s,lrange,verbose=False,spectral=True,full_output=False
             # For spheroidal eigenvalues
             Adict[ lj,m,n,p ] = A[j,j]
             # For the vector representation of the spheroidal harmonic
-            spheroidal_vector[ lj,m,n,p ] = ysmat[:,j]
+            spheroidal_vector[ lj,m,n,p ] = ysmat[:,j] 
             # For the vector representation of the adjoint spheroidal harmonic
-            adj_spheroidal_vector[ lj,m,n,p ] = adj_ysmat[j,:]
+            adj_spheroidal_vector[ lj,m,n,p ] = adj_ysmat[j,:] 
             #
             for k,lk in enumerate(lrange):
                 # For the spherical to spheroidal inner products 
@@ -5007,6 +5398,129 @@ def __ysprod_matrix_legacy__( dimensionless_spin, lm_space, N_theta=128, s=-2 ):
     return ans
 
 
+# Evaluate spheroidal multipole moments (spheroical projections also output)
+def eval_spheroidal_moments( a, M, spheroidal_amplitudes_dict, times=None, verbose=False ):
+    
+    
+    '''
+    Evaluate spheroidal multipole moments (spheroical projections also output).
+    '''
+    
+    #
+    from numpy import ndarray,sum,array,zeros_like
+    
+    # Validate inputs
+    # ---
+    
+    # Dictionary formatting 
+    mref = None
+    for k in spheroidal_amplitudes_dict:
+        
+        #
+        if not isinstance(k,(tuple,list,ndarray)):
+            error('keys of amplitude dict must be iterable containing ell m n p, where n and p are overtone and parity label for spheroidal momements (eg QNMs)')
+        elif len(k) != 4:
+            error('keys of ampltides dict must of length 4 and contain ell m n p, where n and p are overtone and parity label for spheroidal momements (eg QNMs)')    
+        else:
+            for index in k:
+                if not isinstance(index,int):
+                    error('QNM index not int: keys of ampltides dict must of length 4 and contain ell m n p, where n and p are overtone and parity label for spheroidal momements (eg QNMs)')
+                    
+        #
+        if mref is None: 
+            _,mref,_,_ = k
+            
+        #
+        if mref != k[1]:
+            error('m-pole mismatch: all values of m in keys of spheroidal_amplitudes_dict must be equal. The user should consider only sets of like m when using this method. WE ARE BORG. YOU WILL BE ASSIMILATED.')
+        
+    # Amplitudes must be consistent or single number
+    test_amplitude = spheroidal_amplitudes_dict[ spheroidal_amplitudes_dict.keys()[0] ]
+    if isinstance(test_amplitude,(list,tuple,ndarray)):
+        if isinstance(times,ndarray):
+            error('Amplitudes are given as timeseries, but time are also given and this should not be the case.')
+        #
+        process_timeseries_amplitudes = True
+        alert('Processing spheroidal amplitude timeseries.',verbose=verbose)
+    else:
+        if not isinstance(times,ndarray):
+            error('Amplitudes are given as single values, but time values not input or are input of the wrong type. A numpy array of times must be given. Times and amplitudes must have the same array shape.')
+        if len(test_amplitude) != len(times):
+            error('length mismatch: amplitudes found to be time series, but of lenth not equal to the times input')
+        if isinstance(test_amplitude,(int,float,complex)):
+            process_timeseries_amplitudes = False
+            alert('Processing spheroidal amplitude values.',verbose=verbose)
+        else:
+            error('type error: spheroidal amplitude must be numpy array or number')
+    
+    # End of input validation
+    
+    # Generate QNM objects, including the related spheroidal harmonics
+    # ---
+    k_space   = sorted(spheroidal_amplitudes_dict.keys())
+    qnmo_list = [ qnmobj(M,a,l,m,n,p=p,use_nr_convention=True,verbose=False)  for l,m,n,p in k_space ]
+    
+    # Setup data for spherical info containers
+    # ---
+        
+    # Calculate spherical moment timeseries
+    # --- 
+    
+    # define helper function 
+    def calc_spherical_moments_helper( spheroidal_moment ):
+
+        # Define list of spherical indices to consider for data storage
+        j_space = sorted(set( [ (l,m) for l,m,n,p in k_space ] ))
+
+        #
+        spherical_moments_dict = {}
+            
+        #
+        for index,j in enumerate(j_space):
+            
+            #
+            ll,mm = j
+            
+            #
+            spherical_moments_dict[j] = sum( [ spheroidal_amplitudes_dict[k] * qnmo_list[index].ysprod(ll,mm) for index,k in enumerate(k_space) ], axis=0 )
+            
+        #
+        return spherical_moments_dict
+        
+    
+    #
+    if process_timeseries_amplitudes:
+        
+        #-~>-~>-~>-~>-~>-~>-~>-~>-~>-~>-~>-~>-#
+        # IF ampltiudes are timeseries        #
+        #-~>-~>-~>-~>-~>-~>-~>-~>-~>-~>-~>-~>-#
+        
+        # Define spheroidal_moments_dict so that the same variable ID is used for both cases of process_timeseries_amplitudes
+        spheroidal_moments_dict = spheroidal_amplitudes_dict
+        
+        # Calculate the spherical moments
+        spherical_moments_dict = calc_spherical_moments_helper( spheroidal_moments_dict )
+        
+    else:
+        
+        #-~>-~>-~>-~>-~>-~>-~>-~>-~>-~>-~>-~>-#
+        # ELSE-IF amplitudes are constant     #
+        #-~>-~>-~>-~>-~>-~>-~>-~>-~>-~>-~>-~>-#
+        # THEN we assumed the damped sinusoidal time depedence is desired
+        
+        # Calculate spheroidal moments
+        spheroidal_moments_dict = {}
+        for index,k in enumerate(k_space):
+            exponential_part = exp( 1j * qnmo_list[index].CW * times )
+            spheroidal_moments_dict[k] = spheroidal_amplitudes_dict[k] * exponential_part
+        
+        # Calculate the spherical moments
+        spherical_moments_dict = calc_spherical_moments_helper( spheroidal_moments_dict )
+        
+    #
+    return spherical_moments_dict,spheroidal_moments_dict
+
+
 # Validation for calc_spheroidal_moments
 def validate_inputs_for_calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose, s ):
     '''
@@ -5113,7 +5627,7 @@ def validate_inputs_for_calc_spheroidal_moments_helper( spherical_moments_dict, 
 
 
 # Calc spheroidal moments from spherical ones
-def calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, s=-2, spectral=True, method=None, time=None ):
+def calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, time, verbose=False, s=-2, spectral=True, method=None,harmonic_norm_convention=None, np=None, derivatives=None ):
     
     '''
     '''
@@ -5148,7 +5662,7 @@ def calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, 
         # ~- -~ ~- -~ ~- -~ ~- -~ #
         
         #
-        spheroidal_moments_dict,_,_,_ = calc_spheroidal_moments_helper( spherical_moments_dict, a, m, n, p, verbose=verbose, s=s, spectral=spectral )
+        spheroidal_moments_dict,_,_,_ = calc_spheroidal_moments_helper( spherical_moments_dict, a, m, n, p, verbose=verbose, s=s, spectral=spectral,np=np )
         
     elif either_p_or_n_is_iterable:
         
@@ -5160,24 +5674,26 @@ def calc_spheroidal_moments( spherical_moments_dict, a, m, n, p, verbose=False, 
         if method in ('grad','gradient'):
             
             # Use derivatives of input sperical multipoles as features
-            spheroidal_moments_dict,L,Z,qnmo_dict = __calc_spheroidal_moments_via_gradient__(spherical_moments_dict, a, m, n, p, verbose=verbose, s=s, spectral=spectral,time=time)
+            spheroidal_moments_dict, L, Z, qnmo_dict = __calc_spheroidal_moments_via_gradient__(
+                spherical_moments_dict, a, m, n, p, verbose=verbose, s=s, spectral=spectral, time=time, np=np, derivatives=derivatives)
             
         else:
             
             # Use projects as features 
-            spheroidal_moments_dict,L,Z,qnmo_dict = __calc_spheroidal_moments_via_projection__(spherical_moments_dict, a, m, n, p, verbose=verbose, s=s, spectral=spectral)
+            spheroidal_moments_dict,L,Z,qnmo_dict = __calc_spheroidal_moments_via_projection__(spherical_moments_dict, a, m, n, p, verbose=verbose, s=s, spectral=spectral,harmonic_norm_convention=harmonic_norm_convention,np=np)
             
     #
     return spheroidal_moments_dict,L,Z,qnmo_dict
             
         
 #
-def __calc_spheroidal_moments_via_gradient__(spherical_moments_dict, a, m, n, p, verbose=False, s=-2, spectral=True, spheroidal_moments_dict=None, T_dict=None, V_dict=None, qnmo_dict=None, time=None):
+def __calc_spheroidal_moments_via_gradient__(spherical_moments_dict, a, m, n, p, verbose=False, s=-2, spectral=True, spheroidal_moments_dict=None, T_dict=None, V_dict=None, qnmo_dict=None, time=None, np=None, derivatives=None):
     
     # Import usefuls 
     # ---
     from numpy import ndarray,zeros,sort,array,dot,hstack,vstack,arange
     from numpy.linalg import inv,pinv
+    from scipy.linalg import lstsq
     
     
     # Determine if iterables are given
@@ -5226,20 +5742,24 @@ def __calc_spheroidal_moments_via_gradient__(spherical_moments_dict, a, m, n, p,
     t = time
     Y_raw = array( [ spherical_moments_dict[l,m] for l in lrange ] )
     
+    # Construct seed mixing matrices (ie the matrices for the 0th derivatives)
+    foo = {}
+    for pk in p_iterable:
+        for nk in n_iterable:
+            foo[nk,pk] = ysprod_matrix(a,m,nk,pk,s=s,lrange=lrange,verbose=verbose,spectral=spectral,qnmo_dict=qnmo_dict,full_output=True)
+    
     # Construct dict of derivatives
     DY = {}
     k = 0
     for pk in p_iterable:
         for nk in n_iterable:
             for l in lrange:
-                DY[l,m,k] = spline_diff( t, spherical_moments_dict[l,m], n=k )
+                if derivatives is None:
+                    # DY[l,m,k] = ffdiff( t, spherical_moments_dict[l,m], n=k,wlim=[0.0,5*abs(qnmo_dict[l,m,nk,pk].cw.real)] )
+                    DY[l,m,k] = spline_diff( t, spherical_moments_dict[l,m], n=k )
+                else:
+                    DY[l,m,k] = derivatives[l,m][k]
             k += 1
-    
-    # Construct seed mixing matrices (ie the matrices for the 0th derivatives)
-    foo = {}
-    for pk in p_iterable:
-        for nk in n_iterable:
-            foo[nk,pk] = ysprod_matrix(a,m,nk,pk,s=s,lrange=lrange,verbose=verbose,spectral=spectral,qnmo_dict=qnmo_dict,full_output=True)
             
     # Stack the matrices horizontally
     T1 = None
@@ -5259,7 +5779,7 @@ def __calc_spheroidal_moments_via_gradient__(spherical_moments_dict, a, m, n, p,
             else:
                 CW1 = hstack( [CW1,CW0] )
                 
-    # Add derivative cases by scaling and then vertically staking
+    # Add derivative cases by scaling and then vertically stacking
     T,Y = None,None
     k = 0
     CW = CW1
@@ -5293,6 +5813,7 @@ def __calc_spheroidal_moments_via_gradient__(spherical_moments_dict, a, m, n, p,
         
         #    
         S[:,kref] = dot( Z,Y )
+        # S[:,kref] = lstsq( L,Y )[0] # Gives basically the same answer as above
         
     # Construct dictionaries
     final_spheroidal_moments_dict = {}
@@ -5310,12 +5831,16 @@ def __calc_spheroidal_moments_via_gradient__(spherical_moments_dict, a, m, n, p,
     return (final_spheroidal_moments_dict,L,Z,qnmo_dict)
 
 #
-def __calc_spheroidal_moments_via_projection__(spherical_moments_dict, a, m, n, p, verbose=False, s=-2, spectral=True):
+def __calc_spheroidal_moments_via_projection__(spherical_moments_dict, a, m, n, p, verbose=False, s=-2, spectral=True,harmonic_norm_convention=None):
     
     # Import usefuls 
     # ---
     from numpy import ndarray,zeros,sort,array,dot
     from numpy.linalg import inv,pinv
+    from scipy.linalg import lstsq
+    
+    #
+    error('this method does not work; please use the "gradient" method')
     
     #
     # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
@@ -5346,7 +5871,7 @@ def __calc_spheroidal_moments_via_projection__(spherical_moments_dict, a, m, n, 
         for nk in n_iterable:
             
             #
-            spheroidal_moments_dict,T_dict,V_dict,qnmo_dict = calc_spheroidal_moments_helper( spherical_moments_dict, a, m, nk, pk, verbose=verbose, s=s, spectral=spectral, spheroidal_moments_dict=spheroidal_moments_dict,T_dict=T_dict,V_dict=V_dict, qnmo_dict=qnmo_dict )
+            spheroidal_moments_dict,T_dict,V_dict,qnmo_dict = calc_spheroidal_moments_helper( spherical_moments_dict, a, m, nk, pk, verbose=verbose, s=s, spectral=spectral, spheroidal_moments_dict=spheroidal_moments_dict,T_dict=T_dict,V_dict=V_dict, qnmo_dict=qnmo_dict,harmonic_norm_convention=harmonic_norm_convention )
         
     # # 
     # return spheroidal_moments_dict,T_dict,V_dict,qnmo_dict
@@ -5390,11 +5915,14 @@ def __calc_spheroidal_moments_via_projection__(spherical_moments_dict, a, m, n, 
                             col_index += 1
                             
                             #
-                            LT = array([  T_dict[ (ll,m), (lc,m,nb,pa) ] for ll in lrange ])
-                            LV = array([  V_dict[ (lf,m,ne,pd),(ll,m) ] for ll in lrange ] )
+                            LT = array([  T_dict[ (ll,m), (lc,m,nb,pa) ] for ll in lrange ],dtype=complex)
+                            LV = array([  V_dict[ (lf,m,ne,pd),(ll,m) ] for ll in lrange ],dtype=complex )
                             
                             #
-                            weight = (1j*qnmo_dict[lc,m,nb,pa].cw) ** ( pa * nb )
+                            # weight = 1.0 / abs(  (qnmo_dict[lc,m,nb,pa].cw) * (qnmo_dict[lf,m,ne,pd].cw.conj())  )
+                            weight = 1.0
+                            weight = (1j*qnmo_dict[lc,m,nb,pa].cw) ** ( col_index-1)
+                            # weight = (1j*qnmo_dict[lf,m,ne,pd].cw) ** ( 1-pd)
                             
                             # NOTE that this line is corrently wrong
                             # NOTE that dot does not complex conjugate
@@ -5430,6 +5958,10 @@ def __calc_spheroidal_moments_via_projection__(spherical_moments_dict, a, m, n, 
                     
         # Solve for all spheroidal amplitudes 
         S[:,k] = dot( Z, Y )
+        
+        #
+        # S[:,k], RESIDUAL, EFFECTIVE_RANK, SINGULAR_VALUES = lstsq( L,Y )
+        # print(RESIDUAL,EFFECTIVE_RANK)
     
     # Construct dictionaries
     final_spheroidal_moments_dict = {}
@@ -5448,7 +5980,7 @@ def __calc_spheroidal_moments_via_projection__(spherical_moments_dict, a, m, n, 
 
 
 # Calc spheroidal moments from spherical ones
-def calc_spheroidal_moments_helper( spherical_moments_dict, a, m, n, p, verbose=False, s=-2, spectral=True, spheroidal_moments_dict=None, T_dict=None, V_dict=None, qnmo_dict=None ):
+def calc_spheroidal_moments_helper( spherical_moments_dict, a, m, n, p, verbose=False, s=-2, spectral=True, spheroidal_moments_dict=None, T_dict=None, V_dict=None, qnmo_dict=None,harmonic_norm_convention=None ):
     
     '''
     GENERAL
@@ -5535,11 +6067,14 @@ def calc_spheroidal_moments_helper( spherical_moments_dict, a, m, n, p, verbose=
     # Calculate the relevant matrix of spherical-spheroidal inner products
     # NOTE that we conjugate here. Does this signal a remaining inconsistency in conventions?
     # ---
-    T = ysprod_matrix(a,m,n,p,s=s,lrange=lrange,verbose=verbose,spectral=spectral,qnmo_dict=qnmo_dict)
+    foo = ysprod_matrix(a,m,n,p,s=s,lrange=lrange,verbose=verbose,spectral=spectral,qnmo_dict=qnmo_dict,norm_convention=harmonic_norm_convention,full_output=True)
+    
+    #
+    T = foo['ys_matrix']
     
     # Invert map
     # ---
-    V = inv(T)
+    V = foo['adj_ys_matrix'].conj()
     
     # Define index domain and pre-allocate spheroidal output
     # ---
@@ -7187,7 +7722,7 @@ class leaver_solve_workflow:
 #
 def tkangular( S, theta, acw, m, s=-2, separation_constant=None,adjoint=False,flip_phase_convention=False  ):
     '''
-    Apply Teukolsy's angular operator to input
+    Apply Teukolsy's angular operator to input. NOTE that ell does not appear explicitely in the equation. It is instead encapsulated by the separation constant.
     '''
     #
     from numpy import sin, cos, isnan, diff,sign,pi
@@ -7214,6 +7749,51 @@ def tkangular( S, theta, acw, m, s=-2, separation_constant=None,adjoint=False,fl
 
     #
     ans = (D2S + VS)[mask]
+
+    #
+    return ans
+
+
+
+#
+def tkradial( R, x, M, a, cw, m, s=-2, separation_constant=None,flip_phase_convention=False  ):
+    '''
+    Apply Teukolsy's angular operator to input. NOTE that ell does not appear explicitely in the equation. It is instead encapsulated by the separation constant.
+    '''
+    
+    #
+    from numpy import sin, cos, isnan, diff,sign,pi, sqrt
+    
+    #
+    if separation_constant is None:
+        separation_constant = sc_leaver( acw, 2, m, s,verbose=False,adjoint=False)[0]
+    Alm = separation_constant
+    
+    #
+    D0R = R
+    D1R = spline_diff(x,R)
+    D2R = spline_diff(x, R, 2)
+    
+    #
+    b = sqrt(M*M - a*a)
+    rp = M+b
+    rm = M-b
+
+    #
+    x[x == 1] = 1-1e-8
+    x[x == 0] = 1e-8
+    
+    #
+    P0 = -Alm - rm*rp*cw**2 + ((2*1j)*s*cw*(-rp + rm*x))*1.0/(-1 + x) + ((-1 + x)**2*(m**2*rm*rp + (2*a*m*cw*(rp - rm*x))*1.0/(-1 + x) + cw**2*(rm*rp + (rp - rm*x)**2*1.0/(-1 + x)**2)**2 + (1j*s*(a*m*(-1 + x)*(1 - 2*rp - x + 2*rm*x) + (rm - rp)*cw*(rp - rm*x**2)))*1.0/(-1 + x)**2))*1.0/((rm - rp)**2*x)
+    
+    #
+    P1 = ((-1 + x)*(-1 + 2*rp*(1 + s - x) + x + s*(-1 + x - 2*rm*x)))*1.0/(rm - rp)
+    
+    #
+    P2 = (-1 + x)**2*x
+
+    #
+    ans = P0*D0R + P1*D1R + P2*D2R
 
     #
     return ans

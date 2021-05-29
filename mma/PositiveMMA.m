@@ -50,7 +50,13 @@ TableD::usage="Create list of derivatives up to a given order"
 MapRuleD::usage="Create rule to replace derivatives"
 
 (* Simplfy terms independently *)
-CoeffSimplify::usage="Simplfy terms independently"
+TermSimplify::usage="Simplfy terms independently"
+
+(* Simplfy terms independently *)
+TermFullSimplify::usage="FullSimplfy terms independently"
+
+(* Simplfy terms independently *)
+CoeffSimplify::usage="Simplfy coefficients independently"
 
 (* FullSimplfy terms independently *)
 CoeffFullSimplify::usage="FullSimplfy terms independently"
@@ -470,6 +476,24 @@ CoeffSimplify[F_,vars_]:=Module[
 					};
 		,{kkkk,Length[vars]}
 	];
+	Return[Ans];
+]
+(* Simplfy terms independently *)
+Remove[TermSimplify];
+TermSimplify[F_]:=Module[
+	(* Internals *)
+	{Ans},
+	(* Simplfy each Term *)
+	Ans = Total[ Table[ Simplify[F[[k]]], {k,Range[Length[F]]} ] ];
+	Return[Ans];
+]
+(* Simplfy terms independently *)
+Remove[TermFullSimplify];
+TermFullSimplify[F_]:=Module[
+	(* Internals *)
+	{Ans},
+	(* Simplfy each Term *)
+	Ans = Total[ Table[ FullSimplify[F[[k]]], {k,Range[Length[F]]} ] ];
 	Return[Ans];
 ]
 (* FullSimplfy coefficients independently *)
