@@ -279,7 +279,7 @@ DeriveIndicialSolutions[Dy_,y_,x_,SingularPoints_,order_:2,f_:f,opts:OptionsPatt
 
 
 Remove[DeriveIndicialSolutions2];
-DeriveIndicialSolutions2[DyFunctions_,y_,x_,SingularPoints_,f_:f]:=Module[
+DeriveIndicialSolutions2[DyFunctions_,y_,x_,SingularPoints_,f_:f,RefDy_:None]:=Module[
 	
 	(* Internal variables *)
 	{Ans,p,SingularScale,xSingular,SingularIndex,IndicialSolution,Dy,IndicialEquation,
@@ -316,6 +316,13 @@ DeriveIndicialSolutions2[DyFunctions_,y_,x_,SingularPoints_,f_:f]:=Module[
 	
 	(* Construct the differential equation *)
 	Dy =Sum[p[[k]]D[y[x],{x,k-1}],{k,Length[p]}];
+	
+	(**)
+	If[ RefDy =!= None,
+		Print[Dy];
+		Print[RefDy];
+		Print[ Simplify[Dy==RefDy] ];
+	];
 	
 	(*Determine a singular scaling for the solution ansatz*)
 	SingularScale = 1; SingularIndex = {};

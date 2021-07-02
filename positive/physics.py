@@ -1702,7 +1702,7 @@ class qnmobj:
     '''
     
     # Initialize the object
-    def __init__(this,M,a,l,m,n,p=None,s=-2,verbose=False,calc_slm=True,calc_rlm=True,use_nr_convention=True,refine=False,num_x=2**9,num_theta=2**9,harmonic_norm_convention=None,amplitude=None):
+    def __init__(this, M, a, l, m, n, p=None, s=-2, verbose=False, calc_slm=True, calc_rlm=False, use_nr_convention=True, refine=False, num_x=2**15, num_theta=2**9, harmonic_norm_convention=None, amplitude=None, __DEVELOPMENT__=False):
 
         # Import needed things
         from positive.physics import leaver
@@ -1738,7 +1738,7 @@ class qnmobj:
         if calc_slm: this.__calc_slm__(__return__=False,num_theta=num_theta,norm_convention=harmonic_norm_convention)
         
         # Calculate the spheroidal harmonic for this QNM and store related information to the current object
-        if calc_rlm: this.__calc_rlm__(__return__=False,num_x=num_x)
+        if calc_rlm: this.__calc_rlm__(__return__=False,num_x=num_x,__DEVELOPMENT__=__DEVELOPMENT__)
 
     # Validate inputs
     def __validate_inputs__(this,M,a,l,m,n,p,s,verbose,use_nr_convention,refine,harmonic_norm_convention,amplitude):
@@ -1748,6 +1748,8 @@ class qnmobj:
             error('BH mass must be positive')
         if a<0:
             error('This object uses the convention that a>0. To select the retrograde QNM branch, set p=-1')
+        if a>M:
+            error('Mass=M cannot be less than BH spin/Mass=a')
         if not isinstance(l,int):
             error('ell must be integer')
         if not isinstance(m,int):
@@ -1919,25 +1921,35 @@ class qnmobj:
         
 
     #
-    def __calc_rlm__(this,x=None,num_x=2**9,plot=False,__return__=True):
+    def __calc_rlm__(this,num_x=2**15,plot=False,__return__=True,__DEVELOPMENT__=False):
         
         #
         from numpy import linspace,pi,mean,median,sqrt,sin
         
+        # Throw an error if the function is not called in development mode
+        if not __DEVELOPMENT__:
+            error('This method is under development. The current TODO items are: verify that final output satisfies the radial equation (it already satisfies the transformed equation ie with leading order behavior scaled out)')
+        
+        if this.__use_nr_convention__: error('this functions should only be used for the perturbation theory convention for now')
+        
         # Define domain
-        zero = 1e-8
-        this.__x__ = linspace(0,0.96,num_x) if x==None else x
+        # x = (r-rp)/(r-rm)
+        zero = 1e-4
+        this.__x__ = linspace(zero,1-zero*100,num_x) 
         
         #
-        rlm_array = rlm_helper( this.a, this.cw, this.sc, this.l, this.m, this.__x__, this.s,london=False)
-        
-        #
+        rlm_array = rlm_helper( this.a, this.cw, this.sc, this.l, this.m, this.__x__, this.s,geometric_M=1,london=False)
         # Test whether a spheroidal harmonic array satisfies TK's radial equation
-        __rlm_test_quantity__,test_state = test_rlm(rlm_array,this.sc,this.a/2,2*this.cw,this.l,this.m,this.s,this.__x__,M=1,verbose=this.verbose)
+        __rlm_test_quantity__,test_state = test_rlm(rlm_array,this.sc,this.a,this.cw,this.l,this.m,this.s,this.__x__,verbose=this.verbose,regularized=False)
+        
+        # #
+        # rlm_array = rlm_helper( this.a, this.cw, this.sc, this.l, this.m, this.__x__, this.s,geometric_M=1,london=False,pre_solution=1)
+        # # Test whether a spheroidal harmonic array satisfies TK's radial equation
+        # __rlm_test_quantity__,test_state = test_rlm(rlm_array,this.sc,this.a,this.cw,this.l,this.m,this.s,this.__x__,verbose=this.verbose,regularized=True)
         
         #
         if __return__:
-            return this.__x__,rlm_array
+            return this.__x__,rlm_array,__rlm_test_quantity__
         else:
             this.rlm = rlm_array
             this.__rlm_test_quantity__ = __rlm_test_quantity__
@@ -2095,6 +2107,7 @@ class qnmobj:
         xlim(lim(this.__x__))
         xlabel(r'$x$')
         title(r'$|R_{\ell m n p}|$')
+        yscale('log')
         if show_legend: legend(loc='best')
         
         #
@@ -2109,6 +2122,8 @@ class qnmobj:
         sca( ax[2] )
         plot( this.__x__, abs(this.__rlm_test_quantity__), color=colors[2],lw=line_width, label=label, ls=ls )
         yscale('log')
+        ylim(1e-10,1e10)
+        #print(ylim())
         grid(True)
         xlabel(r'$x$')
         title(r'$\mathcal{D}_{x}^2 R_{\ell m n p} $')
@@ -3263,7 +3278,7 @@ def leaver_ahelper( l,m,s,aw,Alm,london=False,verbose=False,adjoint=False ):
 
 
 #
-def leaver_rhelper( l,m,s,a,w,Alm, london=True, verbose=False, adjoint=False ):
+def leaver_rhelper( l,m,s,a,w,Alm, london=False, verbose=False, adjoint=False ):
 
     # Import usefuls
     from numpy import sqrt, exp
@@ -3285,7 +3300,7 @@ def leaver_rhelper( l,m,s,a,w,Alm, london=True, verbose=False, adjoint=False ):
         r_beta  = lambda k: lambda k: -1 - Alm - 2*k**2 - s + k*(-2 + (4*1j)*w) + (2*1j)*w - 2*a*m*w + (4 - a**2)*w**2 + ((-2*1j)*a*m + (2*1j)*w - (4*1j)*a**2*w - 4*a*m*w + (4 - 8*a**2)*w**2 + k*((-4*1j)*a*m + (4*1j - (8*1j)*a**2)*w))/b
         r_gamma = lambda k: k**2 + k*(s - (3*1j)*w) - (2*1j)*s*w - 2*w**2 + (k*((2*1j)*a*m - 1j*w) + 4*a*m*w - 2*w**2)/b
         # Exponential pre scale for radial function evaluation
-        r_exp_scale = lambda r: exp( aw * r )
+        r_exp_scale = lambda r: exp( 1j*w * r )
     else:
         # There is only one solution that satisfies the boundary
         # conditions at the event horizon and infinity.
@@ -3305,7 +3320,7 @@ def leaver_rhelper( l,m,s,a,w,Alm, london=True, verbose=False, adjoint=False ):
         r_beta  = lambda k:   -2.0*k*k + (c1+2.0)*k + c3
         r_gamma = lambda k:	k*k + (c2-3.0)*k + c4 - c2 + 2.0
         # Exponential pre scale for radial function evaluation
-        r_exp_scale = lambda r: exp( aw * r )
+        r_exp_scale = lambda r: exp( 1j*w * r )
 
     return p1,p2,r_alpha,r_beta,r_gamma,r_exp_scale
 
@@ -4184,16 +4199,57 @@ def depreciated_slm_dual_set_slow( jf, l, m, n, theta, phi, s=-2, lmax=8, lmin=2
     ans['SGramian'] = u
     return ans
 
+
+#
+def rlm_change_convention(a,cw,M):
+    '''
+    Change form M=1 to M=1/2 convention so that Leaver's solutions may be used.
+    '''
+    
+    #
+    if M!= 1.0: error('This fucntion those calling it use mass scaling convention M=1.')
+    
+    #
+    scale = 1.0 / (2 * M)
+    leaver_cw = cw / scale 
+    leaver_a  = a  * scale 
+    leaver_M  = M  * scale 
+    
+    #
+    return leaver_a,leaver_cw,leaver_M
+
+#
+def rlm_leading_order_scale(x,M,a,w,m,s):
+    
+    #
+    from numpy import exp,sqrt
+    
+    #
+    delta = sqrt( M*M - a*a )
+    
+    #
+    rp = M + delta
+    rm = M - delta
+    
+    #
+    horizon_lo_scale = x**(-s + ((1j*1.0/2)*(a*m - 2*M*rp*w))*1.0/delta)
+    infinity_lo_scale = exp((1j*w*(-rp + rm*x))*1.0/(-1 + x)) * (-1 + x)**(1 + 2*s - (2*1j)*M*w)
+    
+    #
+    lo_scale = exp((1j*w*(-rp + rm*x))*1.0/(-1 + x))*(-1 + x)**(1 + 2*s - (2*1j)*M*w)*x**(-s - ((1j*1.0/2)*(-(a*m) + 2*M*rp*w))*1.0/delta)
+    
+    #
+    return lo_scale, horizon_lo_scale, infinity_lo_scale
+    
+
 #
 def rlm_sequence_backwards(a,cw,sc,l,m,s=-2,verbose=False,span=50,london=False):
     '''
     Function for calulating recursive sequence elements for Leaver's representation of the Teukolsky function (ie solutions to Teukolsky's radial equation).
     '''
     
-    
     # 
     b = slm_sequence_backwards(None,l,m,s=s,sc=sc,verbose=verbose,span=span,__COMPUTE_RADIAL_SEQUENCE__=True,__a__=a,__cw__=cw)
-    
     b_ = { k: b[k]/b[0] for k in b }
     
     #
@@ -4253,10 +4309,13 @@ def slm_sequence_backwards(aw,l,m,s=-2,sc=None,verbose=False,span=10,__COMPUTE_R
         # NOTE that london=-4 here is not only correct but required for this method
         k1,k2,alpha,beta,gamma,scale_fun_u,u2v_map,theta2u_map = leaver_ahelper( l,m,s,aw,sc, london=-4, verbose=verbose )
     else:
-        aa = __a__ # NOTE that we use aa here to differ from the dict defined below
-        cw = __cw__
-        aw = aa*cw
-        k1,k2,alpha,beta,gamma,r_exp_scale = leaver_rhelper( l,m,s,float(aa)/2,cw*2,sc, london=False, verbose=verbose )
+        # Change convention from M=1 to M=1.2 so that leaver's equations may be used
+        # leaver_a,leaver_cw,leaver_M = rlm_change_convention(__a__,__cw__,1)
+        leaver_a,leaver_cw,leaver_M = __a__,__cw__,0.5
+        # NOTE that a*cw is invariant under convention change above
+        aw = leaver_a*leaver_cw
+        # Collect information needed for recursion relations
+        k1,k2,alpha,beta,gamma,r_exp_scale = leaver_rhelper( l,m,s,leaver_a,leaver_cw,sc, london=False, verbose=verbose )
     
     #
     a = {} 
@@ -4278,8 +4337,12 @@ def slm_sequence_backwards(aw,l,m,s=-2,sc=None,verbose=False,span=10,__COMPUTE_R
     k = k_max
     
     #
-    a[ k + 0 ]     = (tol if aw else 0) if k!=k_ell else 1
-    a[ k - 1 ] = - a[k] * beta(k) / gamma(k) if aw else 0
+    if __COMPUTE_RADIAL_SEQUENCE__:
+        a[ k + 0 ]     = tol
+        a[ k - 1 ] = - a[k] * beta(k) / gamma(k) 
+    else:
+        a[ k + 0 ]     = (tol if (aw or __COMPUTE_RADIAL_SEQUENCE__) else 0) if k!=k_ell else 1
+        a[ k - 1 ] = - a[k] * beta(k) / gamma(k) if (aw or __COMPUTE_RADIAL_SEQUENCE__) else 0
     
     #
     done = False 
@@ -4357,10 +4420,12 @@ def slm_sequence_forwards(aw,l,m,s=-2,sc=None,verbose=False,span=10,__COMPUTE_RA
         # NOTE that london=-4 here is not only correct but required for this method
         k1,k2,alpha,beta,gamma,scale_fun_u,u2v_map,theta2u_map = leaver_ahelper( l,m,s,aw,sc, london=-4, verbose=verbose )
     else:
-        aa = __a__ # NOTE that we use aa here to differ from the dict defined below
-        cw = __cw__
-        aw = aa*cw
-        k1,k2,alpha,beta,gamma,r_exp_scale = leaver_rhelper( l,m,s,float(aa)/2,cw*2,sc, london=False, verbose=verbose )
+        # Change convention from M=1 to M=1.2 so that leaver's equations may be used
+        leaver_a,leaver_cw,leaver_M = __a__,__cw__,0.5
+        # NOTE that a*cw is invariant under convention change above
+        aw = leaver_a*leaver_cw
+        # Collect information needed for recursion relations
+        k1,k2,alpha,beta,gamma,r_exp_scale = leaver_rhelper( l,m,s,leaver_a,leaver_cw,sc, london=False, verbose=verbose )
     
     #
     a = {} 
@@ -4561,7 +4626,7 @@ def ysprod_sequence(aw,l,m,s=-2,sc=None,lmax=None,span=None,case=None):
 
 
 # 
-def rlm_helper( a,cw,sc, l, m, x, s, tol=None, verbose=False,london=False, full_output = False,conjugate=False ):
+def rlm_helper( geometric_a,geometric_cw,sc, l, m, x, s, geometric_M=1, tol=None, verbose=False,london=False, full_output = False,conjugate=False,pre_solution=None ):
     
     '''
     RLM_HELPER
@@ -4598,32 +4663,54 @@ def rlm_helper( a,cw,sc, l, m, x, s, tol=None, verbose=False,london=False, full_
     from numpy import complex256, cos, ones, mean, isinf, pi, exp, array, ndarray, unwrap, angle, linalg, sqrt, linspace, sin, float128, zeros_like, sort, ones_like
     from scipy.integrate import trapz
     from numpy import complex128 as dtyp
-    
-    #
-    aw = a*cw
 
     # ------------------------------------------------ #
     # Calculate the radial eigenfunction
     # aka the Teukolsky function
     # ------------------------------------------------ #
     
-    # Precompute useful quantities for the overall prefactor
-    # NOTE that this prefactor encodes the QNM radial boundary conditions
-    # --
-    M = 1.0 # NOTE that a and cw must be defined uner this convention for consistency
-    b = sqrt( M*M - a*a )
-    rp = M + b 
-    rm = M - b 
-    # Compute the prefactor. This is Leaver's prefactor but in x=(r-rp)/(r-rm) coordinates
-    pre_solution = exp((1j*cw*(-rp + rm*x))*1.0/(-1 + x))*(-(b*1.0/(-1 + x)))**(1j*cw + (1j*(-(a*m) + rp*cw))*1.0/b)*(-1 + x)
-
-    # the non-sum part 
-    X = ones(x.shape,dtype=complex256)
-    X = X * pre_solution
+    #
+    a,cw,M = rlm_change_convention(geometric_a,geometric_cw,geometric_M)
     
     #
-    Y = zeros_like(X,dtype=complex)
-    b = rlm_sequence_backwards(a,cw,sc,l,m,s=-2,span=50)
+    aw = a*cw
+    
+    #
+    if M!=0.5:
+        error('M must be 0.5 ie Leavers convention')
+    
+    
+    # # Precompute useful quantities for the overall prefactor
+    # # NOTE that this prefactor encodes the QNM radial boundary conditions
+    # # --
+    # # M = 0.5 # NOTE that a and cw must be defined uner this convention for consistency
+    # # a = a/2
+    # # cw *= 2
+    # b = sqrt(1-4*a*a) # sqrt( M*M - a*a )
+    # rp = (1 + b)*0.5 
+    # rm = (1 - b)*0.5
+    # sp = (-(a*m) + rp*cw)*1.0/b
+    # k0 = -s - 1j*sp
+    # k1 = -1 - s + 1j*cw + 1j*sp
+    # r = (-rp + rm*x)*1.0/(-1 + x)
+    # # Compute the prefactor. This is Leaver's prefactor but in x=(r-rp)/(r-rm) coordinates
+    # if pre_solution is None:
+    #     #
+    #     pre_solution = ((r-rp)**k0) * ((r-rm)**k1) * exp(1j*r*cw)
+    #     # pre_solution = x**k0 * (x-1)**k1 * exp(-1j*cw*r)
+    
+    #
+    if pre_solution is None:
+        pre_solution,_,_ = rlm_leading_order_scale(x,M,a,cw,m,s)
+
+    # the non-sum part 
+    X = pre_solution*ones_like(x)
+    
+    #
+    Y = zeros_like(x,dtype=complex)
+    
+    # NOTE that this should be generalized to look for poor convergence. This is currently not done becuase the recursion relation is solved backwards, thus enforcing convergence. However, it is possible that "span=200" (i.e. 200 terms) is not sufficient for accuracy.
+    b = rlm_sequence_backwards(a,cw,sc,l,m,s=s,span=200)
     
     #
     kspace = sort(b.keys())
@@ -4631,6 +4718,16 @@ def rlm_helper( a,cw,sc, l, m, x, s, tol=None, verbose=False,london=False, full_
     for k in kspace:
         Y += last_pow_x * b[k]
         last_pow_x *= x
+    
+    # #
+    # kspace = sort(b.keys())
+    # for k in kspace:
+    #     Y += b[k] * (x**k)
+        
+    # print(lim(Y))
+    #
+    # alert(cw)
+    # print('!>>  ', mean(tkradial_regularized(Y, x, M, a, cw, m, s, sc)) )
 
     # _,_,alpha,beta,gamma,_ = leaver_rhelper( l,m,s,float(a)/2,cw*2,sc, london=False, verbose=verbose, adjoint=False )
 
@@ -4677,9 +4774,9 @@ def rlm_helper( a,cw,sc, l, m, x, s, tol=None, verbose=False,london=False, full_
     #     print(l,m,s,sc,aw)
     #     warning('The while-loop exited becuase too many iterations have passed. The series may not converge for given inputs. This may be cuased by the use of an inapproprate eigenvalue.')
 
-    #
-    if conjugate:
-        R = R.conj()
+    # #
+    # if conjugate:
+    #     R = R.conj()
         
     #
     if full_output:
@@ -5044,7 +5141,7 @@ def test_slm(Slm,Alm,aw,l,m,s,theta,tol=1e-5,verbose=True):
 
 
 # Function to check whether a radial spheroidal harmonic array satisfies TK's radial equation
-def test_rlm(Rlm,Alm,a,cw,l,m,s,x,M=1,tol=1e-5,verbose=True):
+def test_rlm(Rlm,Alm,a,cw,l,m,s,x,tol=1e-5,verbose=True,regularized=False):
     
     '''
     Function to test whether an input RADIAL spheroidal harmonic satisfies the RADIAL spheroidal differential equation
@@ -5052,9 +5149,31 @@ def test_rlm(Rlm,Alm,a,cw,l,m,s,x,M=1,tol=1e-5,verbose=True):
     
     # Import usefuls 
     from numpy import median
+    from matplotlib.pyplot import plot,show,xlabel,ylabel,figure,yscale
+    
+    #
+    M = 1 # Mass convention of inputs
+    leaver_a,leaver_cw,leaver_M = rlm_change_convention(a,cw,M)
     
     # Evaluate spheroidal differential equation
-    __rlm_test_quantity__ = tkradial( Rlm, x,M, a, cw, m, s=s, separation_constant=Alm)
+    if not regularized:
+        __rlm_test_quantity__1 = tkradial( Rlm, x,leaver_M, leaver_a, leaver_cw, m, s,Alm)
+        __rlm_test_quantity__2 = tkradialr( Rlm, x,leaver_M, leaver_a, leaver_cw, m, s,Alm)
+        __rlm_test_quantity__3 = tkradial_r( Rlm, x,leaver_M, leaver_a, leaver_cw, m, s,Alm, convert_x=True)
+        
+        #
+        __rlm_test_quantity__ = __rlm_test_quantity__1
+        
+        # #
+        # figure()
+        # plot( x, abs(__rlm_test_quantity__1), ls='-' )
+        # plot( x, abs(__rlm_test_quantity__2), ls='--' )
+        # plot( x, abs(__rlm_test_quantity__3), ls='-', lw=4, alpha=0.4 )
+        # yscale('log')
+        # show()
+        
+    else:
+        __rlm_test_quantity__ = tkradial_regularized( Rlm, x,leaver_M, leaver_a, leaver_cw, m, s,Alm)
    
     # Perform the test
     test_number = median(abs(__rlm_test_quantity__))
@@ -6120,11 +6239,11 @@ def calc_spheroidal_moments_helper( spherical_moments_dict, a, m, n, p, verbose=
 
 
 
-# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+# ---------------------- #
 '''Class for boxes in complex frequency space'''
 # The routines of this class assist in the solving and classification of
 # QNM solutions
-# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% #
+# ---------------------- #
 class cwbox:
     # ************************************************************* #
     # This is a class to fascilitate the solving of leaver's equations varying
@@ -7756,7 +7875,7 @@ def tkangular( S, theta, acw, m, s=-2, separation_constant=None,adjoint=False,fl
 
 
 #
-def tkradial( R, x, M, a, cw, m, s=-2, separation_constant=None,flip_phase_convention=False  ):
+def tkradial( R, x, M, a, cw, m, s, separation_constant,flip_phase_convention=False  ):
     '''
     Apply Teukolsy's angular operator to input. NOTE that ell does not appear explicitely in the equation. It is instead encapsulated by the separation constant.
     '''
@@ -7765,32 +7884,220 @@ def tkradial( R, x, M, a, cw, m, s=-2, separation_constant=None,flip_phase_conve
     from numpy import sin, cos, isnan, diff,sign,pi, sqrt
     
     #
-    if separation_constant is None:
-        separation_constant = sc_leaver( acw, 2, m, s,verbose=False,adjoint=False)[0]
+    if M!=0.5:
+        error('this function only works in the M=1/2 convention, but M is %f'%M)
+    if M<a:
+        error('BH spin cannot be greater than its mass')
+    
+    #
     Alm = separation_constant
     
     #
     D0R = R
-    D1R = spline_diff(x,R)
-    D2R = spline_diff(x, R, 2)
+    D1R = spline_diff(x,R, n=1)
+    D2R = spline_diff(x, R, n=2)
     
     #
     b = sqrt(M*M - a*a)
     rp = M+b
     rm = M-b
+    
+    ####
+    
+    P0 = -Alm - a**2*cw**2 - ((2*1j)*cw*s*(rp - rm*x))*1.0/(-1 + x) + (-4*a*cw*m*M*rp + m**2*rm*rp + cw**2*rm**2*rp**2 + 2*cw**2*rm*rp**3 + cw**2*rp**4 - (2*1j)*a*m*M*s + (2*1j)*a*m*rp*s + (2*1j)*cw*M*rm*rp*s - (2*1j)*cw*M*rp**2*s + 4*a*cw*m*M*rm*x + 12*a*cw*m*M*rp*x - 4*m**2*rm*rp*x - 8*cw**2*rm**2*rp**2*x - 8*cw**2*rm*rp**3*x + (8*1j)*a*m*M*s*x - (2*1j)*a*m*rm*s*x - (6*1j)*a*m*rp*s*x - (4*1j)*cw*M*rm*rp*s*x + (4*1j)*cw*M*rp**2*s*x - 12*a*cw*m*M*rm*x**2 - 12*a*cw*m*M*rp*x**2 + 6*m**2*rm*rp*x**2 + 2*cw**2*rm**3*rp*x**2 + 20*cw**2*rm**2*rp**2*x**2 + 2*cw**2*rm*rp**3*x**2 - (12*1j)*a*m*M*s*x**2 + (6*1j)*a*m*rm*s*x**2 - (2*1j)*cw*M*rm**2*s*x**2 + (6*1j)*a*m*rp*s*x**2 + (4*1j)*cw*M*rm*rp*s*x**2 - (2*1j)*cw*M*rp**2*s*x**2 + 12*a*cw*m*M*rm*x**3 + 4*a*cw*m*M*rp*x**3 - 4*m**2*rm*rp*x**3 - 8*cw**2*rm**3*rp*x**3 - 8*cw**2*rm**2*rp**2*x**3 + (8*1j)*a*m*M*s*x**3 - (6*1j)*a*m*rm*s*x**3 + (4*1j)*cw*M*rm**2*s*x**3 - (2*1j)*a*m*rp*s*x**3 - (4*1j)*cw*M*rm*rp*s*x**3 - 4*a*cw*m*M*rm*x**4 + cw**2*rm**4*x**4 + m**2*rm*rp*x**4 + 2*cw**2*rm**3*rp*x**4 + cw**2*rm**2*rp**2*x**4 - (2*1j)*a*m*M*s*x**4 + (2*1j)*a*m*rm*s*x**4 - (2*1j)*cw*M*rm**2*s*x**4 + (2*1j)*cw*M*rm*rp*s*x**4)*1.0/((rm - rp)**2*(-1 + x)**2*x)
+    
+    P1 = (-2*(-1 + x)*(M - rp + M*s - rp*s - M*x + rp*x - M*s*x + rm*s*x))*1.0/(rm - rp)
+    
+    P2 = (-1 + x)**2*x
+    
+    ####
+    
+    # #
+    # P0 = -Alm - rm*rp*cw**2 + ((2*1j)*s*cw*(-rp + rm*x))*1.0/(-1 + x) + ((-1 + x)**2*(m**2*rm*rp + (2*a*m*cw*(rp - rm*x))*1.0/(-1 + x) + cw**2*(rm*rp + (rp - rm*x)**2*1.0/(-1 + x)**2)**2 + (1j*s*(a*m*(-1 + x)*(1 - 2*rp - x + 2*rm*x) + (rm - rp)*cw*(rp - rm*x**2)))*1.0/(-1 + x)**2))*1.0/((rm - rp)**2*x)
+    
+    # #
+    # P1 = ((-1 + x)*(-1 + 2*rp*(1 + s - x) + x + s*(-1 + x - 2*rm*x)))*1.0/(rm - rp)
+    
+    # #
+    # P2 = (-1 + x)**2*x
+    
+    
+    ####
+    
+    # #
+    # b = sqrt(1 - 4*a*a)
+    # rp = 0.5*(1+b)
+    # rm = 0.5*(1-b)
+
+    # #
+    # x[x == 1] = 1-1e-8
+    # x[x == 0] = 1e-8
+    
+    # #
+    # P0 = ((-1j - 2*cw)*(4*a**2*cw + cw*(-2 + x) - 2*a*m*(-1 + x)) - b*(1 + Alm - (2*1j)*cw - 4*cw**2 + a**2*cw**2 + 2*a*cw*m + s + (1j + 2*cw)*(cw + 1j*(1 + s))*x))*1.0/b
+    
+    # #
+    # P1 = ((-1j)*(cw - 2*a*m*(-1 + x)**2 + 8*a**2*cw*x + cw*(-4 + x)*x + 1j*b*(-1 + x)*(-1 + 1j*cw + s + (3 - (3*1j)*cw + s)*x)))*1.0/b
+    
+    # #
+    # P2 = (-1 + x)**2*x
+    
+    
+    ####
+
+    #
+    ans = P0*D0R + P1*D1R + P2*D2R
+
+    #
+    return ans
+
+
+
+
+#
+def tkradialr( R, x, M, a, cw, m, s, separation_constant,flip_phase_convention=False  ):
+    '''
+    Apply Teukolsy's angular operator to input. NOTE that ell does not appear explicitely in the equation. It is instead encapsulated by the separation constant.
+    '''
+    
+    #
+    from numpy import sin, cos, isnan, diff,sign,pi, sqrt
+    
+    #
+    if M!=0.5:
+        error('this function only works in the M=1/2 convention, but M is %f'%M)
+    if M<a:
+        error('BH spin cannot be greater than its mass')
+    
+    #
+    Alm = separation_constant
+    
+    #
+    x[x == 1] = 1-1e-8
+    x[x == 0] = 1e-8
+
+    #
+    b = sqrt(1 - 4*a*a)
+    rp = 0.5*(1+b)
+    rm = 0.5*(1-b)
+    w = cw
+    
+    #
+    r = (-rp + rm*x)*1.0/(-1 + x)
+    
+    #
+    D0R = R
+    D1R = spline_diff(r,R, n=1)
+    D2R = spline_diff(r, R, n=2)
+    
+    #
+    P0 = -Alm + (2*1j)*r*s*w - rm*rp*w**2 + (m**2*rm*rp - 2*a*m*r*w + (r**2 + rm*rp)**2*w**2 + 1j*s*(a*m*(-1 + 2*r) - r**2*w + rm*rp*w))*1.0/((r - rm)*(r - rp))
+    
+    #
+    P1 = (-1 + 2*r)*(1 + s)
+    
+    #
+    P2 = (r - rm)*(r - rp)
+
+    #
+    ans = P0*D0R + P1*D1R + P2*D2R
+
+    #
+    return ans
+
+
+
+#
+def tkradial_regularized( G, x, M, a, cw, m, s, separation_constant,flip_phase_convention=False  ):
+    '''
+    Apply Teukolsy's angular operator to input -- the operator here is in fractioanl radial coordinates and has had the singular exponents applied to the presolution such that the potential is well behaved. NOTE that ell does not appear explicitely in the equation. It is instead encapsulated by the separation constant.
+    '''
+    
+    #
+    from numpy import sin, cos, isnan, diff,sign,pi, sqrt
+    
+    #
+    if M!=0.5:
+        error('this function only works in the M=1/2 convention, but M is %f'%M)
+    if M<a:
+        error('BH spin cannot be greater than its mass')
+    
+    #
+    Alm = separation_constant
+    
+    #
+    D0G = G
+    D1G = spline_diff(x,G, n=1)
+    D2G = spline_diff(x, G, n=2)
+    
+    #
+    b = sqrt(1 - 4*a*a)
 
     #
     x[x == 1] = 1-1e-8
     x[x == 0] = 1e-8
     
     #
-    P0 = -Alm - rm*rp*cw**2 + ((2*1j)*s*cw*(-rp + rm*x))*1.0/(-1 + x) + ((-1 + x)**2*(m**2*rm*rp + (2*a*m*cw*(rp - rm*x))*1.0/(-1 + x) + cw**2*(rm*rp + (rp - rm*x)**2*1.0/(-1 + x)**2)**2 + (1j*s*(a*m*(-1 + x)*(1 - 2*rp - x + 2*rm*x) + (rm - rp)*cw*(rp - rm*x**2)))*1.0/(-1 + x)**2))*1.0/((rm - rp)**2*x)
+    P0 = ((-1j - 2*cw)*(4*a**2*cw + cw*(-2 + x) - 2*a*m*(-1 + x)) - b*(1 + Alm + s - (2*1j)*cw + 2*a*m*cw - 4*cw**2 + a**2*cw**2 + (1j*(1 + s) + cw)*(1j + 2*cw)*x))*1.0/b
     
     #
-    P1 = ((-1 + x)*(-1 + 2*rp*(1 + s - x) + x + s*(-1 + x - 2*rm*x)))*1.0/(rm - rp)
+    P1 = ((-1j)*(cw - 2*a*m*(-1 + x)**2 + 8*a**2*cw*x + cw*(-4 + x)*x + 1j*b*(-1 + x)*(-1 + s + 1j*cw + (3 + s - (3*1j)*cw)*x)))*1.0/b
     
     #
     P2 = (-1 + x)**2*x
+
+    #
+    ans = P0*D0G + P1*D1G + P2*D2G
+
+    #
+    return ans
+
+
+#
+def tkradial_r( R, r, M, a, cw, m, s, separation_constant,flip_phase_convention=False, convert_x = False  ):
+    '''
+    Apply Teukolsy's angular operator to input. NOTE that ell does not appear explicitely in the equation. It is instead encapsulated by the separation constant.
+    '''
+    
+    #
+    from numpy import sin, cos, isnan, diff,sign,pi, sqrt
+    
+    #
+    if M!=0.5:
+        error('this function only works in the M=1/2 convention, but M is %f'%M)
+    
+    #
+    Alm = separation_constant
+    
+    #
+    b = sqrt(1 - 4*a*a)
+    rp = M*(1+b)
+    rm = M*(1-b)
+    
+    #
+    if convert_x:
+        x = r
+        r = (-rp + rm*x)*1.0/(-1 + x)
+        print(M,a,lim(r))
+
+    #
+    D0R = R
+    D1R = spline_diff(r, R, n=1)
+    D2R = spline_diff(r, R, n=2)
+
+    #
+    # r[x == 1] = 1-1e-8
+    r[x == 0] = 1e-8
+    
+    #
+    P0 = -Alm - (cw**2)*rm*rp + (2*1j)*cw*r*s + (-2*a*cw*m*r + m**2*rm*rp + (cw**2)*(
+        r**2 + rm*rp)**2 + 1j*(-(cw*r**2) + a*m*(-1 + 2*r) + cw*rm*rp)*s)*1.0/((r - rm)*(r - rp))
+    
+    #
+    P1 = (-1 + 2*r)*(1 + s)
+    
+    #
+    P2 = (r - rm)*(r - rp)
 
     #
     ans = P0*D0R + P1*D1R + P2*D2R

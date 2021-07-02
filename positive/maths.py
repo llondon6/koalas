@@ -88,7 +88,7 @@ def lentz( aa, bb, tol=None, tiny=1e-30, mpm=False ):
 
     #
     if tol == None:
-        tol = 1e-10
+        tol = 1e-9
 
     #
     f = bb(0)
@@ -122,7 +122,7 @@ def lentz( aa, bb, tol=None, tiny=1e-30, mpm=False ):
         #
         err = abs( DELTA - 1.0 )
         done = (err<tol) or (err==0)
-        if j>=jmax:
+        if (j>=jmax) and ((err>tol)):
             warning('Maximum number of iterations reached before error criteria passed. (err=%s)\n'%str(err))
             state = True
             done = state
@@ -1483,7 +1483,9 @@ def expsin_window( N ):
     return ans
 
 #
-def spline_diff(t,y,k=3,n=1):
+
+
+def spline_diff(t, y, n=1, k=3):
     '''
     Wrapper for InterpolatedUnivariateSpline derivative function
     '''
