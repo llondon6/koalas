@@ -1702,7 +1702,7 @@ class qnmobj:
     '''
     
     # Initialize the object
-    def __init__(this, M, a, l, m, n, p=None, s=-2, verbose=False, calc_slm=True, calc_rlm=False, use_nr_convention=True, refine=False, num_x=2**15, num_theta=2**9, harmonic_norm_convention=None, amplitude=None, __DEVELOPMENT__=False):
+    def __init__(this, M, a, l, m, n, p=None, s=-2, verbose=False, calc_slm=True, calc_rlm=False, use_nr_convention=True, refine=False, num_x=2**14, num_theta=2**9, harmonic_norm_convention=None, amplitude=None, __DEVELOPMENT__=False):
 
         # Import needed things
         from positive.physics import leaver
@@ -1921,14 +1921,14 @@ class qnmobj:
         
 
     #
-    def __calc_rlm__(this,num_x=2**15,plot=False,__return__=True,__DEVELOPMENT__=False):
+    def __calc_rlm__(this,num_x=2**14,plot=False,__return__=True,__DEVELOPMENT__=False,__REGULARIZE__=False):
         
         #
         from numpy import linspace,pi,mean,median,sqrt,sin
         
-        # Throw an error if the function is not called in development mode
-        if not __DEVELOPMENT__:
-            error('This method is under development. The current TODO items are: verify that final output satisfies the radial equation (it already satisfies the transformed equation ie with leading order behavior scaled out)')
+        # # Throw an error if the function is not called in development mode
+        # if not __DEVELOPMENT__:
+        #     error('This method is under development. The current TODO items are: verify that final output satisfies the radial equation (it already satisfies the transformed equation ie with leading order behavior scaled out)')
         
         if this.__use_nr_convention__: error('this functions should only be used for the perturbation theory convention for now')
         
@@ -1938,18 +1938,19 @@ class qnmobj:
         this.__x__ = linspace(zero,1-zero*100,num_x) 
         
         #
-        rlm_array = rlm_helper( this.a, this.cw, this.sc, this.l, this.m, this.__x__, this.s,geometric_M=1,london=False)
-        # Test whether a spheroidal harmonic array satisfies TK's radial equation
-        __rlm_test_quantity__,test_state = test_rlm(rlm_array,this.sc,this.a,this.cw,this.l,this.m,this.s,this.__x__,verbose=this.verbose,regularized=False)
-        
-        # #
-        # rlm_array = rlm_helper( this.a, this.cw, this.sc, this.l, this.m, this.__x__, this.s,geometric_M=1,london=False,pre_solution=1)
-        # # Test whether a spheroidal harmonic array satisfies TK's radial equation
-        # __rlm_test_quantity__,test_state = test_rlm(rlm_array,this.sc,this.a,this.cw,this.l,this.m,this.s,this.__x__,verbose=this.verbose,regularized=True)
+        if not __REGULARIZE__:
+            rlm_array = rlm_helper( this.a, this.cw, this.sc, this.l, this.m, this.__x__, this.s,geometric_M=1,london=False)
+            # Test whether a spheroidal harmonic array satisfies TK's radial equation
+            __rlm_test_quantity__,test_state = test_rlm(rlm_array,this.sc,this.a,this.cw,this.l,this.m,this.s,this.__x__,verbose=this.verbose,regularized=False)
+        else:
+            #
+            rlm_array = rlm_helper( this.a, this.cw, this.sc, this.l, this.m, this.__x__, this.s,geometric_M=1,london=False,pre_solution=1)
+            # Test whether a REGULARIZED spheroidal harmonic array satisfies TK's radial equation
+            __rlm_test_quantity__,test_state = test_rlm(rlm_array,this.sc,this.a,this.cw,this.l,this.m,this.s,this.__x__,verbose=this.verbose,regularized=True)
         
         #
         if __return__:
-            return this.__x__,rlm_array,__rlm_test_quantity__
+            return this.__x__, rlm_array, __rlm_test_quantity__
         else:
             this.rlm = rlm_array
             this.__rlm_test_quantity__ = __rlm_test_quantity__
@@ -4718,65 +4719,9 @@ def rlm_helper( geometric_a,geometric_cw,sc, l, m, x, s, geometric_M=1, tol=None
     for k in kspace:
         Y += last_pow_x * b[k]
         last_pow_x *= x
-    
-    # #
-    # kspace = sort(b.keys())
-    # for k in kspace:
-    #     Y += b[k] * (x**k)
-        
-    # print(lim(Y))
-    #
-    # alert(cw)
-    # print('!>>  ', mean(tkradial_regularized(Y, x, M, a, cw, m, s, sc)) )
-
-    # _,_,alpha,beta,gamma,_ = leaver_rhelper( l,m,s,float(a)/2,cw*2,sc, london=False, verbose=verbose, adjoint=False )
-
-    # # initial series values
-    # a0 = 1.0 # a choice, setting the norm of Rlm
-
-    # a1 = -a0*beta(0)/alpha(0)
-    
-    # # the sum part
-    # done = False
-    # Y = a0*ones(x.shape,dtype=complex256)
-    # Y = Y + a1*x
-    # k = 1
-    # kmax = 5e3
-    # err,yy = [],[]
-    # et2=1e-8 if tol is None else tol
-    # max_a = max(abs(array([a0,a1])))
-    # x_pow_k = x
-    # while not done:
-    #     k += 1
-    #     j = k-1
-    #     a2 = -1.0*( beta(j)*a1 + gamma(j)*a0 ) / alpha(j)
-    #     x_pow_k = x_pow_k*x
-    #     dY = a2*x_pow_k
-    #     Y += dY
-    #     xx = max(abs( dY ))
-
-    #     #
-    #     if full_output:
-    #         yy.append( C*array(Y)*X )
-    #         err.append( xx )
-
-    #     k_is_too_large = k>kmax
-    #     done = (k>=l) and ( (xx<et2 and k>30) or k_is_too_large )
-    #     done = done or xx<et2
-    #     a0 = a1
-    # #     a1 = a2
 
     # together now
     R = X*Y
-
-    # # Warn if the series did not appear to converge
-    # if k_is_too_large:
-    #     print(l,m,s,sc,aw)
-    #     warning('The while-loop exited becuase too many iterations have passed. The series may not converge for given inputs. This may be cuased by the use of an inapproprate eigenvalue.')
-
-    # #
-    # if conjugate:
-    #     R = R.conj()
         
     #
     if full_output:
@@ -5155,11 +5100,14 @@ def test_rlm(Rlm,Alm,a,cw,l,m,s,x,tol=1e-5,verbose=True,regularized=False):
     M = 1 # Mass convention of inputs
     leaver_a,leaver_cw,leaver_M = rlm_change_convention(a,cw,M)
     
+    #
+    pre_solution,_,_ = rlm_leading_order_scale(x,leaver_M,leaver_a,leaver_cw,m,s)
+    
     # Evaluate spheroidal differential equation
     if not regularized:
-        __rlm_test_quantity__1 = tkradial( Rlm, x,leaver_M, leaver_a, leaver_cw, m, s,Alm)
-        __rlm_test_quantity__2 = tkradialr( Rlm, x,leaver_M, leaver_a, leaver_cw, m, s,Alm)
-        __rlm_test_quantity__3 = tkradial_r( Rlm, x,leaver_M, leaver_a, leaver_cw, m, s,Alm, convert_x=True)
+        __rlm_test_quantity__1 = tkradial( Rlm, x,leaver_M, leaver_a, leaver_cw, m, s,Alm)/pre_solution
+        __rlm_test_quantity__2 = tkradialr( Rlm, x,leaver_M, leaver_a, leaver_cw, m, s,Alm)/pre_solution
+        __rlm_test_quantity__3 = tkradial_r( Rlm, x,leaver_M, leaver_a, leaver_cw, m, s,Alm, convert_x=True)/pre_solution
         
         #
         __rlm_test_quantity__ = __rlm_test_quantity__1
