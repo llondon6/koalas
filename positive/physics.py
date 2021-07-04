@@ -1702,7 +1702,7 @@ class qnmobj:
     '''
     
     # Initialize the object
-    def __init__(this, M, a, l, m, n, p=None, s=-2, verbose=False, calc_slm=True, calc_rlm=False, use_nr_convention=True, refine=False, num_x=2**14, num_theta=2**9, harmonic_norm_convention=None, amplitude=None, __DEVELOPMENT__=False):
+    def __init__(this, M, a, l, m, n, p=None, s=-2, verbose=False, calc_slm=True, calc_rlm=True, use_nr_convention=True, refine=False, num_x=2**14, num_theta=2**9, harmonic_norm_convention=None, amplitude=None, __DEVELOPMENT__=False):
 
         # Import needed things
         from positive.physics import leaver
@@ -1747,7 +1747,7 @@ class qnmobj:
         if M<0:
             error('BH mass must be positive')
         if a<0:
-            error('This object uses the convention that a>0. To select the retrograde QNM branch, set p=-1')
+            error('This object uses the convention that a>0. To select the retrograde QNM branch, set p=-1 when using the numerical relativity conventions, or m --> -m for the perturbation theory conventions. See qnmo.explain_conventions for more detail. ')
         if a>M:
             error('Mass=M cannot be less than BH spin/Mass=a')
         if not isinstance(l,int):
@@ -1926,11 +1926,15 @@ class qnmobj:
         #
         from numpy import linspace,pi,mean,median,sqrt,sin
         
-        # # Throw an error if the function is not called in development mode
-        # if not __DEVELOPMENT__:
-        #     error('This method is under development. The current TODO items are: verify that final output satisfies the radial equation (it already satisfies the transformed equation ie with leading order behavior scaled out)')
-        
-        if this.__use_nr_convention__: error('this functions should only be used for the perturbation theory convention for now')
+        # Adjust for conventions
+        if this.__use_nr_convention__:
+            internal_a  = this.a
+            internal_cw = this.cw.conj()
+            internal_sc = this.sc.conj()
+        else:
+            internal_a  = this.a
+            internal_cw = this.cw
+            internal_sc = this.sc
         
         # Define domain
         # x = (r-rp)/(r-rm)
@@ -1939,14 +1943,19 @@ class qnmobj:
         
         #
         if not __REGULARIZE__:
-            rlm_array = rlm_helper( this.a, this.cw, this.sc, this.l, this.m, this.__x__, this.s,geometric_M=1,london=False)
+            rlm_array = rlm_helper( this.a, internal_cw, internal_sc, this.l, this.m, this.__x__, this.s,geometric_M=1,london=False)
             # Test whether a spheroidal harmonic array satisfies TK's radial equation
-            __rlm_test_quantity__,test_state = test_rlm(rlm_array,this.sc,this.a,this.cw,this.l,this.m,this.s,this.__x__,verbose=this.verbose,regularized=False)
+            __rlm_test_quantity__,test_state = test_rlm(rlm_array,internal_sc,this.a,internal_cw,this.l,this.m,this.s,this.__x__,verbose=this.verbose,regularized=False)
         else:
             #
-            rlm_array = rlm_helper( this.a, this.cw, this.sc, this.l, this.m, this.__x__, this.s,geometric_M=1,london=False,pre_solution=1)
+            rlm_array = rlm_helper( this.a, internal_cw, internal_sc, this.l, this.m, this.__x__, this.s,geometric_M=1,london=False,pre_solution=1)
             # Test whether a REGULARIZED spheroidal harmonic array satisfies TK's radial equation
-            __rlm_test_quantity__,test_state = test_rlm(rlm_array,this.sc,this.a,this.cw,this.l,this.m,this.s,this.__x__,verbose=this.verbose,regularized=True)
+            __rlm_test_quantity__,test_state = test_rlm(rlm_array,internal_sc,this.a,internal_cw,this.l,this.m,this.s,this.__x__,verbose=this.verbose,regularized=True)
+            
+        # Adjust for conventions
+        if this.__use_nr_convention__:
+            rlm_array = rlm_array.conj()
+            __rlm_test_quantity__  = __rlm_test_quantity__.conj()
         
         #
         if __return__:
@@ -2106,7 +2115,7 @@ class qnmobj:
         sca( ax[0] )
         plot( this.__x__, abs(this.rlm),lw=line_width,color=colors[0], label=label,ls=ls )
         xlim(lim(this.__x__))
-        xlabel(r'$x$')
+        xlabel(r'$\xi$')
         title(r'$|R_{\ell m n p}|$')
         yscale('log')
         if show_legend: legend(loc='best')
@@ -2115,7 +2124,7 @@ class qnmobj:
         sca( ax[1] )
         pha = unwrap(angle(this.rlm))
         plot( this.__x__, pha, color=colors[1],lw=line_width, label=label, ls=ls )
-        xlabel(r'$x$')
+        xlabel(r'$\xi$')
         title(r'$\arg(R_{\ell m n p})$')
         if show_legend: legend(loc='best')
         
@@ -2126,8 +2135,8 @@ class qnmobj:
         ylim(1e-10,1e10)
         #print(ylim())
         grid(True)
-        xlabel(r'$x$')
-        title(r'$\mathcal{D}_{x}^2 R_{\ell m n p} $')
+        xlabel(r'$\xi$')
+        title(r'$\mathcal{D}_{\xi}^2 R_{\ell m n p} $')
         if show_legend: legend(loc='best')
         
         #
