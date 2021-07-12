@@ -36,17 +36,12 @@ conda install numpy swig cython matplotlib h5py
 
 Before trying this step, you may want to preimptively install fftw3f and zlib, as you could get compile errors if these libraries are not already installed. It's also possible that you may need to install other libraries. If so, google is your friend, and hopefully (like zlib) they are as simple as wget, configure, make, make install. 
 
+Note that there are MANY things disabled here so that you don't waste time faffing about with unnecessary libs. We are only interested in lalsimulation and swig.
+
 ```bash
-#
 ./00boot
-
-# NOTE that there are MANY things disabled here so that you don't waste time faffing about with unnecessary libs -- we are only interested in lalsimulation and swig here
-./configure --prefix=${CONDA_PREFIX} --enable-swig-python --disable-lalstochastic --disable-lalxml --disable-lalinference --disable-laldetchar --disable-lalapps --disable-lalframe --disable-lalmetaio
-
-# 
+./configure --prefix=${CONDA_PREFIX} --enable-swig-python --disable-lalstochastic --disable-lalxml --disable-lalinference --disable-laldetchar --disable-lalapps --disable-lalframe --disable-lalmetaio --disable-lalburst --disable-lalinspiral
 make -j
-
-#
 make install 
 ```
 
