@@ -5,12 +5,14 @@ It's easy to install lalsuite for use via `conda install -c conda-forge lalsuite
 The pain can be lessened, and perhaps avoided all together by noting the following:
 
 * If you're doing development (coding in C) then it's a good bet that only a small part of lalsuite is of interest. 
-* For waveform modelers that part is usually lalsimulation. This means that everything else need non be bothered with, and this means that there are a lot of dependencies that can be ignored.
+* For waveform modelers that part is usually lalsimulation. This means that everything else need not be bothered with, and this means that there are a lot of dependencies that can be ignored.
 * The remaining dependencies are usually simple to install (though some googling may be needed on a system by system basis).
 
-Below I will walk us through the steps that worked for me during my recent install of lalsuite on my macOS Mojaje 10.14.6 macbook. 
+Below I walk through the steps that worked for me during my recent install of lalsuite on my macOS Mojaje 10.14.6 macbook. 
 
 ## 1. Make a conda env and clone lalsuite
+
+Here I call my new environment ```hack-phenomx``` but you can all yours anything. 
 
 ```bash
 # Make a conda env (note that "conda create env" may be needed depending on your conda version)
@@ -35,7 +37,7 @@ conda install numpy swig cython matplotlib h5py
 Before trying this step, you may want to preimptively install fftw3f and zlib, as you could get compile errors if these libraries are not already installed. It's also possible that you may need to install other libraries. If so, google is your friend, and hopefully (like zlib) they are as simple as wget, configure, make, make install. 
 
 ```bash
-# NOTE that there are many things disabled here so that you don't waste time faffing about with unnecessary libs -- we are only interested in lalsimulation and swig here
+# NOTE that there are MANY things disabled here so that you don't waste time faffing about with unnecessary libs -- we are only interested in lalsimulation and swig here
 ./configure --prefix=${CONDA_PREFIX} --enable-swig-python --disable-lalstochastic --disable-lalxml --disable-lalinference --disable-laldetchar --disable-lalapps --disable-lalframe --disable-lalmetaio
 
 # 
@@ -92,8 +94,12 @@ make install
 # Installing fftw3f
 
 1. Download: http://www.fftw.org/download.html
-
-2. Configure and install with 
+2. Unzip and enter fftw-3.3.9 folder
+```
+tar -xvf fftw-3.3.9.tar.gz
+cd fftw-3.3.9
+```
+2. Configure and install with flag to ensure that the version lalsuite wants is compiled
 
 ```bash
 ./configure --enable-float --enable-sse 
@@ -101,5 +107,5 @@ make
 sudo make install
 ```
 
-The flags here are key to getting the correct library file compiled. 
+The flags here are key to getting the correct (for lalsuite) library file compiled. 
 **Reference**: https://stackoverflow.com/questions/37267441/configure-warning-fftw3f-library-not-found-the-slower-fftpack-library-will-be
