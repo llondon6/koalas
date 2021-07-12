@@ -1,4 +1,4 @@
-# Installing lalsuite
+# Installing lalsuite locally for development of lalsimulation
 
 It's easy to install lalsuite for use via `conda install -c conda-forge lalsuite `. But it can a right pain the arse to install it for development on your local machine (rather than a LIGO cluster) due to various libraries and dependencies that will naturally be missing.
 
