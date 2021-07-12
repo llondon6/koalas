@@ -47,6 +47,18 @@ make -j
 make install 
 ```
 
+If this works, note the location of your lalsuite activation script (ie the script that lets your shell know where lalsuite lives). In my case its
+```
+/Users/book/opt/anaconda2/envs/hack-phenomx/etc/lalsuite-user-env.sh
+```
+So regardless of whether I'm in my conda environment, I can tell bash and/or python scripts to use this version of lalsuite by entering the bash command
+
+```
+source /Users/book/opt/anaconda2/envs/hack-phenomx/etc/lalsuite-user-env.sh
+```
+
+prior to running the bash or python code of interest.
+
 ## 4. Add your new environment to jupyter so that you can work with your development code in python via swig
 
 ```bash
